@@ -42,10 +42,21 @@ with engine.connect() as conn:
 
 app = FastAPI(title="Community Connection Platform")
 
-# Cho phép frontend (Vite dev server) gọi API
+import os
+
+cors_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+env_cors = os.getenv("CORS_ORIGINS")
+if env_cors:
+    cors_origins.extend([o.strip() for o in env_cors.split(",") if o.strip()])
+
+# Cho phép frontend gọi API (hỗ trợ cả localhost và các domain deploy HTTPS như Vercel)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"^https:\/\/.*$" if not env_cors else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
