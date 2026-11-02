@@ -61,9 +61,13 @@ export default function Messages() {
 
   // Trạng thái cuộc gọi WebRTC (Voice / Video Call)
   const [callSession, setCallSession] = useState(null)
-  const [incomingCallSignal, setIncomingCallSignal] = useState(null)
   const callSessionRef = useRef(null)
   callSessionRef.current = callSession
+  const callSignalListenersRef = useRef(new Set())
+  const registerCallSignalListener = useRef((listener) => {
+    callSignalListenersRef.current.add(listener)
+    return () => callSignalListenersRef.current.delete(listener)
+  }).current
 
   useEffect(() => {
     if (toastMessage) {
@@ -315,7 +319,14 @@ export default function Messages() {
               conversationId: activeConversation.id,
             })
           } else {
-            setIncomingCallSignal(data)
+            // Chuyển tiếp ngay lập tức đến listener của CallModal mà không bị nuốt gói do React state batching
+            callSignalListenersRef.current.forEach((listener) => {
+              try {
+                listener(data)
+              } catch (err) {
+                console.error('Call signal listener error:', err)
+              }
+            })
           }
         } else if (data.type === 'error') {
           setToastMessage(data.message || 'Lỗi gửi tin nhắn')
@@ -459,7 +470,16 @@ export default function Messages() {
   // 9. Kết thúc phiên gọi
   const handleEndCallSession = () => {
     setCallSession(null)
-    setIncomingCallSignal(null)
+    // Tải lại lịch sử tin nhắn để cả 2 bên cập nhật ngay dòng tin nhắn cuộc gọi
+    if (activeConversation?.id) {
+      setTimeout(() => {
+        getMessages(activeConversation.id)
+          .then((history) => {
+            if (history) setMessages(history)
+          })
+          .catch(() => {})
+      }, 400)
+    }
   }
 
   // Xử lý bấm phím: Enter gửi, Shift+Enter xuống dòng
@@ -472,7 +492,7 @@ export default function Messages() {
 
   // Lọc danh sách hội thoại theo từ khóa tìm kiếm
   const filteredConversations = conversations.filter((c) => {
-    const name = c.partner.display_name || c.partner.username || ''
+    const name = c?.partner?.display_name || c?.partner?.username || ''
     return name.toLowerCase().includes(searchTerm.toLowerCase())
   })
 
@@ -572,7 +592,7 @@ export default function Messages() {
               </div>
             ) : (
               filteredConversations.map((conv) => {
-                const partner = conv.partner
+                const partner = conv.partner || { username: 'user', display_name: 'Người dùng' }
                 const isActive = activeConversation?.id === conv.id
                 const lastMsg = conv.last_message
 
@@ -1375,7 +1395,7 @@ export default function Messages() {
           callSession={callSession}
           onEndCall={handleEndCallSession}
           onSendSignal={handleSendCallSignal}
-          incomingSignal={incomingCallSignal}
+          onRegisterSignalListener={registerCallSignalListener}
         />
       )}
     </div>

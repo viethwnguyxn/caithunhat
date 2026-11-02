@@ -6,6 +6,8 @@ const RTC_CONFIG = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 }
 
@@ -58,7 +60,6 @@ class CallAudioSynthesizer {
         osc1.start(t)
         osc2.start(t)
         osc1.stop(t + 0.5)
-        osc2.stop(t + 0.5)
       } catch (e) {}
     }
 
@@ -66,7 +67,7 @@ class CallAudioSynthesizer {
     this.intervalId = setInterval(playChime, 2000)
   }
 
-  // Âm chuông đổ chuông cuộc gọi đi (Tút... tút...)
+  // Âm chuông chờ đổ máy bên phía người gọi (Ringback tone tút... tút...)
   playOutgoingRingback() {
     this.ensureContext()
     if (!this.ctx) return
@@ -80,22 +81,22 @@ class CallAudioSynthesizer {
         const gain = this.ctx.createGain()
 
         osc.type = 'sine'
-        osc.frequency.setValueAtTime(425, t)
+        osc.frequency.setValueAtTime(440, t)
 
-        gain.gain.setValueAtTime(0.12, t)
-        gain.gain.setValueAtTime(0.12, t + 0.8)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.9)
+        gain.gain.setValueAtTime(0.1, t)
+        gain.gain.setValueAtTime(0.1, t + 1.2)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.3)
 
         osc.connect(gain)
         gain.connect(this.ctx.destination)
 
         osc.start(t)
-        osc.stop(t + 0.9)
+        osc.stop(t + 1.3)
       } catch (e) {}
     }
 
     playBeep()
-    this.intervalId = setInterval(playBeep, 3200)
+    this.intervalId = setInterval(playBeep, 3500)
   }
 
   stop() {
@@ -109,10 +110,10 @@ class CallAudioSynthesizer {
 const audioSynth = new CallAudioSynthesizer()
 
 export default function CallModal({
-  callSession, // { mode: 'outgoing'|'incoming'|'active', callType: 'audio'|'video', partner, sdp, conversationId }
+  callSession, // { mode: 'outgoing'|'incoming', callType: 'audio'|'video', partner, sdp, conversationId }
   onEndCall,
   onSendSignal,
-  incomingSignal, // tín hiệu nhận từ websocket
+  onRegisterSignalListener, // Đăng ký nhận signal trực tiếp từ WebSocket (chống mất gói tin do React state batching)
 }) {
   const [callStatus, setCallStatus] = useState(
     callSession.mode === 'outgoing' ? 'calling' : callSession.mode
@@ -129,20 +130,21 @@ export default function CallModal({
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
   const remoteStreamRef = useRef(null)
+  const iceCandidateQueueRef = useRef([]) // Hàng đợi ICE candidate khi remote description chưa sẵn sàng
   const ringTimeoutRef = useRef(null)
   const durationTimerRef = useRef(null)
 
   const isVideoCall = callSession.callType === 'video'
   const partner = callSession.partner
 
-  // 1. Khởi tạo âm thanh theo trạng thái
+  // 1. Quản lý âm thanh chuông & Timeout 35s cuộc gọi
   useEffect(() => {
     if (callStatus === 'incoming') {
       audioSynth.playIncomingRing()
     } else if (callStatus === 'calling') {
       audioSynth.playOutgoingRingback()
 
-      // Tự động hủy nếu đối phương không nghe máy sau 35 giây
+      // Tự động hủy nếu đối phương không nhấc máy sau 35 giây
       ringTimeoutRef.current = setTimeout(() => {
         handleEndCall('no_answer')
       }, 35000)
@@ -172,14 +174,35 @@ export default function CallModal({
     }
   }, [callStatus])
 
-  // 3. Khởi tạo WebRTC PeerConnection
+  // 3. Đồng bộ Stream vào DOM Video / Audio element (Giải quyết màn hình đen & không tiếng)
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current && isVideoCall) {
+      localVideoRef.current.srcObject = localStreamRef.current
+      localVideoRef.current.play().catch(() => {})
+    }
+  }, [callStatus, isVideoCall])
+
+  useEffect(() => {
+    if (remoteStreamRef.current) {
+      if (remoteVideoRef.current && isVideoCall) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current
+        remoteVideoRef.current.play().catch(() => {})
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStreamRef.current
+        remoteAudioRef.current.play().catch(() => {})
+      }
+    }
+  }, [callStatus, isVideoCall])
+
+  // 4. Khởi tạo WebRTC PeerConnection
   const initPeerConnection = () => {
     if (peerConnectionRef.current) return peerConnectionRef.current
 
     const pc = new RTCPeerConnection(RTC_CONFIG)
     peerConnectionRef.current = pc
 
-    // Nhận ICE Candidate và gửi tới đối phương qua WebSocket
+    // Gửi ICE candidate tới đối phương qua WebSocket
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         onSendSignal({
@@ -190,19 +213,18 @@ export default function CallModal({
       }
     }
 
-    // Nhận stream từ đối phương
+    // Nhận stream Audio/Video từ đối phương
     pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        const stream = event.streams[0]
-        remoteStreamRef.current = stream
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track])
+      remoteStreamRef.current = stream
 
-        if (remoteVideoRef.current && isVideoCall) {
-          remoteVideoRef.current.srcObject = stream
-        }
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = stream
-          remoteAudioRef.current.play().catch(() => {})
-        }
+      if (remoteVideoRef.current && isVideoCall) {
+        remoteVideoRef.current.srcObject = stream
+        remoteVideoRef.current.play().catch(() => {})
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream
+        remoteAudioRef.current.play().catch(() => {})
       }
     }
 
@@ -210,15 +232,20 @@ export default function CallModal({
       if (pc.connectionState === 'connected') {
         setCallStatus('connected')
         audioSynth.stop()
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        handleEndCall('connection_lost')
+        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        setTimeout(() => {
+          if (peerConnectionRef.current && (peerConnectionRef.current.connectionState === 'failed' || peerConnectionRef.current.connectionState === 'disconnected')) {
+            handleEndCall('connection_lost')
+          }
+        }, 3000)
       }
     }
 
     return pc
   }
 
-  // 4. Lấy Media Stream từ Microphone / Camera của thiết bị
+  // 5. Lấy Media Stream từ Microphone / Camera
   const getMediaStream = async (wantVideo) => {
     try {
       const constraints = {
@@ -236,6 +263,7 @@ export default function CallModal({
 
       if (localVideoRef.current && wantVideo) {
         localVideoRef.current.srcObject = stream
+        localVideoRef.current.play().catch(() => {})
       }
 
       return stream
@@ -255,7 +283,7 @@ export default function CallModal({
     }
   }
 
-  // 5. Khởi tạo cuộc gọi đi (Outgoing Call)
+  // 6. Khởi tạo cuộc gọi đi (Outgoing Call)
   const startOutgoingCall = async () => {
     try {
       const stream = await getMediaStream(isVideoCall)
@@ -279,9 +307,10 @@ export default function CallModal({
     }
   }
 
-  // 6. Chấp nhận cuộc gọi đến (Accept Call)
+  // 7. Chấp nhận cuộc gọi đến (Accept Call)
   const handleAcceptCall = async () => {
     audioSynth.stop()
+    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
     setCallStatus('connected')
 
     try {
@@ -294,6 +323,17 @@ export default function CallModal({
 
       if (callSession.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(callSession.sdp))
+
+        // Áp dụng các ICE candidate đã nhận được trong lúc chờ nghe máy
+        while (iceCandidateQueueRef.current.length > 0) {
+          const cand = iceCandidateQueueRef.current.shift()
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(cand))
+          } catch (e) {
+            console.warn('Lỗi thêm queued ICE candidate on accept:', e)
+          }
+        }
+
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
 
@@ -309,9 +349,10 @@ export default function CallModal({
     }
   }
 
-  // 7. Từ chối cuộc gọi đến (Reject Call)
+  // 8. Từ chối cuộc gọi đến (Reject Call)
   const handleRejectCall = () => {
     audioSynth.stop()
+    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
     onSendSignal({
       type: 'call:reject',
       call_type: callSession.callType,
@@ -321,9 +362,10 @@ export default function CallModal({
     onEndCall({ duration: 0, reason: 'declined' })
   }
 
-  // 8. Kết thúc cuộc gọi
+  // 9. Kết thúc cuộc gọi
   const handleEndCall = (reason = 'user_hangup') => {
     audioSynth.stop()
+    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
     onSendSignal({
       type: 'call:end',
       call_type: callSession.callType,
@@ -352,50 +394,78 @@ export default function CallModal({
     if (durationTimerRef.current) clearInterval(durationTimerRef.current)
   }
 
-  // 9. Lắng nghe các tín hiệu WebRTC từ đối phương gửi tới
-  useEffect(() => {
-    if (!incomingSignal) return
-    const { type, sdp, candidate, reason } = incomingSignal
+  // 10. Lắng nghe và xử lý trực tiếp tất cả tín hiệu WebRTC từ đối phương
+  const handleIncomingSignal = async (signal) => {
+    if (!signal) return
+    const { type, sdp, candidate, reason } = signal
+    const pc = peerConnectionRef.current
 
-    const handleSignal = async () => {
-      const pc = peerConnectionRef.current
+    if (type === 'call:answer') {
+      if (pc) {
+        try {
+          if (sdp && pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+            setCallStatus('connected')
+            audioSynth.stop()
+            if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
 
-      if (type === 'call:answer' && pc) {
-        if (sdp && pc.signalingState !== 'stable') {
-          await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-          setCallStatus('connected')
-          audioSynth.stop()
+            // Áp dụng tất cả ICE candidate đang xếp hàng chờ
+            while (iceCandidateQueueRef.current.length > 0) {
+              const queuedCand = iceCandidateQueueRef.current.shift()
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(queuedCand))
+              } catch (e) {
+                console.warn('Lỗi áp dụng queued candidate:', e)
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Lỗi khi setRemoteDescription answer:', err)
         }
-      } else if (type === 'call:ice_candidate' && pc) {
-        if (candidate) {
+      }
+    } else if (type === 'call:ice_candidate') {
+      if (candidate) {
+        // Nếu PeerConnection chưa sẵn sàng hoặc chưa có RemoteDescription -> Đưa vào hàng đợi
+        if (!pc || !pc.remoteDescription || !pc.remoteDescription.type) {
+          iceCandidateQueueRef.current.push(candidate)
+        } else {
           try {
             await pc.addIceCandidate(new RTCIceCandidate(candidate))
           } catch (e) {
             console.warn('Lỗi thêm ICE candidate:', e)
           }
         }
-      } else if (type === 'call:reject' || type === 'call:end') {
-        audioSynth.stop()
-        setErrorMessage(
-          type === 'call:reject'
-            ? 'Đối phương đã từ chối cuộc gọi'
-            : 'Cuộc gọi đã kết thúc'
-        )
-        setTimeout(() => {
-          cleanupCall()
-          onEndCall({ duration, reason: reason || 'remote_ended' })
-        }, 1200)
-      } else if (type === 'call:error') {
-        setErrorMessage(incomingSignal.message || 'Lỗi cuộc gọi')
-        setTimeout(() => {
-          cleanupCall()
-          onEndCall({ duration: 0, reason: 'error' })
-        }, 2000)
+      }
+    } else if (type === 'call:reject' || type === 'call:end') {
+      audioSynth.stop()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      setErrorMessage(
+        type === 'call:reject'
+          ? (reason === 'busy' ? 'Đối phương đang bận' : 'Đối phương đã từ chối cuộc gọi')
+          : 'Cuộc gọi đã kết thúc'
+      )
+      setTimeout(() => {
+        cleanupCall()
+        onEndCall({ duration, reason: reason || 'remote_ended' })
+      }, 1200)
+    } else if (type === 'call:error') {
+      setErrorMessage(signal.message || 'Lỗi cuộc gọi')
+      setTimeout(() => {
+        cleanupCall()
+        onEndCall({ duration: 0, reason: 'error' })
+      }, 2000)
+    }
+  }
+
+  // Đăng ký listener nhận tín hiệu realtime từ WebSocket trong Messages.jsx
+  useEffect(() => {
+    if (onRegisterSignalListener) {
+      const unsubscribe = onRegisterSignalListener(handleIncomingSignal)
+      return () => {
+        if (unsubscribe) unsubscribe()
       }
     }
-
-    handleSignal()
-  }, [incomingSignal])
+  }, [onRegisterSignalListener])
 
   // Bắt đầu gọi nếu là người khởi xướng
   useEffect(() => {
@@ -452,7 +522,12 @@ export default function CallModal({
       }}
     >
       {/* Audio element ẩn để phát tiếng của đối phương */}
-      <audio ref={remoteAudioRef} autoPlay playsInline />
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        onLoadedMetadata={(e) => e.target.play().catch(() => {})}
+      />
 
       {/* ============================================================== */}
       {/* TRƯỜNG HỢP 1: CUỘC GỌI ĐẾN (INCOMING CALL DIALOG)              */}
@@ -652,6 +727,7 @@ export default function CallModal({
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
+                  onLoadedMetadata={(e) => e.target.play().catch(() => {})}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -680,6 +756,7 @@ export default function CallModal({
                     autoPlay
                     playsInline
                     muted
+                    onLoadedMetadata={(e) => e.target.play().catch(() => {})}
                     style={{
                       width: '100%',
                       height: '100%',
