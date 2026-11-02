@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..models.block import Block
 from ..models.connection import Connection
 from ..models.user import User
 from ..schemas.connection import (
@@ -63,6 +64,21 @@ def send_connection_request(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Người dùng không tồn tại",
+        )
+
+    # Kiểm tra xem có ai chặn ai không
+    block = (
+        db.query(Block)
+        .filter(
+            ((Block.blocker_id == current_user.id) & (Block.blocked_id == target_user_id))
+            | ((Block.blocker_id == target_user_id) & (Block.blocked_id == current_user.id))
+        )
+        .first()
+    )
+    if block:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể thực hiện kết nối do người dùng đã bị chặn",
         )
 
     # Tìm quan hệ kết nối giữa 2 người (bất kể chiều nào)

@@ -3,24 +3,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from .db.database import Base, engine, get_db
+from .core.security import hash_password
+from .db.database import Base, SessionLocal, engine, get_db
 from .models import (
+    Block,
     Connection,
     Conversation,
     ConversationMember,
     Message,
     Notification,
+    Post,
+    PostComment,
+    PostLike,
     Profile,
+    Report,
     SurveyAnswer,
     User,
 )  # Đăng ký models vào Base.metadata
 from .routers import (
+    admin_router,
     auth_router,
     chat_router,
     connections_router,
     matching_router,
     notifications_router,
+    posts_router,
     profile_router,
+    reports_router,
     survey_router,
     users_router,
 )
@@ -32,6 +41,12 @@ Base.metadata.create_all(bind=engine)
 with engine.connect() as conn:
     try:
         cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+        if "role" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user' NOT NULL"))
+        if "auth_provider" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'local' NOT NULL"))
+        if "avatar_url" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"))
         if "is_online" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_online BOOLEAN DEFAULT 0 NOT NULL"))
         if "last_seen" not in cols:
@@ -39,6 +54,45 @@ with engine.connect() as conn:
         conn.commit()
     except Exception:
         pass
+
+
+def ensure_admin_user():
+    """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại."""
+    with SessionLocal() as db:
+        admin_email = "admin@kindred.local"
+        admin = db.query(User).filter(User.email == admin_email).first()
+        if not admin:
+            admin = User(
+                email=admin_email,
+                username="admin",
+                password_hash=hash_password("admin123"),
+                auth_provider="local",
+                role="admin",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+            db.refresh(admin)
+        else:
+            if admin.role != "admin":
+                admin.role = "admin"
+                db.commit()
+
+        p = db.query(Profile).filter(Profile.user_id == admin.id).first()
+        if not p:
+            p = Profile(
+                user_id=admin.id,
+                display_name="Kindred Administrator",
+                bio="Quản trị viên hệ thống kết nối cộng đồng Kindred",
+            )
+            db.add(p)
+            db.commit()
+
+
+try:
+    ensure_admin_user()
+except Exception:
+    pass
 
 app = FastAPI(title="Community Connection Platform")
 
@@ -71,6 +125,9 @@ app.include_router(matching_router)
 app.include_router(connections_router)
 app.include_router(chat_router)
 app.include_router(notifications_router)
+app.include_router(reports_router)
+app.include_router(admin_router)
+app.include_router(posts_router)
 
 
 @app.get("/api/health")

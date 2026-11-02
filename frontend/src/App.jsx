@@ -11,6 +11,7 @@ import Discover from './pages/Discover'
 import Communities from './pages/Communities'
 import Connections from './pages/Connections'
 import Messages from './pages/Messages'
+import AdminDashboard from './pages/AdminDashboard'
 
 function App() {
   return (
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Survey />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

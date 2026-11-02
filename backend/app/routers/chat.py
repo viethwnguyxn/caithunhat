@@ -186,14 +186,21 @@ async def websocket_chat(
                     continue
 
                 # Lưu tin nhắn vào Database
-                with SessionLocal() as db:
-                    new_msg = chat_service.create_message(
-                        db=db,
-                        conversation_id=conversation_id,
-                        sender_id=user_id,
-                        content=content,
+                try:
+                    with SessionLocal() as db:
+                        new_msg = chat_service.create_message(
+                            db=db,
+                            conversation_id=conversation_id,
+                            sender_id=user_id,
+                            content=content,
+                        )
+                        msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
+                except HTTPException as e:
+                    await manager.send_personal_message(
+                        {"type": "error", "message": e.detail},
+                        websocket,
                     )
-                    msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
+                    continue
 
                 # Broadcast tới tất cả kết nối trong cuộc hội thoại
                 broadcast_payload = {

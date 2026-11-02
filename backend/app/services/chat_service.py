@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..models.block import Block
 from ..models.chat import Conversation, ConversationMember, Message
 from ..models.user import User
 from ..schemas.chat import (
@@ -82,12 +83,30 @@ def to_conversation_response(
         .count()
     )
 
+    # Kiểm tra trạng thái chặn giữa 2 bên
+    is_blocked = False
+    blocked_by_me = False
+    if partner_user:
+        block_entry = (
+            db.query(Block)
+            .filter(
+                ((Block.blocker_id == current_user.id) & (Block.blocked_id == partner_user.id))
+                | ((Block.blocker_id == partner_user.id) & (Block.blocked_id == current_user.id))
+            )
+            .first()
+        )
+        if block_entry:
+            is_blocked = True
+            blocked_by_me = (block_entry.blocker_id == current_user.id)
+
     return ConversationResponse(
         id=conv.id,
         created_at=conv.created_at,
         partner=partner_dto,
         last_message=MessageResponse.model_validate(last_msg) if last_msg else None,
         unread_count=unread_count,
+        is_blocked=is_blocked,
+        blocked_by_me=blocked_by_me,
     )
 
 
@@ -238,6 +257,30 @@ def create_message(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền gửi tin nhắn trong cuộc hội thoại này",
         )
+
+    # Kiểm tra xem cuộc trò chuyện có bị chặn không
+    other_member = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.conversation_id == conversation_id,
+            ConversationMember.user_id != sender_id,
+        )
+        .first()
+    )
+    if other_member:
+        block_entry = (
+            db.query(Block)
+            .filter(
+                ((Block.blocker_id == sender_id) & (Block.blocked_id == other_member.user_id))
+                | ((Block.blocker_id == other_member.user_id) & (Block.blocked_id == sender_id))
+            )
+            .first()
+        )
+        if block_entry:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cuộc hội thoại đã bị chặn. Không thể gửi tin nhắn.",
+            )
 
     msg = Message(
         conversation_id=conversation_id,

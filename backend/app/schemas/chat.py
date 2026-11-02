@@ -39,6 +39,8 @@ class ConversationResponse(BaseModel):
     partner: ConversationPartnerResponse
     last_message: MessageResponse | None = None
     unread_count: int = 0
+    is_blocked: bool = False
+    blocked_by_me: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

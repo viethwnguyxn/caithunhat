@@ -1,4 +1,4 @@
-﻿import re
+import re
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -46,6 +46,7 @@ class UserResponse(BaseModel):
     email: str
     username: str
     auth_provider: str = "local"
+    role: str = "user"
     avatar_url: str | None = None
     is_active: bool
     created_at: datetime

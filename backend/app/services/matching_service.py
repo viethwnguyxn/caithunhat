@@ -1,9 +1,10 @@
-﻿from typing import Any
+from typing import Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from ..models.block import Block
 from ..models.profile import Profile
 from ..models.survey import SurveyAnswer
 from ..models.user import User
@@ -116,12 +117,25 @@ def get_user_matches(
     stmt_my_profile = select(Profile).where(Profile.user_id == current_user.id)
     my_profile = db.execute(stmt_my_profile).scalar_one_or_none()
 
+    # Loại bỏ những người dùng mà tôi đã chặn hoặc họ đã chặn tôi
+    blocked_stmt = select(Block).where(
+        or_(Block.blocker_id == current_user.id, Block.blocked_id == current_user.id)
+    )
+    blocked_records = db.execute(blocked_stmt).scalars().all()
+    blocked_ids = {
+        b.blocked_id if b.blocker_id == current_user.id else b.blocker_id
+        for b in blocked_records
+    }
+
     stmt_others = (
         select(User, Profile, SurveyAnswer)
         .join(SurveyAnswer, User.id == SurveyAnswer.user_id)
         .outerjoin(Profile, User.id == Profile.user_id)
         .where(User.id != current_user.id, User.is_active == True)
     )
+    if blocked_ids:
+        stmt_others = stmt_others.where(~User.id.in_(blocked_ids))
+
     results = db.execute(stmt_others).all()
 
     if not results:

@@ -15,6 +15,7 @@ class User(Base):
     # password_hash có thể nullable đối với người dùng đăng nhập bằng Google OAuth
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     auth_provider: Mapped[str] = mapped_column(String(20), default="local", nullable=False)
+    role: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_online: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

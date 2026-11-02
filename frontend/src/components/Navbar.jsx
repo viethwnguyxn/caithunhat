@@ -23,6 +23,7 @@ export default function Navbar() {
     { path: '/connections', label: 'Kết nối', icon: '🤝' },
     { path: '/messages', label: 'Tin nhắn', icon: '💬' },
     { path: '/profile', label: 'Hồ sơ', icon: '👤' },
+    ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Quản trị', icon: '⚙️' }] : []),
   ]
 
   return (

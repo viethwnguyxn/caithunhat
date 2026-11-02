@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import ReportModal from '../components/ReportModal'
+import BlockConfirmModal from '../components/BlockConfirmModal'
 import { getMatches } from '../services/matchingService'
 import {
   sendConnectionRequest,
@@ -51,9 +53,21 @@ function Discover() {
 
   // Modal xem chi tiết profile
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
+  const [reportTargetUser, setReportTargetUser] = useState(null)
+  const [blockTargetUser, setBlockTargetUser] = useState(null)
 
-  // Thông báo khi bấm Kết nối
+  // Thông báo khi bấm Kết nối hoặc Chặn
   const [connectToast, setConnectToast] = useState('')
+
+  const handleBlockSuccess = (msg) => {
+    if (blockTargetUser) {
+      const blockedId = blockTargetUser.id
+      setMatches((prev) => prev.filter((m) => m.user.id !== blockedId))
+      setSelectedUserForProfile(null)
+    }
+    setBlockTargetUser(null)
+    setConnectToast(msg)
+  }
 
   const fetchMatches = async () => {
     setLoading(true)
@@ -910,8 +924,76 @@ function Discover() {
                 </button>
               )}
             </div>
+
+            {/* Tùy chọn an toàn: Báo cáo & Chặn */}
+            <div
+              style={{
+                marginTop: '16px',
+                paddingTop: '14px',
+                borderTop: '1px solid #f3f4f6',
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '16px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setReportTargetUser(selectedUserForProfile.user)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>🚩</span>
+                <span>Báo cáo vi phạm</span>
+              </button>
+              <span style={{ color: '#d1d5db' }}>•</span>
+              <button
+                type="button"
+                onClick={() => setBlockTargetUser(selectedUserForProfile.user)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ef4444',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>🚫</span>
+                <span>Chặn người này</span>
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Báo cáo */}
+      {reportTargetUser && (
+        <ReportModal
+          targetUser={reportTargetUser}
+          onClose={() => setReportTargetUser(null)}
+          onSuccess={(msg) => setConnectToast(msg)}
+        />
+      )}
+
+      {/* Modal Xác nhận Chặn */}
+      {blockTargetUser && (
+        <BlockConfirmModal
+          targetUser={blockTargetUser}
+          onClose={() => setBlockTargetUser(null)}
+          onSuccess={handleBlockSuccess}
+        />
       )}
     </div>
   )

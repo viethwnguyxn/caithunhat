@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import ReportModal from '../components/ReportModal'
+import BlockConfirmModal from '../components/BlockConfirmModal'
 import {
   getMyConnections,
   getConnectionRequests,
@@ -20,12 +22,35 @@ export default function Connections() {
   const [error, setError] = useState('')
   const [toastMessage, setToastMessage] = useState('')
 
-  // Modal thông báo nhắn tin (sẽ mở ở Task 11)
+  // Modal Báo cáo & Chặn
+  const [reportTargetUser, setReportTargetUser] = useState(null)
+  const [blockTargetUser, setBlockTargetUser] = useState(null)
+  const [openMenuUserId, setOpenMenuUserId] = useState(null)
+
+  // Modal thông báo nhắn tin
   const [chatNoticeUser, setChatNoticeUser] = useState(null)
 
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(''), 4000)
+  }
+
+  // Đóng dropdown khi click ngoài
+  useEffect(() => {
+    const handleOutside = () => setOpenMenuUserId(null)
+    if (openMenuUserId) {
+      window.addEventListener('click', handleOutside)
+      return () => window.removeEventListener('click', handleOutside)
+    }
+  }, [openMenuUserId])
+
+  const handleBlockSuccess = (msg) => {
+    if (blockTargetUser) {
+      const blockedId = blockTargetUser.id
+      setConnections((prev) => prev.filter((c) => c.user.id !== blockedId))
+    }
+    setBlockTargetUser(null)
+    showToast(msg)
   }
 
   const loadData = async () => {
@@ -464,12 +489,12 @@ export default function Connections() {
                           </div>
 
                           {/* Nút hành động */}
-                          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px' }}>
+                          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px', display: 'flex', gap: '8px', position: 'relative' }}>
                             <button
                               type="button"
                               onClick={() => navigate(`/messages?userId=${u.id}`)}
                               style={{
-                                width: '100%',
+                                flex: 1,
                                 padding: '10px',
                                 borderRadius: '10px',
                                 border: '1px solid #7c5cbf',
@@ -480,7 +505,6 @@ export default function Connections() {
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyCenter: 'center',
                                 justifyContent: 'center',
                                 gap: '6px',
                                 transition: 'all 0.2s ease',
@@ -490,6 +514,100 @@ export default function Connections() {
                               <span>💬</span>
                               <span>Nhắn tin</span>
                             </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuUserId(openMenuUserId === u.id ? null : u.id)
+                              }}
+                              style={{
+                                padding: '10px 14px',
+                                borderRadius: '10px',
+                                border: '1px solid #e5e7eb',
+                                backgroundColor: '#ffffff',
+                                color: '#4b5563',
+                                fontSize: '16px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              title="Tùy chọn an toàn"
+                            >
+                              ⋮
+                            </button>
+
+                            {openMenuUserId === u.id && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  bottom: '50px',
+                                  backgroundColor: '#ffffff',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                                  border: '1px solid #f3f4f6',
+                                  minWidth: '160px',
+                                  zIndex: 50,
+                                  padding: '6px',
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuUserId(null)
+                                    setReportTargetUser(u)
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    color: '#374151',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                >
+                                  <span>🚩</span>
+                                  <span>Báo cáo</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuUserId(null)
+                                    setBlockTargetUser(u)
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    color: '#dc2626',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                >
+                                  <span>🚫</span>
+                                  <span>Chặn bạn này</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -816,6 +934,24 @@ export default function Connections() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal Báo cáo vi phạm */}
+      {reportTargetUser && (
+        <ReportModal
+          targetUser={reportTargetUser}
+          onClose={() => setReportTargetUser(null)}
+          onSuccess={(msg) => showToast(msg)}
+        />
+      )}
+
+      {/* Modal Xác nhận Chặn */}
+      {blockTargetUser && (
+        <BlockConfirmModal
+          targetUser={blockTargetUser}
+          onClose={() => setBlockTargetUser(null)}
+          onSuccess={handleBlockSuccess}
+        />
       )}
     </div>
   )

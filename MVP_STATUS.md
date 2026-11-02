@@ -59,7 +59,15 @@
 | • Dữ liệu `is_online` & `last_seen` | `DONE` | Lưu trữ trong bảng `users`, auto-migration trên SQLite hiện có. |
 | • Hiển thị trực quan | `DONE` | Chấm xanh/xám trên avatar, văn bản `🟢 Đang hoạt động` / `⚪ Hoạt động x phút trước`. |
 | • Sự kiện Realtime `user_status` | `DONE` | Broadcast qua WebSocket khi user tham gia hoặc ngắt kết nối. |
-| **10. Communities (Cộng đồng)** | | |
+| **10. An toàn & Kiểm duyệt (Block & Report)** | | |
+| • Chặn người dùng 2 chiều (Block) | `DONE` | Ẩn khỏi Discover, chặn gửi kết nối, khóa chat realtime 1-1, chỉ người chặn mới unblock được. |
+| • Báo cáo vi phạm (Report) | `DONE` | Gửi lý do (Spam, Quấy rối, Lừa đảo, v.v.) + mô tả chi tiết, lưu DB chờ admin xử lý. |
+| **11. Quản trị viên (Admin Dashboard)** | | |
+| • Phân quyền Admin (`role == "admin"`) | `DONE` | Dependency `get_current_admin`, chặn người dùng thường 403 Forbidden. |
+| • Thống kê hệ thống (Stats) | `DONE` | Tổng user, user hoạt động, user bị khóa, đơn vi phạm chờ duyệt. |
+| • Quản lý tài khoản người dùng | `DONE` | Tìm kiếm username/email, lọc role, Khóa / Mở khóa tài khoản ngay lập tức. |
+| • Kiểm duyệt đơn vi phạm (Moderation) | `DONE` | Duyệt xử lý đơn (resolved) kèm tùy chọn khóa luôn tài khoản vi phạm, hoặc Bác bỏ (dismissed). |
+| **12. Communities (Cộng đồng)** | | |
 | • Trang Khám phá Chủ đề Cộng đồng | `DONE` | Giao diện 6 nhóm chủ đề lớn (Tech, Sách, Nghệ thuật, Thể thao, Sinh viên, Freelance). |
 | • Bộ lọc theo danh mục | `DONE` | Lọc chủ đề linh hoạt, nút CTA chuyển hướng thẳng vào tìm bạn bè đồng điệu. |
 | • Backend Group & Post CRUD | `PARTIAL` / `TODO` | Chưa xây dựng backend REST API riêng cho việc tự tạo group và bài đăng cộng đồng (do task này được tạm hoãn để ưu tiên Realtime Chat và Notifications). |
