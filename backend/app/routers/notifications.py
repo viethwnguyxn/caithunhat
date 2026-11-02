@@ -45,3 +45,19 @@ def mark_all_notifications_as_read(
         message=f"Đã đánh dấu {count} thông báo là đã đọc",
     )
 
+
+@router.put("/conversations/{conversation_id}/read", response_model=NotificationActionResponse)
+def mark_conversation_notifications_as_read(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Đánh dấu tất cả thông báo tin nhắn của một cuộc hội thoại là đã đọc."""
+    count = notification_service.mark_conversation_notifications_read(
+        db, conversation_id, current_user.id
+    )
+    return NotificationActionResponse(
+        success=True,
+        message=f"Đã đánh dấu {count} thông báo tin nhắn là đã đọc",
+    )
+

@@ -25,3 +25,12 @@ export const markAllNotificationsAsRead = async () => {
   return response.data
 }
 
+/**
+ * Đánh dấu tất cả thông báo tin nhắn của một cuộc trò chuyện là đã đọc
+ * @param {number} conversationId
+ */
+export const markConversationNotificationsAsRead = async (conversationId) => {
+  const response = await api.put(`/api/notifications/conversations/${conversationId}/read`)
+  return response.data
+}
+

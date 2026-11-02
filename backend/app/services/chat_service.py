@@ -222,6 +222,12 @@ def get_conversation_messages(
         Message.sender_id != current_user.id,
         Message.read_at.is_(None),
     ).update({Message.read_at: now}, synchronize_session=False)
+
+    # ĐỒNG THỜI đánh dấu các thông báo Notification liên quan tới cuộc hội thoại này là đã đọc!
+    notification_service.mark_conversation_notifications_read(
+        db=db, conversation_id=conversation_id, user_id=current_user.id
+    )
+
     db.commit()
 
     # Lấy tin nhắn theo thứ tự thời gian tăng dần

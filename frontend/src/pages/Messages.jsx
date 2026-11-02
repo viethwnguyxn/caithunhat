@@ -11,6 +11,7 @@ import {
   sendMessage,
 } from '../services/chatService'
 import { reportService } from '../services/reportService'
+import { markConversationNotificationsAsRead } from '../services/notificationService'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -118,13 +119,24 @@ export default function Messages() {
     }
   }
 
-  // 2. Xử lý query params từ URL (?conversationId=... hoặc ?userId=...)
+  // 2. Xử lý query params hoặc state từ URL (?conversationId=... hoặc state.conversationId)
   useEffect(() => {
     const initChat = async () => {
       const convList = await loadConversations()
       const searchParams = new URLSearchParams(location.search)
-      const queryConvId = searchParams.get('conversationId')
-      const queryUserId = searchParams.get('userId')
+      const queryConvId = location.state?.conversationId || searchParams.get('conversationId')
+      const queryUserId = location.state?.userId || searchParams.get('userId')
+
+      // Nếu có query param trên URL, chuẩn hóa URL về /messages để đồng nhất
+      if (searchParams.get('conversationId') || searchParams.get('userId')) {
+        navigate('/messages', {
+          replace: true,
+          state: {
+            conversationId: queryConvId ? parseInt(queryConvId, 10) : undefined,
+            userId: queryUserId ? parseInt(queryUserId, 10) : undefined,
+          },
+        })
+      }
 
       if (queryConvId) {
         const found = convList.find((c) => c.id === parseInt(queryConvId, 10))
@@ -152,7 +164,7 @@ export default function Messages() {
     }
 
     initChat()
-  }, [location.search])
+  }, [location.search, location.state])
 
   // 3. Quản lý WebSocket và tải tin nhắn khi đổi activeConversation
   useEffect(() => {
@@ -168,6 +180,12 @@ export default function Messages() {
         if (isMounted) {
           setMessages(history || [])
           setTimeout(() => scrollToBottom(false), 50)
+          // Đánh dấu đã đọc các thông báo của cuộc hội thoại này và làm mới biểu tượng chuông
+          markConversationNotificationsAsRead(activeConversation.id)
+            .then(() => {
+              window.dispatchEvent(new CustomEvent('notifications-updated'))
+            })
+            .catch(() => {})
         }
       })
       .catch((err) => {
@@ -226,6 +244,13 @@ export default function Messages() {
               return c
             })
           )
+
+          // Tự động xóa thông báo vì đang mở xem cuộc trò chuyện này
+          markConversationNotificationsAsRead(activeConversation.id)
+            .then(() => {
+              window.dispatchEvent(new CustomEvent('notifications-updated'))
+            })
+            .catch(() => {})
         } else if (data.type === 'user_status') {
           const { user_id, is_online, last_seen } = data
           setActiveConversation((prev) => {

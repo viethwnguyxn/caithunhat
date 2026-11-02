@@ -60,11 +60,20 @@ export default function NotificationBell() {
     }
   }
 
-  // Tải lần đầu và lặp polling mỗi 20 giây
+  // Tải lần đầu, lặp polling mỗi 15 giây và lắng nghe sự kiện cập nhật thông báo
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 20000)
-    return () => clearInterval(interval)
+    const interval = setInterval(fetchNotifications, 15000)
+
+    const handleNotificationsUpdated = () => {
+      fetchNotifications()
+    }
+    window.addEventListener('notifications-updated', handleNotificationsUpdated)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('notifications-updated', handleNotificationsUpdated)
+    }
   }, [])
 
   // Đóng dropdown khi click ra ngoài
@@ -129,7 +138,7 @@ export default function NotificationBell() {
         break
       case 'message':
         if (notif.related_id) {
-          navigate(`/messages?conversationId=${notif.related_id}`)
+          navigate('/messages', { state: { conversationId: notif.related_id } })
         } else {
           navigate('/messages')
         }

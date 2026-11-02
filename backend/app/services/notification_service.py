@@ -120,3 +120,23 @@ def mark_all_read(db: Session, user_id: int) -> int:
     db.commit()
     return updated_count
 
+
+def mark_conversation_notifications_read(
+    db: Session, conversation_id: int, user_id: int
+) -> int:
+    """
+    Đánh dấu tất cả thông báo tin nhắn thuộc một cuộc hội thoại cụ thể là đã đọc.
+    """
+    updated_count = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user_id,
+            Notification.type == "message",
+            Notification.related_id == conversation_id,
+            Notification.is_read.is_(False),
+        )
+        .update({Notification.is_read: True}, synchronize_session=False)
+    )
+    db.commit()
+    return updated_count
+
