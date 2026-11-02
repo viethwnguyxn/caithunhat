@@ -297,6 +297,10 @@ export default function Messages() {
           // Xử lý các tín hiệu WebRTC Calling
           if (data.type === 'call:offer') {
             if (callSessionRef.current) {
+              // Nếu đang trong phiên gọi của chính conversation này thì bỏ qua offer lặp, không gửi reject bận
+              if (callSessionRef.current.conversationId === activeConversation?.id) {
+                return
+              }
               if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
                 socketRef.current.send(
                   JSON.stringify({
@@ -470,6 +474,7 @@ export default function Messages() {
   // 9. Kết thúc phiên gọi
   const handleEndCallSession = () => {
     setCallSession(null)
+    callSessionRef.current = null
     // Tải lại lịch sử tin nhắn để cả 2 bên cập nhật ngay dòng tin nhắn cuộc gọi
     if (activeConversation?.id) {
       setTimeout(() => {

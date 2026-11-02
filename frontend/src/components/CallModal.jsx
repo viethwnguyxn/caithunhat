@@ -11,11 +11,13 @@ const RTC_CONFIG = {
   ],
 }
 
-// Bộ tạo âm thanh chuông gọi điện bằng Web Audio API (không phụ thuộc file ngoài)
+// Bộ tạo âm thanh chuông gọi điện bằng Web Audio API an toàn, triệt tiêu tiếng tít khi ngắt máy
 class CallAudioSynthesizer {
   constructor() {
     this.ctx = null
     this.intervalId = null
+    this.activeOscillators = new Set()
+    this.masterGain = null
   }
 
   ensureContext() {
@@ -27,18 +29,23 @@ class CallAudioSynthesizer {
       if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume()
       }
+      if (this.ctx && !this.masterGain) {
+        this.masterGain = this.ctx.createGain()
+        this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime)
+        this.masterGain.connect(this.ctx.destination)
+      }
     } catch (e) {}
   }
 
-  // Âm chuông cuộc gọi đến (Nhạc chuông điện thoại vui tai)
+  // Âm chuông cuộc gọi đến (Nhạc chuông vui tai)
   playIncomingRing() {
-    this.ensureContext()
-    if (!this.ctx) return
     this.stop()
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
 
     const playChime = () => {
       try {
-        if (!this.ctx) return
+        if (!this.ctx || !this.masterGain) return
         const t = this.ctx.currentTime
         const osc1 = this.ctx.createOscillator()
         const osc2 = this.ctx.createOscillator()
@@ -51,15 +58,31 @@ class CallAudioSynthesizer {
         osc2.frequency.setValueAtTime(783.99, t) // G5
 
         gain.gain.setValueAtTime(0.18, t)
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
 
         osc1.connect(gain)
         osc2.connect(gain)
-        gain.connect(this.ctx.destination)
+        gain.connect(this.masterGain)
+
+        this.activeOscillators.add(osc1)
+        this.activeOscillators.add(osc2)
+
+        const cleanup = () => {
+          this.activeOscillators.delete(osc1)
+          this.activeOscillators.delete(osc2)
+          try {
+            osc1.disconnect()
+            osc2.disconnect()
+            gain.disconnect()
+          } catch (e) {}
+        }
+        osc1.onended = cleanup
+        osc2.onended = cleanup
 
         osc1.start(t)
         osc2.start(t)
         osc1.stop(t + 0.5)
+        osc2.stop(t + 0.5)
       } catch (e) {}
     }
 
@@ -69,13 +92,13 @@ class CallAudioSynthesizer {
 
   // Âm chuông chờ đổ máy bên phía người gọi (Ringback tone tút... tút...)
   playOutgoingRingback() {
-    this.ensureContext()
-    if (!this.ctx) return
     this.stop()
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
 
     const playBeep = () => {
       try {
-        if (!this.ctx) return
+        if (!this.ctx || !this.masterGain) return
         const t = this.ctx.currentTime
         const osc = this.ctx.createOscillator()
         const gain = this.ctx.createGain()
@@ -83,15 +106,24 @@ class CallAudioSynthesizer {
         osc.type = 'sine'
         osc.frequency.setValueAtTime(440, t)
 
-        gain.gain.setValueAtTime(0.1, t)
-        gain.gain.setValueAtTime(0.1, t + 1.2)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.3)
+        gain.gain.setValueAtTime(0.08, t)
+        gain.gain.setValueAtTime(0.08, t + 1.0)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1)
 
         osc.connect(gain)
-        gain.connect(this.ctx.destination)
+        gain.connect(this.masterGain)
+
+        this.activeOscillators.add(osc)
+        osc.onended = () => {
+          this.activeOscillators.delete(osc)
+          try {
+            osc.disconnect()
+            gain.disconnect()
+          } catch (e) {}
+        }
 
         osc.start(t)
-        osc.stop(t + 1.3)
+        osc.stop(t + 1.1)
       } catch (e) {}
     }
 
@@ -103,6 +135,25 @@ class CallAudioSynthesizer {
     if (this.intervalId) {
       clearInterval(this.intervalId)
       this.intervalId = null
+    }
+
+    // Dừng và ngắt kết nối NGAY LẬP TỨC toàn bộ oscillator đang phát
+    this.activeOscillators.forEach((osc) => {
+      try {
+        osc.stop()
+        osc.disconnect()
+      } catch (e) {}
+    })
+    this.activeOscillators.clear()
+
+    // Khóa master gain và ngắt kết nối khỏi destination
+    if (this.masterGain && this.ctx) {
+      try {
+        this.masterGain.gain.cancelScheduledValues(0)
+        this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime)
+        this.masterGain.disconnect()
+      } catch (e) {}
+      this.masterGain = null
     }
   }
 }
@@ -137,17 +188,17 @@ export default function CallModal({
   const isVideoCall = callSession.callType === 'video'
   const partner = callSession.partner
 
-  // 1. Quản lý âm thanh chuông & Timeout 35s cuộc gọi
+  // 1. Quản lý âm thanh chuông & Timeout 45s cuộc gọi
   useEffect(() => {
     if (callStatus === 'incoming') {
       audioSynth.playIncomingRing()
     } else if (callStatus === 'calling') {
       audioSynth.playOutgoingRingback()
 
-      // Tự động hủy nếu đối phương không nhấc máy sau 35 giây
+      // Tự động hủy nếu đối phương không nhấc máy sau 45 giây (đủ thời gian cho người nhận kịp bấm)
       ringTimeoutRef.current = setTimeout(() => {
         handleEndCall('no_answer')
-      }, 35000)
+      }, 45000)
     } else {
       audioSynth.stop()
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
@@ -159,7 +210,14 @@ export default function CallModal({
     }
   }, [callStatus])
 
-  // 2. Bộ đếm thời gian khi cuộc gọi kết nối
+  // 2. Dọn dẹp âm thanh triệt để khi component unmount
+  useEffect(() => {
+    return () => {
+      audioSynth.stop()
+    }
+  }, [])
+
+  // 3. Bộ đếm thời gian khi cuộc gọi kết nối
   useEffect(() => {
     if (callStatus === 'connected') {
       durationTimerRef.current = setInterval(() => {
@@ -174,7 +232,7 @@ export default function CallModal({
     }
   }, [callStatus])
 
-  // 3. Đồng bộ Stream vào DOM Video / Audio element (Giải quyết màn hình đen & không tiếng)
+  // 4. Đồng bộ Stream vào DOM Video / Audio element (Giải quyết màn hình đen & không tiếng)
   useEffect(() => {
     if (localVideoRef.current && localStreamRef.current && isVideoCall) {
       localVideoRef.current.srcObject = localStreamRef.current
@@ -195,7 +253,7 @@ export default function CallModal({
     }
   }, [callStatus, isVideoCall])
 
-  // 4. Khởi tạo WebRTC PeerConnection
+  // 5. Khởi tạo WebRTC PeerConnection
   const initPeerConnection = () => {
     if (peerConnectionRef.current) return peerConnectionRef.current
 
@@ -233,57 +291,61 @@ export default function CallModal({
         setCallStatus('connected')
         audioSynth.stop()
         if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        setTimeout(() => {
-          if (peerConnectionRef.current && (peerConnectionRef.current.connectionState === 'failed' || peerConnectionRef.current.connectionState === 'disconnected')) {
-            handleEndCall('connection_lost')
-          }
-        }, 3000)
+      } else if (pc.connectionState === 'failed') {
+        // CHỈ ngắt cuộc gọi nếu ĐÃ KẾT NỐI mà bị rớt mạng. Tuyệt đối KHÔNG ngắt khi đang đổ chuông chờ nghe!
+        if (callStatus === 'connected') {
+          setTimeout(() => {
+            if (peerConnectionRef.current && peerConnectionRef.current.connectionState === 'failed') {
+              handleEndCall('connection_lost')
+            }
+          }, 4000)
+        }
       }
     }
 
     return pc
   }
 
-  // 5. Lấy Media Stream từ Microphone / Camera
+  // 6. Lấy Media Stream từ Microphone / Camera (có cơ chế fallback an toàn nếu Camera đang bận)
   const getMediaStream = async (wantVideo) => {
     try {
-      const constraints = {
-        audio: true,
-        video: wantVideo
-          ? {
+      if (wantVideo) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: {
               width: { ideal: 1280 },
               height: { ideal: 720 },
               facingMode: 'user',
-            }
-          : false,
-      }
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      localStreamRef.current = stream
+            },
+          })
+          localStreamRef.current = stream
 
-      if (localVideoRef.current && wantVideo) {
-        localVideoRef.current.srcObject = stream
-        localVideoRef.current.play().catch(() => {})
-      }
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream
+            localVideoRef.current.play().catch(() => {})
+          }
 
-      return stream
-    } catch (err) {
-      console.warn('Lỗi lấy Camera/Micro:', err)
-      // Nếu yêu cầu video mà lỗi camera -> thử fallback sang chỉ lấy audio
-      if (wantVideo) {
-        try {
+          return stream
+        } catch (camErr) {
+          console.warn('Camera đang bận hoặc không khả dụng, tự động fallback sang Mic:', camErr)
+          // Fallback sang Voice nếu Camera đang bị ứng dụng/tab khác giữ
           const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
           localStreamRef.current = audioOnlyStream
           return audioOnlyStream
-        } catch (audioErr) {
-          throw new Error('Không thể truy cập Microphone hoặc Camera trên thiết bị của bạn.')
         }
+      } else {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        localStreamRef.current = audioStream
+        return audioStream
       }
-      throw new Error('Không thể truy cập Microphone trên thiết bị của bạn.')
+    } catch (err) {
+      console.warn('Lỗi lấy Microphone:', err)
+      throw new Error('Vui lòng cấp quyền Microphone để đàm thoại.')
     }
   }
 
-  // 6. Khởi tạo cuộc gọi đi (Outgoing Call)
+  // 7. Khởi tạo cuộc gọi đi (Outgoing Call)
   const startOutgoingCall = async () => {
     try {
       const stream = await getMediaStream(isVideoCall)
@@ -307,7 +369,7 @@ export default function CallModal({
     }
   }
 
-  // 7. Chấp nhận cuộc gọi đến (Accept Call)
+  // 8. Chấp nhận cuộc gọi đến (Accept Call)
   const handleAcceptCall = async () => {
     audioSynth.stop()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
@@ -349,7 +411,7 @@ export default function CallModal({
     }
   }
 
-  // 8. Từ chối cuộc gọi đến (Reject Call)
+  // 9. Từ chối cuộc gọi đến (Reject Call)
   const handleRejectCall = () => {
     audioSynth.stop()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
@@ -362,7 +424,7 @@ export default function CallModal({
     onEndCall({ duration: 0, reason: 'declined' })
   }
 
-  // 9. Kết thúc cuộc gọi
+  // 10. Kết thúc cuộc gọi
   const handleEndCall = (reason = 'user_hangup') => {
     audioSynth.stop()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
@@ -378,6 +440,7 @@ export default function CallModal({
 
   // Dọn dẹp Stream và PeerConnection
   const cleanupCall = () => {
+    audioSynth.stop()
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop())
       localStreamRef.current = null
@@ -385,6 +448,16 @@ export default function CallModal({
     if (remoteStreamRef.current) {
       remoteStreamRef.current.getTracks().forEach((t) => t.stop())
       remoteStreamRef.current = null
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null
+      remoteAudioRef.current.pause()
     }
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close()
@@ -394,7 +467,7 @@ export default function CallModal({
     if (durationTimerRef.current) clearInterval(durationTimerRef.current)
   }
 
-  // 10. Lắng nghe và xử lý trực tiếp tất cả tín hiệu WebRTC từ đối phương
+  // 11. Lắng nghe và xử lý trực tiếp tất cả tín hiệu WebRTC từ đối phương
   const handleIncomingSignal = async (signal) => {
     if (!signal) return
     const { type, sdp, candidate, reason } = signal
@@ -449,6 +522,7 @@ export default function CallModal({
         onEndCall({ duration, reason: reason || 'remote_ended' })
       }, 1200)
     } else if (type === 'call:error') {
+      audioSynth.stop()
       setErrorMessage(signal.message || 'Lỗi cuộc gọi')
       setTimeout(() => {
         cleanupCall()
