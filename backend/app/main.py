@@ -38,22 +38,23 @@ from .routers import (
 Base.metadata.create_all(bind=engine)
 
 # Đảm bảo SQLite tương thích khi thêm cột mới vào bảng users đã tồn tại
-with engine.connect() as conn:
-    try:
-        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
-        if "role" not in cols:
-            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user' NOT NULL"))
-        if "auth_provider" not in cols:
-            conn.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'local' NOT NULL"))
-        if "avatar_url" not in cols:
-            conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"))
-        if "is_online" not in cols:
-            conn.execute(text("ALTER TABLE users ADD COLUMN is_online BOOLEAN DEFAULT 0 NOT NULL"))
-        if "last_seen" not in cols:
-            conn.execute(text("ALTER TABLE users ADD COLUMN last_seen DATETIME"))
-        conn.commit()
-    except Exception:
-        pass
+if str(engine.url).startswith("sqlite"):
+    with engine.connect() as conn:
+        try:
+            cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+            if "role" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user' NOT NULL"))
+            if "auth_provider" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'local' NOT NULL"))
+            if "avatar_url" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"))
+            if "is_online" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_online BOOLEAN DEFAULT 0 NOT NULL"))
+            if "last_seen" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN last_seen DATETIME"))
+            conn.commit()
+        except Exception:
+            pass
 
 
 def ensure_admin_user():
