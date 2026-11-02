@@ -209,6 +209,69 @@ async def websocket_chat(
                 }
                 await manager.broadcast_to_conversation(conversation_id, broadcast_payload)
 
+            elif msg_type.startswith("call:"):
+                # ==========================================
+                # XỬ LÝ WEBRTC SIGNALING (VOICE & VIDEO CALL)
+                # ==========================================
+                with SessionLocal() as db:
+                    if chat_service.is_conversation_blocked(db, conversation_id, user_id):
+                        await manager.send_personal_message(
+                            {
+                                "type": "call:error",
+                                "message": "Cuộc hội thoại đã bị chặn. Không thể thực hiện cuộc gọi.",
+                            },
+                            websocket,
+                        )
+                        continue
+
+                # Đính kèm sender_id và conversation_id
+                data["sender_id"] = user_id
+                data["conversation_id"] = conversation_id
+
+                # Chuyển tiếp tín hiệu WebRTC tới người còn lại trong cuộc trò chuyện
+                await manager.broadcast_to_conversation(
+                    conversation_id,
+                    data,
+                    exclude_user_id=user_id,
+                )
+
+                # Khi cuộc gọi kết thúc hoặc bị từ chối/nhỡ -> tự động ghi tin nhắn hệ thống vào phòng chat
+                if msg_type in ("call:end", "call:reject"):
+                    call_type = data.get("call_type", "audio")
+                    duration = data.get("duration_seconds", 0)
+                    reason = data.get("reason")
+                    call_icon = "📹" if call_type == "video" else "📞"
+                    call_name = "Cuộc gọi video" if call_type == "video" else "Cuộc gọi thoại"
+
+                    if duration and duration > 0:
+                        mins = duration // 60
+                        secs = duration % 60
+                        log_content = f"{call_icon} {call_name} (Thời lượng: {mins:02d}:{secs:02d})"
+                    elif reason == "declined" or msg_type == "call:reject":
+                        log_content = f"{call_icon} Cuộc gọi bị từ chối"
+                    elif reason == "busy":
+                        log_content = f"{call_icon} Đối phương đang bận"
+                    else:
+                        log_content = f"{call_icon} Cuộc gọi nhỡ"
+
+                    try:
+                        with SessionLocal() as db:
+                            sys_msg = chat_service.create_message(
+                                db=db,
+                                conversation_id=conversation_id,
+                                sender_id=user_id,
+                                content=log_content,
+                            )
+                            msg_dict = MessageResponse.model_validate(sys_msg).model_dump(mode="json")
+
+                        # Gửi tin nhắn hệ thống cuộc gọi tới cả 2 bên
+                        await manager.broadcast_to_conversation(
+                            conversation_id,
+                            {"type": "message", "message": msg_dict},
+                        )
+                    except Exception:
+                        pass
+
     except WebSocketDisconnect:
         await manager.disconnect(websocket, conversation_id, user_id)
     except Exception:

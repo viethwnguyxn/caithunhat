@@ -12,6 +12,7 @@ import {
 } from '../services/chatService'
 import { reportService } from '../services/reportService'
 import { markConversationNotificationsAsRead } from '../services/notificationService'
+import CallModal from '../components/CallModal'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -57,6 +58,12 @@ export default function Messages() {
   const [showChatMenu, setShowChatMenu] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+
+  // Trạng thái cuộc gọi WebRTC (Voice / Video Call)
+  const [callSession, setCallSession] = useState(null)
+  const [incomingCallSignal, setIncomingCallSignal] = useState(null)
+  const callSessionRef = useRef(null)
+  callSessionRef.current = callSession
 
   useEffect(() => {
     if (toastMessage) {
@@ -282,6 +289,34 @@ export default function Messages() {
               return c
             })
           )
+        } else if (data.type && data.type.startsWith('call:')) {
+          // Xử lý các tín hiệu WebRTC Calling
+          if (data.type === 'call:offer') {
+            if (callSessionRef.current) {
+              if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+                socketRef.current.send(
+                  JSON.stringify({
+                    type: 'call:reject',
+                    call_type: data.call_type,
+                    reason: 'busy',
+                  })
+                )
+              }
+              return
+            }
+            setCallSession({
+              mode: 'incoming',
+              callType: data.call_type || 'audio',
+              partner: activeConversation?.partner || {
+                id: data.sender_id,
+                username: 'Đối phương',
+              },
+              sdp: data.sdp,
+              conversationId: activeConversation.id,
+            })
+          } else {
+            setIncomingCallSignal(data)
+          }
         } else if (data.type === 'error') {
           setToastMessage(data.message || 'Lỗi gửi tin nhắn')
         }
@@ -394,6 +429,37 @@ export default function Messages() {
       )
     )
     setToastMessage(msg)
+  }
+
+  // 7. Bắt đầu cuộc gọi (Voice / Video Call)
+  const handleStartCall = (callType) => {
+    if (activeConversation?.is_blocked) {
+      setToastMessage('Cuộc hội thoại này đã bị chặn. Không thể thực hiện cuộc gọi.')
+      return
+    }
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setToastMessage('Đang kết nối lại tới máy chủ chat. Vui lòng thử lại sau giây lát!')
+      return
+    }
+    setCallSession({
+      mode: 'outgoing',
+      callType,
+      partner: activeConversation.partner,
+      conversationId: activeConversation.id,
+    })
+  }
+
+  // 8. Gửi tín hiệu WebRTC qua WebSocket
+  const handleSendCallSignal = (payload) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(payload))
+    }
+  }
+
+  // 9. Kết thúc phiên gọi
+  const handleEndCallSession = () => {
+    setCallSession(null)
+    setIncomingCallSignal(null)
   }
 
   // Xử lý bấm phím: Enter gửi, Shift+Enter xuống dòng
@@ -787,6 +853,67 @@ export default function Messages() {
                     </span>
                   </div>
 
+                  {/* Nút Gọi thoại & Gọi video */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleStartCall('audio')}
+                      disabled={activeConversation.is_blocked}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        border: '1px solid #ede9fe',
+                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#f5f0ff',
+                        color: activeConversation.is_blocked ? '#9ca3af' : '#7c5cbf',
+                        fontSize: '16px',
+                        cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi thoại'}
+                      onMouseOver={(e) => {
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#ede9fe'
+                      }}
+                      onMouseOut={(e) => {
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#f5f0ff'
+                      }}
+                    >
+                      📞
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStartCall('video')}
+                      disabled={activeConversation.is_blocked}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        border: '1px solid #ede9fe',
+                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#f5f0ff',
+                        color: activeConversation.is_blocked ? '#9ca3af' : '#7c5cbf',
+                        fontSize: '16px',
+                        cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi video'}
+                      onMouseOver={(e) => {
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#ede9fe'
+                      }}
+                      onMouseOut={(e) => {
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#f5f0ff'
+                      }}
+                    >
+                      📹
+                    </button>
+                  </div>
+
                   {/* Menu dấu ba chấm (...) */}
                   <div style={{ position: 'relative' }}>
                     <button
@@ -947,6 +1074,41 @@ export default function Messages() {
                   </div>
                 ) : (
                   messages.map((m, idx) => {
+                    const isCallLog = m.content && (m.content.startsWith('📞') || m.content.startsWith('📹'))
+                    if (isCallLog) {
+                      return (
+                        <div
+                          key={m.id || idx}
+                          style={{
+                            alignSelf: 'center',
+                            margin: '6px 0',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '6px 14px',
+                              borderRadius: '20px',
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                            }}
+                          >
+                            <span>{m.content}</span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                              • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    }
+
                     const isMe = m.sender_id === user?.id
                     return (
                       <div
@@ -1204,6 +1366,16 @@ export default function Messages() {
           targetUser={activeConversation.partner}
           onClose={() => setShowBlockModal(false)}
           onSuccess={handleBlockSuccess}
+        />
+      )}
+
+      {/* Modal Cuộc gọi thoại / Video WebRTC */}
+      {callSession && (
+        <CallModal
+          callSession={callSession}
+          onEndCall={handleEndCallSession}
+          onSendSignal={handleSendCallSignal}
+          incomingSignal={incomingCallSignal}
         />
       )}
     </div>

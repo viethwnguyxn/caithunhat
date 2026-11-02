@@ -243,6 +243,30 @@ def get_conversation_messages(
     return [MessageResponse.model_validate(m) for m in messages]
 
 
+def is_conversation_blocked(db: Session, conversation_id: int, user_id: int) -> bool:
+    """Kiểm tra xem cuộc hội thoại có thành viên nào đang chặn nhau không."""
+    other_member = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.conversation_id == conversation_id,
+            ConversationMember.user_id != user_id,
+        )
+        .first()
+    )
+    if not other_member:
+        return False
+
+    block_entry = (
+        db.query(Block)
+        .filter(
+            ((Block.blocker_id == user_id) & (Block.blocked_id == other_member.user_id))
+            | ((Block.blocker_id == other_member.user_id) & (Block.blocked_id == user_id))
+        )
+        .first()
+    )
+    return block_entry is not None
+
+
 def create_message(
     db: Session, conversation_id: int, sender_id: int, content: str
 ) -> Message:
@@ -265,28 +289,11 @@ def create_message(
         )
 
     # Kiểm tra xem cuộc trò chuyện có bị chặn không
-    other_member = (
-        db.query(ConversationMember)
-        .filter(
-            ConversationMember.conversation_id == conversation_id,
-            ConversationMember.user_id != sender_id,
+    if is_conversation_blocked(db, conversation_id, sender_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cuộc hội thoại đã bị chặn. Không thể gửi tin nhắn.",
         )
-        .first()
-    )
-    if other_member:
-        block_entry = (
-            db.query(Block)
-            .filter(
-                ((Block.blocker_id == sender_id) & (Block.blocked_id == other_member.user_id))
-                | ((Block.blocker_id == other_member.user_id) & (Block.blocked_id == sender_id))
-            )
-            .first()
-        )
-        if block_entry:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cuộc hội thoại đã bị chặn. Không thể gửi tin nhắn.",
-            )
 
     msg = Message(
         conversation_id=conversation_id,

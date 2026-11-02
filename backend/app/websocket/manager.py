@@ -97,9 +97,12 @@ class ConnectionManager:
         except Exception:
             pass
 
-    async def broadcast_to_conversation(self, conversation_id: int, message: dict):
+    async def broadcast_to_conversation(
+        self, conversation_id: int, message: dict, exclude_user_id: int | None = None
+    ):
         """
         Phát tin nhắn (broadcast) tới tất cả thành viên đang online trong cuộc hội thoại.
+        Có thể loại trừ một user cụ thể (ví dụ người gửi tín hiệu WebRTC).
         Tự động dọn dẹp các socket bị ngắt kết nối đột ngột.
         """
         if conversation_id not in self.active_connections:
@@ -108,6 +111,8 @@ class ConnectionManager:
         dead_connections: list[tuple[int, WebSocket]] = []
 
         for user_id, sockets in list(self.active_connections[conversation_id].items()):
+            if exclude_user_id is not None and user_id == exclude_user_id:
+                continue
             for ws in list(sockets):
                 try:
                     await ws.send_json(message)
