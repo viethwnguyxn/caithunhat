@@ -240,6 +240,50 @@ export default function Profile() {
               </button>
             </form>
           )}
+
+          {/* Card Khảo sát kết nối & Câu chuyện */}
+          <div
+            style={{
+              marginTop: '28px',
+              padding: '20px',
+              borderRadius: '16px',
+              border: '1.5px solid #ede9fe',
+              backgroundColor: '#faf8ff',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#5b21b6', marginBottom: '4px' }}>
+                📝 Khảo sát kết nối & Câu chuyện cá nhân
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                Cập nhật hoàn cảnh sống, gu kết nối, cảm xúc và câu chuyện của bạn để tìm người đồng điệu hơn.
+              </p>
+            </div>
+            <Link
+              to="/survey"
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #7c5cbf',
+                color: '#7c5cbf',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              ✏️ Cập nhật Khảo sát
+            </Link>
+          </div>
         </div>
       </div>
     </div>

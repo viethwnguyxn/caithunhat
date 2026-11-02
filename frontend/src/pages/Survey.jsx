@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSurvey, submitSurvey } from '../services/surveyService'
 
@@ -109,6 +109,7 @@ function Survey() {
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState('')
+  const [stepTransitioning, setStepTransitioning] = useState(false)
 
   useEffect(() => {
     async function loadOldSurvey() {
@@ -190,15 +191,29 @@ function Survey() {
     }
     setError('')
     setStep((prev) => Math.min(prev + 1, totalSteps))
+    // Chống bấm đúp chuột từ bước trước ăn vào nút submit của bước sau
+    setStepTransitioning(true)
+    setTimeout(() => {
+      setStepTransitioning(false)
+    }, 600)
   }
 
   const handleBack = () => {
     setError('')
     setStep((prev) => Math.max(prev - 1, 1))
+    setStepTransitioning(true)
+    setTimeout(() => {
+      setStepTransitioning(false)
+    }, 400)
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
+    // Nếu vừa mới chuyển sang bước cuối dưới 600ms thì chặn để tránh click đúp ngoài ý muốn
+    if (stepTransitioning || loading) {
+      return
+    }
+
     const errMsg = validateCurrentStep()
     if (errMsg) {
       setError(errMsg)
@@ -578,6 +593,25 @@ function Survey() {
                   }}
                 />
               </div>
+
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '12px 16px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>💡</span>
+                <span>
+                  Phần câu chuyện là <strong>tùy chọn</strong>. Bạn có thể chia sẻ ngay bây giờ hoặc cập nhật lại bất kỳ lúc nào trong trang <strong>Hồ sơ cá nhân</strong>.
+                </span>
+              </div>
             </div>
           )}
 
@@ -589,7 +623,7 @@ function Survey() {
                 onClick={handleBack}
                 className="btn-secondary"
                 style={{ flex: 1, padding: '14px' }}
-                disabled={loading}
+                disabled={loading || stepTransitioning}
               >
                 Quay lại
               </button>
@@ -601,6 +635,7 @@ function Survey() {
                 onClick={handleNext}
                 className="btn-primary"
                 style={{ flex: 2, padding: '14px' }}
+                disabled={stepTransitioning}
               >
                 Tiếp tục
               </button>
@@ -608,10 +643,19 @@ function Survey() {
               <button
                 type="submit"
                 className="btn-primary"
-                style={{ flex: 2, padding: '14px' }}
-                disabled={loading}
+                style={{
+                  flex: 2,
+                  padding: '14px',
+                  opacity: stepTransitioning ? 0.7 : 1,
+                  transition: 'opacity 0.2s ease',
+                }}
+                disabled={loading || stepTransitioning}
               >
-                {loading ? 'Đang lưu kết quả...' : 'Hoàn thành Khảo sát'}
+                {loading
+                  ? 'Đang lưu kết quả...'
+                  : form.story?.trim() || form.what_you_want_others_to_understand?.trim()
+                  ? 'Lưu câu chuyện & Hoàn thành'
+                  : 'Bỏ qua & Hoàn thành'}
               </button>
             )}
           </div>
