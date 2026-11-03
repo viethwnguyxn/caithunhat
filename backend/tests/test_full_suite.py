@@ -156,7 +156,19 @@ def run_full_backend_test_suite():
         assert updated_prof.display_name == "Test Suite Display"
         assert updated_prof.bio == "Senior Tester Bio"
         assert updated_prof.age_group == "23-27"
-        print("✓ Lấy và Cập nhật hồ sơ cá nhân: OK")
+
+        # Kiểm tra hồ sơ công khai qua cả 2 route function: /api/users/{id}/public và /api/profile/{id}
+        from app.routers.users import get_user_public_profile
+        from app.routers.profile import get_public_profile as get_profile_public
+
+        res_p1 = get_user_public_profile(user_id=new_user.id, current_user=new_user, db=db)
+        assert res_p1.display_name == "Test Suite Display"
+        assert not hasattr(res_p1, "password") and not hasattr(res_p1, "email")
+
+        res_p2 = get_profile_public(user_id=new_user.id, current_user=new_user, db=db)
+        assert res_p2.display_name == "Test Suite Display"
+
+        print("✓ Lấy và Cập nhật hồ sơ cá nhân & Hồ sơ công khai (cả 2 endpoints): OK")
 
         # =====================================================================
         # 3. SURVEY TESTS
@@ -328,6 +340,18 @@ def run_full_backend_test_suite():
         except HTTPException as e:
             assert e.status_code == 403
         print("✓ Đánh dấu đã đọc & Phân quyền bảo mật thông báo (403): OK")
+
+        # Kiểm tra các loại thông báo mới (post_like, post_comment)
+        assert "post_like" in notification_service.VALID_NOTIFICATION_TYPES
+        assert "post_comment" in notification_service.VALID_NOTIFICATION_TYPES
+        notif_like = notification_service.create_notification(
+            db, new_user.id, "post_like", "Thả tim", "Có người thích bài", related_id=1
+        )
+        assert notif_like.type == "post_like"
+        notif_comment = notification_service.create_notification(
+            db, new_user.id, "post_comment", "Bình luận", "Có người bình luận", related_id=1
+        )
+        assert notif_comment.type == "post_comment"
 
         # Đánh dấu tất cả đã đọc
         notification_service.mark_all_read(db, alice.id)

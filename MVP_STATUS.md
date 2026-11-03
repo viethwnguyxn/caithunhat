@@ -18,7 +18,7 @@
 | **2. Profile Cá Nhân** | | |
 | • Xem hồ sơ cá nhân | `DONE` | `GET /api/profile/me`, hiển thị đầy đủ avatar, bio, độ tuổi, hoàn cảnh sống. |
 | • Cập nhật hồ sơ cá nhân | `DONE` | `PUT /api/profile/me`, cập nhật linh hoạt các trường tùy chọn. |
-| • Xem hồ sơ công khai | `DONE` | `GET /api/users/{id}/public`, bảo mật tuyệt đối không lộ password_hash hay email cá nhân. |
+| • Xem hồ sơ công khai | `DONE` | `GET /api/users/{id}/public` (hỗ trợ cả `GET /api/profile/{id}`), bảo mật tuyệt đối không lộ password_hash hay email cá nhân. |
 | **3. Survey Onboarding (Khảo sát Đồng điệu)** | | |
 | • 6 Nhóm câu hỏi khảo sát | `DONE` | Thu thập độ tuổi, hoàn cảnh hiện tại, cảm xúc, mục tiêu, sở thích, câu chuyện riêng. |
 | • Lưu & Cập nhật khảo sát | `DONE` | `POST /api/survey`, tự động đồng bộ độ tuổi và tình trạng sang Profile cá nhân. |

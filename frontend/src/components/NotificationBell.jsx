@@ -36,6 +36,10 @@ function getNotificationIcon(type) {
       return '👥'
     case 'group_post':
       return '📝'
+    case 'post_like':
+      return '❤️'
+    case 'post_comment':
+      return '💬'
     default:
       return '🔔'
   }
@@ -145,7 +149,13 @@ export default function NotificationBell() {
         break
       case 'group_join':
       case 'group_post':
-        navigate('/communities')
+      case 'post_like':
+      case 'post_comment':
+        if (notif.related_id) {
+          navigate('/communities', { state: { postId: notif.related_id } })
+        } else {
+          navigate('/communities')
+        }
         break
       default:
         break

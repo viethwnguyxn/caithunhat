@@ -13,6 +13,8 @@ VALID_NOTIFICATION_TYPES = {
     "message",
     "group_join",
     "group_post",
+    "post_like",
+    "post_comment",
 }
 
 

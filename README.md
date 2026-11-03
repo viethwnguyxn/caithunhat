@@ -284,7 +284,7 @@ npm run dev
 | `POST` | `/api/auth/login` | Đăng nhập bằng Email/Username + Mật khẩu | Public |
 | `POST` | `/api/auth/google` | Đăng nhập một chạm bằng Google ID Token | Public |
 | `GET` | `/api/users/me` | Lấy thông tin tài khoản hiện tại | Bearer JWT |
-| `GET` | `/api/users/{id}/public` | Lấy thông tin hồ sơ công khai của người dùng | Bearer JWT |
+| `GET` | `/api/users/{id}/public` | Lấy thông tin hồ sơ công khai của người dùng (Hỗ trợ cả `/api/profile/{id}`) | Bearer JWT |
 
 ### 📋 Khảo sát & Hồ sơ (Survey & Profile)
 | Method | Endpoint | Mô tả | Yêu cầu Auth |
