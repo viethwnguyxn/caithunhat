@@ -9,6 +9,7 @@ const RTC_CONFIG = {
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
   ],
+  iceCandidatePoolSize: 10,
 }
 
 // Bộ tạo âm thanh chuông gọi điện bằng Web Audio API an toàn, triệt tiêu tiếng tít khi ngắt máy
@@ -235,7 +236,9 @@ export default function CallModal({
   // 4. Đồng bộ Stream vào DOM Video / Audio element (Giải quyết màn hình đen & không tiếng)
   useEffect(() => {
     if (localVideoRef.current && localStreamRef.current && isVideoCall) {
-      localVideoRef.current.srcObject = localStreamRef.current
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current
+      }
       localVideoRef.current.play().catch(() => {})
     }
   }, [callStatus, isVideoCall])
@@ -243,11 +246,24 @@ export default function CallModal({
   useEffect(() => {
     if (remoteStreamRef.current) {
       if (remoteVideoRef.current && isVideoCall) {
-        remoteVideoRef.current.srcObject = remoteStreamRef.current
-        remoteVideoRef.current.play().catch(() => {})
+        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current
+        }
+        const playPromise = remoteVideoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('remoteVideo play err, retrying muted:', err)
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true
+              remoteVideoRef.current.play().catch(() => {})
+            }
+          })
+        }
       }
       if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remoteStreamRef.current
+        if (remoteAudioRef.current.srcObject !== remoteStreamRef.current) {
+          remoteAudioRef.current.srcObject = remoteStreamRef.current
+        }
         remoteAudioRef.current.play().catch(() => {})
       }
     }
@@ -267,40 +283,84 @@ export default function CallModal({
           type: 'call:ice_candidate',
           candidate: event.candidate,
           call_type: callSession.callType,
+          target_user_id: callSession.partner?.id,
+          conversation_id: callSession.conversationId,
         })
       }
     }
 
-    // Nhận stream Audio/Video từ đối phương
+    // Nhận stream Audio/Video từ đối phương - gom các track liên tục vào stream chung
     pc.ontrack = (event) => {
-      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track])
-      remoteStreamRef.current = stream
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream()
+      }
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
+            remoteStreamRef.current.addTrack(track)
+          }
+        })
+      } else if (event.track) {
+        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
+          remoteStreamRef.current.addTrack(event.track)
+        }
+      }
+
+      const stream = remoteStreamRef.current
 
       if (remoteVideoRef.current && isVideoCall) {
-        remoteVideoRef.current.srcObject = stream
-        remoteVideoRef.current.play().catch(() => {})
+        if (remoteVideoRef.current.srcObject !== stream) {
+          remoteVideoRef.current.srcObject = stream
+        }
+        const playPromise = remoteVideoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true
+              remoteVideoRef.current.play().catch(() => {})
+            }
+          })
+        }
       }
+
       if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = stream
+        if (remoteAudioRef.current.srcObject !== stream) {
+          remoteAudioRef.current.srcObject = stream
+        }
         remoteAudioRef.current.play().catch(() => {})
       }
     }
 
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') {
+    // Đồng bộ trạng thái kết nối hai bên: CHỈ đếm giờ khi gói tin media thực sự kết nối!
+    const checkConnected = () => {
+      if (
+        pc.connectionState === 'connected' ||
+        pc.iceConnectionState === 'connected' ||
+        pc.iceConnectionState === 'completed'
+      ) {
         setCallStatus('connected')
         audioSynth.stop()
         if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-      } else if (pc.connectionState === 'failed') {
-        // CHỈ ngắt cuộc gọi nếu ĐÃ KẾT NỐI mà bị rớt mạng. Tuyệt đối KHÔNG ngắt khi đang đổ chuông chờ nghe!
-        if (callStatus === 'connected') {
-          setTimeout(() => {
-            if (peerConnectionRef.current && peerConnectionRef.current.connectionState === 'failed') {
-              handleEndCall('connection_lost')
-            }
-          }, 4000)
-        }
       }
+    }
+
+    pc.onconnectionstatechange = () => {
+      checkConnected()
+      if (pc.connectionState === 'failed') {
+        setTimeout(() => {
+          if (
+            peerConnectionRef.current &&
+            peerConnectionRef.current.connectionState === 'failed' &&
+            peerConnectionRef.current.iceConnectionState === 'failed'
+          ) {
+            handleEndCall('connection_lost')
+          }
+        }, 7000)
+      }
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      checkConnected()
     }
 
     return pc
@@ -312,10 +372,14 @@ export default function CallModal({
       if (wantVideo) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
             video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { ideal: 640 },
+              height: { ideal: 480 },
               facingMode: 'user',
             },
           })
@@ -330,12 +394,26 @@ export default function CallModal({
         } catch (camErr) {
           console.warn('Camera đang bận hoặc không khả dụng, tự động fallback sang Mic:', camErr)
           // Fallback sang Voice nếu Camera đang bị ứng dụng/tab khác giữ
-          const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+            video: false,
+          })
           localStreamRef.current = audioOnlyStream
           return audioOnlyStream
         }
       } else {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: false,
+        })
         localStreamRef.current = audioStream
         return audioStream
       }
@@ -355,13 +433,18 @@ export default function CallModal({
         pc.addTrack(track, stream)
       })
 
-      const offer = await pc.createOffer()
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: isVideoCall,
+      })
       await pc.setLocalDescription(offer)
 
       onSendSignal({
         type: 'call:offer',
         call_type: callSession.callType,
         sdp: offer,
+        target_user_id: callSession.partner?.id,
+        conversation_id: callSession.conversationId,
       })
     } catch (err) {
       setErrorMessage(err.message || 'Không thể bắt đầu cuộc gọi')
@@ -373,7 +456,7 @@ export default function CallModal({
   const handleAcceptCall = async () => {
     audioSynth.stop()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-    setCallStatus('connected')
+    setCallStatus('connecting') // Đặt connecting, chờ WebRTC ICE bắt tay xong mới đếm giờ đồng bộ
 
     try {
       const stream = await getMediaStream(isVideoCall)
@@ -386,7 +469,13 @@ export default function CallModal({
       if (callSession.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(callSession.sdp))
 
-        // Áp dụng các ICE candidate đã nhận được trong lúc chờ nghe máy
+        const answer = await pc.createAnswer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: isVideoCall,
+        })
+        await pc.setLocalDescription(answer)
+
+        // Áp dụng các ICE candidate sau khi đã setLocalDescription(answer) thành công
         while (iceCandidateQueueRef.current.length > 0) {
           const cand = iceCandidateQueueRef.current.shift()
           try {
@@ -396,16 +485,16 @@ export default function CallModal({
           }
         }
 
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-
         onSendSignal({
           type: 'call:answer',
           call_type: callSession.callType,
           sdp: answer,
+          target_user_id: callSession.partner?.id,
+          conversation_id: callSession.conversationId,
         })
       }
     } catch (err) {
+      console.error('Lỗi khi chấp nhận cuộc gọi:', err)
       setErrorMessage(err.message || 'Lỗi khi chấp nhận cuộc gọi')
       setTimeout(() => handleEndCall('error'), 3000)
     }
@@ -419,6 +508,8 @@ export default function CallModal({
       type: 'call:reject',
       call_type: callSession.callType,
       reason: 'declined',
+      target_user_id: callSession.partner?.id,
+      conversation_id: callSession.conversationId,
     })
     cleanupCall()
     onEndCall({ duration: 0, reason: 'declined' })
@@ -433,6 +524,8 @@ export default function CallModal({
       call_type: callSession.callType,
       duration_seconds: duration,
       reason: reason,
+      target_user_id: callSession.partner?.id,
+      conversation_id: callSession.conversationId,
     })
     cleanupCall()
     onEndCall({ duration, reason })
@@ -478,7 +571,7 @@ export default function CallModal({
         try {
           if (sdp && pc.signalingState !== 'stable') {
             await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-            setCallStatus('connected')
+            setCallStatus('connecting')
             audioSynth.stop()
             if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
 
@@ -769,6 +862,8 @@ export default function CallModal({
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>
                   {callStatus === 'connected'
                     ? formatDuration(duration)
+                    : callStatus === 'connecting'
+                    ? 'Đang kết nối...'
                     : errorMessage || 'Đang đổ chuông...'}
                 </span>
               </div>
@@ -904,7 +999,12 @@ export default function CallModal({
                   {partner?.display_name || partner?.username}
                 </h3>
                 <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
-                  {errorMessage || (callStatus === 'connected' ? 'Cuộc gọi thoại đang diễn ra' : 'Đang đổ chuông...')}
+                  {errorMessage ||
+                    (callStatus === 'connected'
+                      ? 'Cuộc gọi thoại đang diễn ra'
+                      : callStatus === 'connecting'
+                      ? 'Đang kết nối...'
+                      : 'Đang đổ chuông...')}
                 </p>
               </div>
             )}

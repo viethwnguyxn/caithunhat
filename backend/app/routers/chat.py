@@ -111,8 +111,10 @@ async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocke
     và tới phòng chat (qua manager.broadcast_to_conversation).
     """
     msg_type = data.get("type", "")
-    conversation_id = data.get("conversation_id")
-    target_user_id = data.get("target_user_id")
+    raw_conv_id = data.get("conversation_id")
+    raw_target_id = data.get("target_user_id")
+    conversation_id = int(raw_conv_id) if raw_conv_id is not None and str(raw_conv_id).isdigit() else None
+    target_user_id = int(raw_target_id) if raw_target_id is not None and str(raw_target_id).isdigit() else None
 
     caller_info = None
 
