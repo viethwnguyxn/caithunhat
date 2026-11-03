@@ -521,6 +521,14 @@ export default function CallModal({
         cleanupCall()
         onEndCall({ duration, reason: reason || 'remote_ended' })
       }, 1200)
+    } else if (type === 'call:unavailable') {
+      audioSynth.stop()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      setErrorMessage(signal.message || 'Đối phương hiện không trực tuyến.')
+      setTimeout(() => {
+        cleanupCall()
+        onEndCall({ duration: 0, reason: 'unavailable' })
+      }, 2500)
     } else if (type === 'call:error') {
       audioSynth.stop()
       setErrorMessage(signal.message || 'Lỗi cuộc gọi')

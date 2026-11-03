@@ -8,7 +8,7 @@ from ..models.user import User
 
 class ConnectionManager:
     """
-    Quản lý tập trung các kết nối WebSocket theo từng cuộc hội thoại (room).
+    Quản lý tập trung các kết nối WebSocket theo từng cuộc hội thoại (room) và theo người dùng toàn cục.
     Cấu trúc lưu trữ:
       active_connections[conversation_id][user_id] = set(WebSocket)
       user_sockets[user_id] = set(WebSocket)
@@ -36,8 +36,57 @@ class ConnectionManager:
         except Exception:
             pass
 
+    async def connect_user(self, websocket: WebSocket, user_id: int):
+        """Chấp nhận kết nối WebSocket toàn cục của người dùng (Global User Signaling & Calling)."""
+        await websocket.accept()
+        if user_id not in self.user_sockets:
+            self.user_sockets[user_id] = set()
+
+        is_first = (len(self.user_sockets[user_id]) == 0)
+        self.user_sockets[user_id].add(websocket)
+
+        if is_first:
+            self._update_user_db_status(user_id, is_online=True)
+
+    async def disconnect_user(self, websocket: WebSocket, user_id: int):
+        """Hủy kết nối WebSocket toàn cục của người dùng."""
+        if user_id in self.user_sockets:
+            self.user_sockets[user_id].discard(websocket)
+            if not self.user_sockets[user_id]:
+                del self.user_sockets[user_id]
+                now = datetime.now(timezone.utc)
+                self._update_user_db_status(user_id, is_online=False, last_seen=now)
+
+    async def send_to_user(self, user_id: int, message: dict) -> bool:
+        """
+        Gửi tin nhắn hoặc tín hiệu WebRTC tới tất cả các WebSocket đang mở của user_id
+        (dù user đang ở bất kỳ trang nào như Home, Discover, Communities hay Messages).
+        Trả về True nếu gửi thành công tới ít nhất 1 socket.
+        """
+        if user_id not in self.user_sockets or not self.user_sockets[user_id]:
+            return False
+
+        dead_sockets = set()
+        sent = False
+        for ws in list(self.user_sockets[user_id]):
+            try:
+                await ws.send_json(message)
+                sent = True
+            except Exception:
+                dead_sockets.add(ws)
+
+        for ws in dead_sockets:
+            self.user_sockets[user_id].discard(ws)
+
+        if user_id in self.user_sockets and not self.user_sockets[user_id]:
+            del self.user_sockets[user_id]
+            now = datetime.now(timezone.utc)
+            self._update_user_db_status(user_id, is_online=False, last_seen=now)
+
+        return sent
+
     async def connect(self, websocket: WebSocket, conversation_id: int, user_id: int):
-        """Chấp nhận kết nối WebSocket và thêm vào danh sách theo dõi."""
+        """Chấp nhận kết nối WebSocket phòng chat và thêm vào danh sách theo dõi."""
         await websocket.accept()
         if conversation_id not in self.active_connections:
             self.active_connections[conversation_id] = {}
@@ -61,7 +110,7 @@ class ConnectionManager:
             )
 
     async def disconnect(self, websocket: WebSocket, conversation_id: int, user_id: int):
-        """Xóa kết nối WebSocket khi client ngắt kết nối hoặc rời phòng."""
+        """Xóa kết nối WebSocket phòng chat khi client ngắt kết nối hoặc rời phòng."""
         if conversation_id in self.active_connections:
             if user_id in self.active_connections[conversation_id]:
                 self.active_connections[conversation_id][user_id].discard(websocket)

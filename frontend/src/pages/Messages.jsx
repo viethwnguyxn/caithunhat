@@ -13,7 +13,7 @@ import {
 import { reportService } from '../services/reportService'
 import { markConversationNotificationsAsRead } from '../services/notificationService'
 import { getPublicProfile } from '../services/profileService'
-import CallModal from '../components/CallModal'
+import { useCall } from '../contexts/CallContext'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -65,15 +65,25 @@ export default function Messages() {
   const [loadingPartnerProfile, setLoadingPartnerProfile] = useState(false)
   const [isHoveringPartner, setIsHoveringPartner] = useState(false)
 
-  // Trạng thái cuộc gọi WebRTC (Voice / Video Call)
-  const [callSession, setCallSession] = useState(null)
-  const callSessionRef = useRef(null)
-  callSessionRef.current = callSession
-  const callSignalListenersRef = useRef(new Set())
-  const registerCallSignalListener = useRef((listener) => {
-    callSignalListenersRef.current.add(listener)
-    return () => callSignalListenersRef.current.delete(listener)
-  }).current
+  // Quản lý cuộc gọi toàn cục qua CallContext
+  const { startCall } = useCall()
+
+  // Tự động tải lại lịch sử tin nhắn khi cuộc gọi kết thúc để cập nhật dòng log cuộc gọi
+  useEffect(() => {
+    const handleCallEnded = () => {
+      if (activeConversation?.id) {
+        setTimeout(() => {
+          getMessages(activeConversation.id)
+            .then((history) => {
+              if (history) setMessages(history)
+            })
+            .catch(() => {})
+        }, 500)
+      }
+    }
+    window.addEventListener('call-session-ended', handleCallEnded)
+    return () => window.removeEventListener('call-session-ended', handleCallEnded)
+  }, [activeConversation?.id])
 
   useEffect(() => {
     if (toastMessage) {
@@ -346,43 +356,15 @@ export default function Messages() {
             })
           )
         } else if (data.type && data.type.startsWith('call:')) {
-          // Xử lý các tín hiệu WebRTC Calling
-          if (data.type === 'call:offer') {
-            if (callSessionRef.current) {
-              // Nếu đang trong phiên gọi của chính conversation này thì bỏ qua offer lặp, không gửi reject bận
-              if (callSessionRef.current.conversationId === activeConversation?.id) {
-                return
-              }
-              if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-                socketRef.current.send(
-                  JSON.stringify({
-                    type: 'call:reject',
-                    call_type: data.call_type,
-                    reason: 'busy',
-                  })
-                )
-              }
-              return
-            }
-            setCallSession({
-              mode: 'incoming',
-              callType: data.call_type || 'audio',
-              partner: activeConversation?.partner || {
-                id: data.sender_id,
-                username: 'Đối phương',
-              },
-              sdp: data.sdp,
-              conversationId: activeConversation.id,
-            })
-          } else {
-            // Chuyển tiếp ngay lập tức đến listener của CallModal mà không bị nuốt gói do React state batching
-            callSignalListenersRef.current.forEach((listener) => {
-              try {
-                listener(data)
-              } catch (err) {
-                console.error('Call signal listener error:', err)
-              }
-            })
+          // Tín hiệu cuộc gọi WebRTC đã được CallContext xử lý tập trung toàn cục
+          if (data.type === 'call:end' || data.type === 'call:reject') {
+            setTimeout(() => {
+              getMessages(activeConversation.id)
+                .then((history) => {
+                  if (history) setMessages(history)
+                })
+                .catch(() => {})
+            }, 500)
           }
         } else if (data.type === 'error') {
           setToastMessage(data.message || 'Lỗi gửi tin nhắn')
@@ -498,45 +480,17 @@ export default function Messages() {
     setToastMessage(msg)
   }
 
-  // 7. Bắt đầu cuộc gọi (Voice / Video Call)
+  // 7. Bắt đầu cuộc gọi (Voice / Video Call qua CallContext toàn cục)
   const handleStartCall = (callType) => {
     if (activeConversation?.is_blocked) {
       setToastMessage('Cuộc hội thoại này đã bị chặn. Không thể thực hiện cuộc gọi.')
       return
     }
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setToastMessage('Đang kết nối lại tới máy chủ chat. Vui lòng thử lại sau giây lát!')
+    if (!activeConversation?.partner || !activeConversation?.id) {
+      setToastMessage('Vui lòng chọn một cuộc trò chuyện để bắt đầu cuộc gọi.')
       return
     }
-    setCallSession({
-      mode: 'outgoing',
-      callType,
-      partner: activeConversation.partner,
-      conversationId: activeConversation.id,
-    })
-  }
-
-  // 8. Gửi tín hiệu WebRTC qua WebSocket
-  const handleSendCallSignal = (payload) => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(payload))
-    }
-  }
-
-  // 9. Kết thúc phiên gọi
-  const handleEndCallSession = () => {
-    setCallSession(null)
-    callSessionRef.current = null
-    // Tải lại lịch sử tin nhắn để cả 2 bên cập nhật ngay dòng tin nhắn cuộc gọi
-    if (activeConversation?.id) {
-      setTimeout(() => {
-        getMessages(activeConversation.id)
-          .then((history) => {
-            if (history) setMessages(history)
-          })
-          .catch(() => {})
-      }, 400)
-    }
+    startCall(activeConversation.partner, activeConversation.id, callType)
   }
 
   // Xử lý bấm phím: Enter gửi, Shift+Enter xuống dòng
@@ -1539,15 +1493,6 @@ export default function Messages() {
         />
       )}
 
-      {/* Modal Cuộc gọi thoại / Video WebRTC */}
-      {callSession && (
-        <CallModal
-          callSession={callSession}
-          onEndCall={handleEndCallSession}
-          onSendSignal={handleSendCallSignal}
-          onRegisterSignalListener={registerCallSignalListener}
-        />
-      )}
 
       {/* Modal Xem Hồ Sơ Người Dùng */}
       {partnerProfileModal && (
