@@ -12,6 +12,7 @@ import {
 } from '../services/chatService'
 import { reportService } from '../services/reportService'
 import { markConversationNotificationsAsRead } from '../services/notificationService'
+import { getPublicProfile } from '../services/profileService'
 import CallModal from '../components/CallModal'
 
 function formatTimeAgo(dateString) {
@@ -59,6 +60,11 @@ export default function Messages() {
   const [unblocking, setUnblocking] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
+  // Trạng thái xem hồ sơ đối phương
+  const [partnerProfileModal, setPartnerProfileModal] = useState(null)
+  const [loadingPartnerProfile, setLoadingPartnerProfile] = useState(false)
+  const [isHoveringPartner, setIsHoveringPartner] = useState(false)
+
   // Trạng thái cuộc gọi WebRTC (Voice / Video Call)
   const [callSession, setCallSession] = useState(null)
   const callSessionRef = useRef(null)
@@ -84,6 +90,52 @@ export default function Messages() {
       return () => window.removeEventListener('click', handleClickOutside)
     }
   }, [showChatMenu])
+
+  // Xem thông tin chi tiết hồ sơ đối phương
+  const handleOpenPartnerProfile = async () => {
+    if (!activeConversation?.partner) return
+    const partner = activeConversation.partner
+    setPartnerProfileModal({
+      ...partner,
+      bio: partner.bio || '',
+      age_group: partner.age_group || '',
+      current_status: partner.current_status || '',
+      story: partner.story || '',
+      interests: partner.interests || [],
+    })
+    setLoadingPartnerProfile(true)
+    try {
+      const fullProfile = await getPublicProfile(partner.id)
+      if (fullProfile) {
+        setPartnerProfileModal((prev) => ({
+          ...prev,
+          ...fullProfile,
+          display_name: fullProfile.display_name || prev?.display_name,
+          avatar_url: fullProfile.avatar_url || prev?.avatar_url,
+          bio: fullProfile.bio || prev?.bio,
+          age_group: fullProfile.age_group || prev?.age_group,
+          current_status: fullProfile.current_status || prev?.current_status,
+          story: fullProfile.story || prev?.story,
+          interests: fullProfile.interests || prev?.interests,
+        }))
+      }
+    } catch (err) {
+      console.warn('Không thể tải profile chi tiết:', err)
+    } finally {
+      setLoadingPartnerProfile(false)
+    }
+  }
+
+  // Đóng modal profile khi bấm phím Escape
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape') setPartnerProfileModal(null)
+    }
+    if (partnerProfileModal) {
+      window.addEventListener('keydown', handleEscKey)
+    }
+    return () => window.removeEventListener('keydown', handleEscKey)
+  }, [partnerProfileModal])
 
   // Hỗ trợ responsive cho mobile
   const [isMobile, setIsMobile] = useState(
@@ -502,20 +554,30 @@ export default function Messages() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden',
+        backgroundColor: '#f8f7ff',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Navbar />
 
       <div
         style={{
           flex: 1,
+          minHeight: 0,
           maxWidth: '1200px',
           width: '100%',
           margin: '0 auto',
-          padding: '20px 16px',
+          padding: '16px 16px 20px',
           display: 'flex',
           gap: '20px',
-          height: 'calc(100vh - 84px)',
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
         {/* ========================================================= */}
@@ -524,6 +586,8 @@ export default function Messages() {
         <div
           style={{
             width: isMobile ? '100%' : '340px',
+            height: '100%',
+            minHeight: 0,
             display: isMobile && activeConversation ? 'none' : 'flex',
             backgroundColor: '#ffffff',
             borderRadius: '20px',
@@ -534,7 +598,7 @@ export default function Messages() {
           }}
         >
           {/* Header cột trái */}
-          <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #f3f4f6' }}>
+          <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
                 Đoạn chat 💬
@@ -577,7 +641,7 @@ export default function Messages() {
           </div>
 
           {/* Danh sách hội thoại */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px' }}>
             {loadingConversations ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '14px' }}>
                 Đang tải hội thoại...
@@ -733,6 +797,8 @@ export default function Messages() {
         <div
           style={{
             flex: 1,
+            height: '100%',
+            minHeight: 0,
             width: isMobile ? '100%' : 'auto',
             display: isMobile && !activeConversation ? 'none' : 'flex',
             backgroundColor: '#ffffff',
@@ -754,6 +820,7 @@ export default function Messages() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   backgroundColor: '#ffffff',
+                  flexShrink: 0,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -779,74 +846,121 @@ export default function Messages() {
                       ←
                     </button>
                   )}
-                  <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
-                    <img
-                      src={
-                        activeConversation.partner.avatar_url ||
-                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                          activeConversation.partner.username
-                        )}`
-                      }
-                      alt={activeConversation.partner.display_name || activeConversation.partner.username}
-                      style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        border: '2px solid #7c5cbf',
-                        backgroundColor: '#f5f0ff',
-                      }}
-                    />
-                    <span
-                      style={{
-                        position: 'absolute',
-                        bottom: '0px',
-                        right: '0px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#d1d5db',
-                        border: '2px solid #ffffff',
-                        boxShadow: activeConversation.partner.is_online ? '0 0 4px rgba(16, 185, 129, 0.4)' : 'none',
-                      }}
-                      title={activeConversation.partner.is_online ? 'Đang hoạt động' : 'Offline'}
-                    />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-                      {activeConversation.partner.display_name || activeConversation.partner.username}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                  {/* Khung thông tin đối phương: hover hoặc nhấp để xem profile */}
+                  <div
+                    onClick={handleOpenPartnerProfile}
+                    onMouseEnter={() => setIsHoveringPartner(true)}
+                    onMouseLeave={() => setIsHoveringPartner(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      transition: 'all 0.15s ease',
+                      backgroundColor: isHoveringPartner ? '#f5f0ff' : 'transparent',
+                    }}
+                    title="Nhấp để xem hồ sơ cá nhân"
+                  >
+                    <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
+                      <img
+                        src={
+                          activeConversation.partner.avatar_url ||
+                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                            activeConversation.partner.username
+                          )}`
+                        }
+                        alt={activeConversation.partner.display_name || activeConversation.partner.username}
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid #7c5cbf',
+                          backgroundColor: '#f5f0ff',
+                          transition: 'transform 0.15s ease',
+                          transform: isHoveringPartner ? 'scale(1.06)' : 'scale(1)',
+                        }}
+                      />
                       <span
                         style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          color: activeConversation.partner.is_online ? '#059669' : '#6b7280',
+                          position: 'absolute',
+                          bottom: '0px',
+                          right: '0px',
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#d1d5db',
+                          border: '2px solid #ffffff',
+                          boxShadow: activeConversation.partner.is_online ? '0 0 4px rgba(16, 185, 129, 0.4)' : 'none',
                         }}
-                      >
+                        title={activeConversation.partner.is_online ? 'Đang hoạt động' : 'Offline'}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            color: isHoveringPartner ? '#7c5cbf' : '#1a1a2e',
+                            margin: 0,
+                            transition: 'color 0.15s ease',
+                          }}
+                        >
+                          {activeConversation.partner.display_name || activeConversation.partner.username}
+                        </h3>
+                        {/* Nút Xem hồ sơ hiển thị trực quan */}
                         <span
                           style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#9ca3af',
-                            display: 'inline-block',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: isHoveringPartner ? '#7c5cbf' : '#ede9fe',
+                            color: isHoveringPartner ? '#ffffff' : '#7c5cbf',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            transition: 'all 0.15s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
                           }}
-                        />
-                        {activeConversation.partner.is_online
-                          ? 'Đang hoạt động'
-                          : activeConversation.partner.last_seen
-                          ? `Hoạt động ${formatTimeAgo(activeConversation.partner.last_seen)}`
-                          : 'Offline'}
-                      </span>
-                      {activeConversation.partner.current_status && (
-                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                          • {activeConversation.partner.current_status}
+                        >
+                          👤 Xem hồ sơ
                         </span>
-                      )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: activeConversation.partner.is_online ? '#059669' : '#6b7280',
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#9ca3af',
+                              display: 'inline-block',
+                            }}
+                          />
+                          {activeConversation.partner.is_online
+                            ? 'Đang hoạt động'
+                            : activeConversation.partner.last_seen
+                            ? `Hoạt động ${formatTimeAgo(activeConversation.partner.last_seen)}`
+                            : 'Offline'}
+                        </span>
+                        {activeConversation.partner.current_status && (
+                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            • {activeConversation.partner.current_status}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -982,6 +1096,34 @@ export default function Messages() {
                         }}
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {/* Xem hồ sơ đối phương */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowChatMenu(false)
+                            handleOpenPartnerProfile()
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            background: 'none',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            color: '#374151',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <span>👤</span>
+                          <span>Xem hồ sơ</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1071,10 +1213,11 @@ export default function Messages() {
                 </div>
               </div>
 
-              {/* Vùng hiển thị tin nhắn (Message stream) */}
+              {/* Vùng hiển thị tin nhắn (Message stream - chỉ cuộn độc lập vùng này) */}
               <div
                 style={{
                   flex: 1,
+                  minHeight: 0,
                   padding: '20px',
                   overflowY: 'auto',
                   backgroundColor: '#faf9fe',
@@ -1216,6 +1359,7 @@ export default function Messages() {
                     justifyContent: 'space-between',
                     gap: '12px',
                     flexWrap: 'wrap',
+                    flexShrink: 0,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#991b1b', fontSize: '13px' }}>
@@ -1257,6 +1401,7 @@ export default function Messages() {
                     display: 'flex',
                     gap: '12px',
                     alignItems: 'center',
+                    flexShrink: 0,
                   }}
                 >
                   <textarea
@@ -1402,6 +1547,307 @@ export default function Messages() {
           onSendSignal={handleSendCallSignal}
           onRegisterSignalListener={registerCallSignalListener}
         />
+      )}
+
+      {/* Modal Xem Hồ Sơ Người Dùng */}
+      {partnerProfileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '16px',
+            animation: 'fadeIn 0.2s ease-in-out',
+          }}
+          onClick={() => setPartnerProfileModal(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '28px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Nút đóng */}
+            <button
+              type="button"
+              onClick={() => setPartnerProfileModal(null)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'none',
+                border: 'none',
+                fontSize: '22px',
+                color: '#9ca3af',
+                cursor: 'pointer',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              title="Đóng (Esc)"
+            >
+              ✕
+            </button>
+
+            {/* Header: Avatar & Tên */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  border: '2px solid #7c5cbf',
+                  backgroundColor: '#f5f0ff',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <img
+                  src={
+                    partnerProfileModal.avatar_url ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                      partnerProfileModal.username
+                    )}`
+                  }
+                  alt={partnerProfileModal.display_name || partnerProfileModal.username}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px 0' }}>
+                  {partnerProfileModal.display_name || partnerProfileModal.username}
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', color: '#6b7280' }}>@{partnerProfileModal.username}</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      backgroundColor: partnerProfileModal.is_online ? '#ecfdf5' : '#f3f4f6',
+                      color: partnerProfileModal.is_online ? '#059669' : '#6b7280',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: partnerProfileModal.is_online ? '#10b981' : '#9ca3af',
+                      }}
+                    />
+                    {partnerProfileModal.is_online ? 'Đang online' : 'Offline'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {loadingPartnerProfile && (
+              <div style={{ fontSize: '12px', color: '#7c5cbf', marginBottom: '12px', fontStyle: 'italic' }}>
+                Đang tải chi tiết hồ sơ...
+              </div>
+            )}
+
+            {/* Thông tin cơ bản: Tuổi & Hoàn cảnh */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {partnerProfileModal.age_group && (
+                <span
+                  style={{
+                    backgroundColor: '#f5f0ff',
+                    color: '#7c5cbf',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  🎂 {partnerProfileModal.age_group}
+                </span>
+              )}
+              {partnerProfileModal.current_status && (
+                <span
+                  style={{
+                    backgroundColor: '#ede9fe',
+                    color: '#6b21a8',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  💼 {partnerProfileModal.current_status}
+                </span>
+              )}
+            </div>
+
+            {/* Giới thiệu bản thân (Bio) */}
+            <div style={{ marginBottom: '18px' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Giới thiệu
+              </h4>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: '#4b5563',
+                  lineHeight: '1.6',
+                  backgroundColor: '#faf9fe',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  margin: 0,
+                }}
+              >
+                {partnerProfileModal.bio || 'Chưa cập nhật tiểu sử giới thiệu.'}
+              </p>
+            </div>
+
+            {/* Câu chuyện cá nhân (Story) nếu có */}
+            {partnerProfileModal.story && (
+              <div style={{ marginBottom: '18px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Câu chuyện chia sẻ
+                </h4>
+                <p
+                  style={{
+                    fontSize: '13.5px',
+                    color: '#4b5563',
+                    lineHeight: '1.6',
+                    backgroundColor: '#f9fafb',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    margin: 0,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  "{partnerProfileModal.story}"
+                </p>
+              </div>
+            )}
+
+            {/* Sở thích / Chủ đề quan tâm */}
+            {Array.isArray(partnerProfileModal.interests) && partnerProfileModal.interests.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Sở thích & Chủ đề
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {partnerProfileModal.interests.map((it, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        fontSize: '12px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#4b5563',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      #{it}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nút hành động */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button
+                type="button"
+                onClick={() => setPartnerProfileModal(null)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '10px',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: '#f9fafb',
+                  color: '#4b5563',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Đóng
+              </button>
+
+              {!activeConversation?.is_blocked && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPartnerProfileModal(null)
+                      handleStartCall('audio')
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid #ede9fe',
+                      backgroundColor: '#f5f0ff',
+                      color: '#7c5cbf',
+                      fontSize: '13.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    📞 Gọi thoại
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPartnerProfileModal(null)
+                      handleStartCall('video')
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: '#7c5cbf',
+                      color: '#ffffff',
+                      fontSize: '13.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
+                    }}
+                  >
+                    📹 Gọi video
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
