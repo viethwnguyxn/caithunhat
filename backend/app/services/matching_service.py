@@ -107,7 +107,16 @@ def get_user_matches(
     current_user: User,
     limit: int = 20,
 ) -> MatchListResponse:
-    """Thuật toán tìm kiếm người phù hợp dựa trên TF-IDF và Cosine Similarity."""
+    """
+    Thuật toán tìm kiếm người phù hợp kết hợp (Hybrid Matching Engine):
+    1. Trọng tâm cốt lõi: TF-IDF Vectorization + Cosine Similarity trên chuỗi văn bản đặc trưng.
+    2. Tinh chỉnh điểm thưởng (Rule-based Bonus):
+       - Cùng nhóm độ tuổi (age_group): +5%
+       - Cùng hoàn cảnh sống (life_situation): +10%
+       - Cùng tình trạng hiện tại (current_status): +5%
+       - Có sở thích / chủ đề chung (common_interests): +5%
+    3. Chuẩn hóa giới hạn điểm tương đồng (Match Score): min(100, max(0, score_percent)).
+    """
     stmt_my_survey = select(SurveyAnswer).where(SurveyAnswer.user_id == current_user.id)
     my_survey = db.execute(stmt_my_survey).scalar_one_or_none()
 
@@ -166,11 +175,25 @@ def get_user_matches(
         cand_profile = candidate_profiles[idx]
         cand_survey = candidate_surveys[idx]
 
-        score_percent = int(round(float(sim_score) * 100))
-        score_percent = max(0, min(100, score_percent))
-
         common_interests = find_common_interests(my_survey, cand_survey)
         reasons = generate_match_reasons(my_survey, cand_survey, common_interests)
+
+        # 1. Điểm cơ sở từ TF-IDF Vectorization & Cosine Similarity (0 - 100%)
+        base_score = int(round(float(sim_score) * 100))
+
+        # 2. Cộng thưởng điểm theo quy tắc thực tế (Rule-based Bonus)
+        bonus_score = 0
+        if my_survey.age_group and my_survey.age_group == cand_survey.age_group:
+            bonus_score += 5   # Cùng nhóm độ tuổi (+5%)
+        if my_survey.life_situation and my_survey.life_situation == cand_survey.life_situation:
+            bonus_score += 10  # Cùng hoàn cảnh sống (+10%)
+        if my_survey.current_status and my_survey.current_status == cand_survey.current_status:
+            bonus_score += 5   # Cùng tình trạng hiện tại (+5%)
+        if common_interests:
+            bonus_score += 5   # Có ít nhất 1 chủ đề hoặc sở thích chung (+5%)
+
+        # 3. Chuẩn hóa tổng điểm tương đồng trong khoảng [0, 100]%
+        final_score = max(0, min(100, base_score + bonus_score))
 
         user_interests = list(dict.fromkeys((cand_survey.topics or []) + (cand_survey.free_time_activities or [])))
 
@@ -187,7 +210,7 @@ def get_user_matches(
                 goals=cand_survey.goals or [],
                 desired_connection_types=cand_survey.desired_connection_types or [],
             ),
-            match_score=score_percent,
+            match_score=final_score,
             common_interests=common_interests,
             match_reasons=reasons,
         )
