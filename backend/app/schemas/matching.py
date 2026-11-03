@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
 class MatchUserResponse(BaseModel):
@@ -25,3 +25,4 @@ class MatchItem(BaseModel):
 
 class MatchListResponse(BaseModel):
     matches: list[MatchItem]
+    has_survey: bool = True
