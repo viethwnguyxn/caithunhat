@@ -58,15 +58,16 @@ if str(engine.url).startswith("sqlite"):
 
 
 def ensure_admin_user():
-    """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại."""
+    """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại (đọc từ biến môi trường)."""
     with SessionLocal() as db:
-        admin_email = "admin@kindred.local"
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@kindred.local")
+        admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")
         admin = db.query(User).filter(User.email == admin_email).first()
         if not admin:
             admin = User(
                 email=admin_email,
                 username="admin",
-                password_hash=hash_password("admin123"),
+                password_hash=hash_password(admin_password),
                 auth_provider="local",
                 role="admin",
                 is_active=True,
@@ -97,21 +98,23 @@ except Exception:
 
 app = FastAPI(title="Community Connection Platform")
 
-import os
-
+# Cấu hình CORS chặt chẽ: Khai báo danh sách origin cụ thể và giới hạn regex
 cors_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://caithunhat.vercel.app",
 ]
 env_cors = os.getenv("CORS_ORIGINS")
 if env_cors:
     cors_origins.extend([o.strip() for o in env_cors.split(",") if o.strip()])
 
-# Cho phép frontend gọi API (hỗ trợ cả localhost và các domain deploy HTTPS như Vercel)
+# Chỉ cho phép các domain được định danh hoặc domain *.vercel.app của dự án (ngăn chặn CSRF / wildcard HTTPS origin)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"^https:\/\/.*$" if not env_cors else None,
+    allow_origin_regex=r"^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

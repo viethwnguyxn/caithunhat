@@ -31,11 +31,8 @@ from app.models.profile import Profile
 from app.models.survey import SurveyAnswer
 from app.models.post import Post, PostLike, PostComment
 
-# Lấy URL từ biến môi trường hoặc tham số truyền vào
-DEFAULT_SUPABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres.aoivkgruiplfipfwrire:Nguyenhuuviet123@aws-0-eu-west-1.pooler.supabase.com:6543/postgres"
-)
+# Lấy URL từ biến môi trường (bảo mật tuyệt đối, không hard-code thông tin database thật)
+DEFAULT_DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Danh sách người dùng mẫu chất lượng cao
 SAMPLE_USERS = [
@@ -372,17 +369,19 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         arg = sys.argv[1].strip()
         if arg in ["--supabase", "-s"]:
-            target_url = DEFAULT_SUPABASE_URL
+            target_url = os.getenv("DATABASE_URL")
+            if not target_url or target_url.startswith("sqlite"):
+                print("❌ Lỗi: Khi dùng cờ --supabase, bạn phải cấu hình DATABASE_URL (PostgreSQL) trong file .env hoặc biến môi trường!")
+                sys.exit(1)
         elif arg in ["--local", "-l"]:
             target_url = "sqlite:///./community.db"
         elif arg.startswith("postgresql://") or arg.startswith("sqlite://"):
             target_url = arg
 
     if not target_url:
-        # Mặc định ưu tiên Supabase nếu có trong biến môi trường hoặc script
         target_url = os.getenv("DATABASE_URL")
-        if not target_url or target_url.startswith("sqlite"):
-            target_url = DEFAULT_SUPABASE_URL
+        if not target_url:
+            target_url = "sqlite:///./community.db"
 
     seed_database(target_url)
 

@@ -1,4 +1,4 @@
-﻿import re
+import re
 import uuid
 from fastapi import HTTPException, status
 from google.auth.transport import requests
@@ -87,18 +87,25 @@ def authenticate_user(db: Session, account: str, password: str) -> User:
 
 
 def verify_google_token(token_str: str) -> dict:
-    """Xác thực Google ID Token với Google API."""
+    """Xác thực Google ID Token với Google API (Bắt buộc kiểm tra chính xác audience client_id)."""
+    client_id = (GOOGLE_CLIENT_ID or "").strip()
+    if not client_id or client_id.startswith("your_"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Máy chủ chưa được cấu hình GOOGLE_CLIENT_ID hợp lệ. Vui lòng cấu hình biến môi trường trên Render/Server.",
+        )
+
     try:
         req = requests.Request()
-        # Nếu đã cấu hình GOOGLE_CLIENT_ID thì verify kèm audience
-        aud = GOOGLE_CLIENT_ID.strip() if GOOGLE_CLIENT_ID and not GOOGLE_CLIENT_ID.startswith("your_") else None
-        id_info = id_token.verify_oauth2_token(token_str, req, audience=aud)
+        id_info = id_token.verify_oauth2_token(token_str, req, audience=client_id)
 
         # Đảm bảo issuer từ Google
         if id_info.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
             raise ValueError("Token không phải từ Google")
 
         return id_info
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
