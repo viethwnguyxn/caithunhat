@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
@@ -8,6 +8,7 @@ import {
   sendConnectionRequest,
   getMyConnections,
   getConnectionRequests,
+  acceptConnection,
 } from '../services/connectionService'
 
 const AGE_FILTER_OPTIONS = [
@@ -37,13 +38,17 @@ const CONNECTION_TYPE_OPTIONS = [
 ]
 
 function Discover() {
+  const navigate = useNavigate()
   const [matches, setMatches] = useState([])
+  const [hasSurvey, setHasSurvey] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   // Trạng thái kết nối: { [userId]: 'accepted' | 'pending_sent' | 'pending_received' }
   const [connectionStatuses, setConnectionStatuses] = useState({})
+  const [incomingRequestMap, setIncomingRequestMap] = useState({}) // { [senderUserId]: connectionId }
   const [sendingConnectId, setSendingConnectId] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
 
   // Bộ lọc
   const [selectedAge, setSelectedAge] = useState('Tất cả độ tuổi')
@@ -79,9 +84,11 @@ function Discover() {
         getConnectionRequests().catch(() => ({ incoming: [], outgoing: [] })),
       ])
       setMatches(data.matches || [])
+      setHasSurvey(data.has_survey !== false)
 
-      // Tạo map trạng thái kết nối
+      // Tạo map trạng thái kết nối và map connectionId để chấp nhận tức thì
       const statusMap = {}
+      const reqMap = {}
       conns.forEach((c) => {
         statusMap[c.user.id] = 'accepted'
       })
@@ -90,8 +97,10 @@ function Discover() {
       })
       reqs.incoming?.forEach((r) => {
         statusMap[r.user.id] = 'pending_received'
+        reqMap[r.user.id] = r.id // Lưu ID connection để bấm Chấp nhận ngay lập tức trên thẻ
       })
       setConnectionStatuses(statusMap)
+      setIncomingRequestMap(reqMap)
     } catch (err) {
       console.error('Lỗi khi tải matches:', err)
       setError(
@@ -177,6 +186,31 @@ function Discover() {
       alert(err.response?.data?.detail || 'Không thể gửi lời mời kết nối. Vui lòng thử lại.')
     } finally {
       setSendingConnectId(null)
+    }
+  }
+
+  // Chấp nhận lời mời kết nối trực tiếp ngay trên thẻ hoặc trong modal
+  const handleAcceptClick = async (targetUser) => {
+    const connId = incomingRequestMap[targetUser.id]
+    if (!connId) {
+      navigate('/connections?tab=received')
+      return
+    }
+
+    setActionLoadingId(targetUser.id)
+    try {
+      await acceptConnection(connId)
+      setConnectionStatuses((prev) => ({
+        ...prev,
+        [targetUser.id]: 'accepted',
+      }))
+      setConnectToast(`Đã đồng ý kết bạn với ${targetUser.display_name || targetUser.username}! 🎉 Giờ hai bạn đã có thể nhắn tin.`)
+      setTimeout(() => setConnectToast(''), 4500)
+    } catch (err) {
+      console.error('Lỗi khi chấp nhận kết nối:', err)
+      alert(err.response?.data?.detail || 'Không thể chấp nhận lời mời. Vui lòng thử lại.')
+    } finally {
+      setActionLoadingId(null)
     }
   }
 
@@ -363,8 +397,51 @@ function Discover() {
           </div>
         )}
 
-        {/* 3. TRẠNG THÁI: EMPTY */}
-        {!loading && !error && filteredMatches.length === 0 && (
+        {/* 3a. TRẠNG THÁI: CHƯA HOÀN THÀNH KHẢO SÁT (GỢI Ý LÀM KHẢO SÁT) */}
+        {!loading && !error && !hasSurvey && (
+          <div
+            className="card"
+            style={{
+              maxWidth: '580px',
+              margin: '30px auto',
+              textAlign: 'center',
+              padding: '40px 32px',
+              border: '2px dashed #c084fc',
+              backgroundColor: '#faf5ff',
+              borderRadius: '20px',
+              boxShadow: '0 8px 30px rgba(124, 92, 191, 0.08)',
+            }}
+          >
+            <div style={{ fontSize: '52px', marginBottom: '16px' }}>📝</div>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', marginBottom: '10px' }}>
+              Bạn chưa làm khảo sát Onboarding
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
+              Kindred sử dụng thuật toán TF-IDF & Cosine Similarity để phân tích sở thích, mục tiêu và hoàn cảnh của bạn nhằm gợi ý những người bạn đồng điệu nhất.
+              <br />
+              Hãy dành 1–2 phút hoàn thành bài khảo sát ngắn để mở khóa danh sách gợi ý kết đôi nhé!
+            </p>
+            <Link to="/survey">
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  padding: '12px 30px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 14px rgba(124, 92, 191, 0.4)',
+                  cursor: 'pointer',
+                  borderRadius: '12px',
+                }}
+              >
+                Làm khảo sát ngay 🚀
+              </button>
+            </Link>
+          </div>
+        )}
+
+        {/* 3b. TRẠNG THÁI: EMPTY (ĐÃ LÀM KHẢO SÁT NHƯNG CHƯA CÓ AI KHỚP) */}
+        {!loading && !error && hasSurvey && filteredMatches.length === 0 && (
           <div className="card" style={{ maxWidth: '540px', margin: '40px auto', textAlign: 'center' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
             <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
@@ -372,7 +449,7 @@ function Discover() {
             </h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
               {matches.length === 0
-                ? 'Hiện chưa có đủ người dùng hoàn thành khảo sát để gợi ý kết đôi. Hãy mời thêm bạn bè tham gia nhé!'
+                ? 'Hiện chưa có thêm người dùng mới hoàn thành khảo sát để gợi ý kết đôi. Hãy mời thêm bạn bè cùng tham gia nhé!'
                 : 'Không có ai khớp với các tiêu chí lọc hiện tại. Thử nới lỏng hoặc xóa bộ lọc xem sao!'}
             </p>
             {matches.length > 0 && (
@@ -595,9 +672,9 @@ function Discover() {
                     </button>
 
                     {connectionStatuses[u.id] === 'accepted' ? (
-                      <button
-                        type="button"
-                        disabled
+                      <Link
+                        to="/messages"
+                        state={{ userId: u.id }}
                         style={{
                           flex: 1,
                           padding: '10px',
@@ -607,11 +684,16 @@ function Discover() {
                           backgroundColor: '#ecfdf5',
                           color: '#059669',
                           fontWeight: 600,
-                          cursor: 'default',
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
                         }}
                       >
-                        ✓ Bạn bè
-                      </button>
+                        💬 Nhắn tin
+                      </Link>
                     ) : connectionStatuses[u.id] === 'pending_sent' ? (
                       <button
                         type="button"
@@ -631,26 +713,50 @@ function Discover() {
                         ⏳ Đang chờ
                       </button>
                     ) : connectionStatuses[u.id] === 'pending_received' ? (
-                      <Link
-                        to="/connections"
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          fontSize: '13px',
-                          borderRadius: '8px',
-                          border: '1px solid #ddd6fe',
-                          backgroundColor: '#f5f0ff',
-                          color: '#7c5cbf',
-                          fontWeight: 600,
-                          textAlign: 'center',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        📬 Nhận lời mời
-                      </Link>
+                      <div style={{ flex: 1, display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === u.id}
+                          onClick={() => handleAcceptClick(u)}
+                          style={{
+                            flex: 1,
+                            padding: '10px 8px',
+                            fontSize: '13px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: '#10b981',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            cursor: actionLoadingId === u.id ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                          }}
+                        >
+                          {actionLoadingId === u.id ? 'Đang nhận...' : '🤝 Đồng ý'}
+                        </button>
+                        <Link
+                          to="/connections?tab=received"
+                          style={{
+                            padding: '10px 10px',
+                            fontSize: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #ddd6fe',
+                            backgroundColor: '#f5f0ff',
+                            color: '#7c5cbf',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Xem chi tiết lời mời trong trang Kết nối"
+                        >
+                          Xem ↗
+                        </Link>
+                      </div>
                     ) : (
                       <button
                         type="button"
@@ -856,9 +962,9 @@ function Discover() {
               </button>
 
               {connectionStatuses[selectedUserForProfile.user.id] === 'accepted' ? (
-                <button
-                  type="button"
-                  disabled
+                <Link
+                  to="/messages"
+                  state={{ userId: selectedUserForProfile.user.id }}
                   style={{
                     flex: 1,
                     padding: '12px',
@@ -866,12 +972,17 @@ function Discover() {
                     border: '1px solid #a7f3d0',
                     backgroundColor: '#ecfdf5',
                     color: '#059669',
-                    fontWeight: 600,
-                    cursor: 'default',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
                   }}
                 >
-                  ✓ Đã kết nối bạn bè
-                </button>
+                  💬 Nhắn tin
+                </Link>
               ) : connectionStatuses[selectedUserForProfile.user.id] === 'pending_sent' ? (
                 <button
                   type="button"
@@ -890,25 +1001,47 @@ function Discover() {
                   ⏳ Đang chờ phản hồi
                 </button>
               ) : connectionStatuses[selectedUserForProfile.user.id] === 'pending_received' ? (
-                <Link
-                  to="/connections"
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #ddd6fe',
-                    backgroundColor: '#f5f0ff',
-                    color: '#7c5cbf',
-                    fontWeight: 600,
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  📬 Trả lời lời mời
-                </Link>
+                <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    disabled={actionLoadingId === selectedUserForProfile.user.id}
+                    onClick={() => handleAcceptClick(selectedUserForProfile.user)}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: '#10b981',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      cursor: actionLoadingId === selectedUserForProfile.user.id ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    {actionLoadingId === selectedUserForProfile.user.id ? 'Đang nhận...' : '🤝 Đồng ý kết nối'}
+                  </button>
+                  <Link
+                    to="/connections?tab=received"
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd6fe',
+                      backgroundColor: '#f5f0ff',
+                      color: '#7c5cbf',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    Xem lời mời ↗
+                  </Link>
+                </div>
               ) : (
                 <button
                   type="button"
