@@ -68,8 +68,8 @@ flowchart TD
         MatchingAlgo[TF-IDF + Cosine Similarity Engine]
     end
 
-    subgraph Storage [SQLite Database]
-        DB[(community.db)]
+    subgraph Storage [Supabase PostgreSQL]
+        DB[(PostgreSQL — Supabase Cloud)]
     end
 
     UI --> AxiosClient
@@ -93,9 +93,10 @@ flowchart TD
 | **Frontend** | React 18, Vite | JavaScript, React Router DOM, Context API, CSS Tokens (Không Redux, không UI framework nặng) |
 | **Backend** | Python 3.10+, FastAPI | Pydantic v2, SQLAlchemy 2.0 ORM, Uvicorn |
 | **Matching / ML** | Scikit-learn | TF-IDF Vectorizer, Cosine Similarity (Không Deep Learning, không LLM) |
-| **Database** | SQLite | `community.db` lưu trữ quan hệ chuẩn hóa |
+| **Database** | PostgreSQL (Supabase) | Supabase Cloud PostgreSQL, kết nối qua `DATABASE_URL`, NullPool + pool_pre_ping cho production |
 | **Authentication**| JWT, Bcrypt, Google Auth | `pyjwt`, `bcrypt`, `google-auth` |
 | **Realtime** | Native WebSocket | Giao thức WebSocket 1-1, tự động theo dõi online/offline |
+| **Deploy** | Render + Supabase + Vercel | Backend API trên Render, Database trên Supabase, Frontend trên Vercel |
 
 ---
 
@@ -106,7 +107,7 @@ chat/
 ├── backend/
 │   ├── app/
 │   │   ├── core/           # Cấu hình JWT, bảo mật, hash mật khẩu
-│   │   ├── db/             # Kết nối SQLAlchemy engine, Base, SessionLocal
+│   │   ├── db/             # Kết nối SQLAlchemy engine, Base, SessionLocal (NullPool + pool_pre_ping cho Supabase)
 │   │   ├── models/         # SQLAlchemy ORM models (User, Profile, Survey, Connection, Chat, Notification)
 │   │   ├── schemas/        # Pydantic schemas request/response
 │   │   ├── services/       # Business logic (User, Profile, Survey, Matching, Connection, Chat, Notification)
@@ -117,7 +118,7 @@ chat/
 │   ├── .env                # Biến môi trường backend
 │   ├── .env.example        # Mẫu biến môi trường
 │   ├── requirements.txt    # Thư viện Python
-│   └── community.db        # Cơ sở dữ liệu SQLite
+│   └── community.db        # Cơ sở dữ liệu SQLite (chỉ dùng local — production dùng Supabase PostgreSQL)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # Navbar, NotificationBell, ProtectedRoute, GoogleLoginButton
@@ -165,11 +166,17 @@ copy .env.example .env   # Trên Windows
 
 ### 6.3 Cấu hình Biến môi trường (`backend/.env`)
 ```env
+# Local Development (SQLite)
 DATABASE_URL=sqlite:///./community.db
+
+# Production (Supabase PostgreSQL) — chỉ set trên Render, không commit vào git
+# DATABASE_URL=postgresql://user:password@host:5432/dbname
+
 JWT_SECRET_KEY=your_secure_random_secret_key_here
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
+CORS_ORIGINS=https://your-app.vercel.app
 ```
 
 ### 6.4 Cài đặt Frontend
@@ -285,4 +292,35 @@ Tại thư mục `frontend`:
 npm run build
 ```
 Đóng gói hoàn tất thành công trong `dist/` sạch sẽ, không có cảnh báo hay lỗi cú pháp.
+
+---
+
+## 12. Production Deployment (Triển khai Production)
+
+Dự án được triển khai trên 3 nền tảng:
+
+| Thành phần | Nền tảng | Ghi chú |
+| :--- | :--- | :--- |
+| **Frontend** | [Vercel](https://vercel.com) | Auto-deploy từ git, build Vite `dist/` |
+| **Backend API** | [Render](https://render.com) | Web Service, Python runtime, free tier |
+| **Database** | [Supabase](https://supabase.com) | PostgreSQL cloud, free tier |
+
+### 12.1 Biến môi trường cần set trên Render
+
+| Biến | Mô tả |
+| :--- | :--- |
+| `DATABASE_URL` | Connection string Supabase (`postgresql://...`) |
+| `JWT_SECRET_KEY` | Chuỗi ngẫu nhiên bảo mật, tối thiểu 32 ký tự |
+| `JWT_ALGORITHM` | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` |
+| `GOOGLE_CLIENT_ID` | OAuth Client ID từ Google Cloud Console |
+| `CORS_ORIGINS` | Domain Vercel của frontend (vd: `https://kindred.vercel.app`) |
+
+### 12.2 Start Command trên Render
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+> **Lưu ý:** Giữ **1 instance** trên Render (mặc định free tier) để WebSocket ConnectionManager hoạt động đúng. WebSocket state được lưu trong bộ nhớ — nếu scale nhiều instance sẽ cần Redis.
 

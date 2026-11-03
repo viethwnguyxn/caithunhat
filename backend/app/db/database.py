@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from ..core.config import DATABASE_URL
 
@@ -8,15 +9,29 @@ if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 connect_args = {}
+is_postgres = db_url.startswith("postgresql")
+
 if db_url.startswith("sqlite"):
     # check_same_thread=False bắt buộc với SQLite khi dùng FastAPI
     # vì FastAPI xử lý request trên nhiều thread khác nhau
     connect_args["check_same_thread"] = False
 
-engine = create_engine(
-    db_url,
-    connect_args=connect_args,
-)
+if is_postgres:
+    # NullPool: không giữ connection sau khi dùng xong — phù hợp với Supabase
+    # vì Supabase giới hạn số connection đồng thời (free tier: ~20 connections)
+    # pool_pre_ping: tự kiểm tra connection còn sống trước khi dùng
+    # tránh lỗi "connection closed" sau 10 phút nhàn rỗi của Supabase
+    engine = create_engine(
+        db_url,
+        connect_args=connect_args,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+    )
+else:
+    engine = create_engine(
+        db_url,
+        connect_args=connect_args,
+    )
 
 # Session factory — mỗi request sẽ tạo một session riêng
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
