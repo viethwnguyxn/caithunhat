@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
@@ -12,7 +12,23 @@ import {
 
 export default function Connections() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('connections') // 'connections' | 'received' | 'sent'
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const initialTab = searchParams.get('tab') || location.state?.tab
+  const [activeTab, setActiveTab] = useState(
+    initialTab === 'received' || initialTab === 'sent' || initialTab === 'connections'
+      ? initialTab
+      : 'connections'
+  ) // 'connections' | 'received' | 'sent'
+
+  // Đồng bộ activeTab khi query param trên URL thay đổi (ví dụ điều hướng từ /discover sang ?tab=received)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const tab = params.get('tab') || location.state?.tab
+    if (tab && (tab === 'received' || tab === 'sent' || tab === 'connections')) {
+      setActiveTab(tab)
+    }
+  }, [location.search, location.state])
   const [connections, setConnections] = useState([])
   const [receivedRequests, setReceivedRequests] = useState([])
   const [sentRequests, setSentRequests] = useState([])

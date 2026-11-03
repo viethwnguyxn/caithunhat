@@ -112,7 +112,7 @@ def get_user_matches(
     my_survey = db.execute(stmt_my_survey).scalar_one_or_none()
 
     if not my_survey:
-        return MatchListResponse(matches=[])
+        return MatchListResponse(matches=[], has_survey=False)
 
     stmt_my_profile = select(Profile).where(Profile.user_id == current_user.id)
     my_profile = db.execute(stmt_my_profile).scalar_one_or_none()
@@ -139,7 +139,7 @@ def get_user_matches(
     results = db.execute(stmt_others).all()
 
     if not results:
-        return MatchListResponse(matches=[])
+        return MatchListResponse(matches=[], has_survey=True)
 
     candidate_users: list[User] = []
     candidate_profiles: list[Profile | None] = []
@@ -194,4 +194,4 @@ def get_user_matches(
         matches.append(match_item)
 
     matches.sort(key=lambda item: item.match_score, reverse=True)
-    return MatchListResponse(matches=matches[:limit])
+    return MatchListResponse(matches=matches[:limit], has_survey=True)
