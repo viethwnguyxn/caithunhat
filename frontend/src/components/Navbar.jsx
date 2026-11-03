@@ -8,200 +8,179 @@ export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  const handleSearchSubmit = (e) => {
+    if (e.key === 'Enter' && searchKeyword.trim()) {
+      navigate(`/discover?search=${encodeURIComponent(searchKeyword.trim())}`)
+    }
+  }
+
   const isActive = (path) => location.pathname === path
 
   const navItems = [
-    { path: '/home', label: 'Trang chủ', icon: '🏠' },
-    { path: '/discover', label: 'Khám phá', icon: '✨' },
-    { path: '/communities', label: 'Cộng đồng', icon: '🌟' },
-    { path: '/connections', label: 'Kết nối', icon: '🤝' },
-    { path: '/messages', label: 'Tin nhắn', icon: '💬' },
-    { path: '/profile', label: 'Hồ sơ', icon: '👤' },
-    ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Quản trị', icon: '⚙️' }] : []),
+    { path: '/discover', label: 'Discover', icon: 'explore' },
+    { path: '/communities', label: 'Community', icon: 'groups' },
+    { path: '/messages', label: 'Tin nhắn', icon: 'chat' },
+    { path: '/connections', label: 'Kết nối', icon: 'handshake' },
+    ...(user?.role === 'admin'
+      ? [{ path: '/admin', label: 'Quản trị', icon: 'admin_panel_settings' }]
+      : []),
   ]
 
+  const userAvatar =
+    user?.avatar_url ||
+    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
+
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        backgroundColor: 'rgba(255, 255, 255, 0.92)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        borderBottom: '1px solid #ede9fe',
-        boxShadow: '0 2px 10px rgba(124, 92, 191, 0.04)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 20px',
-          height: '64px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Logo */}
-        <Link
-          to="/home"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: 800,
-            fontSize: '20px',
-            color: '#7c5cbf',
-            letterSpacing: '-0.5px',
-          }}
-        >
-          <span
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-            }}
-          >
-            ◎
-          </span>
-          <span>Kindred</span>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#08090a]/90 backdrop-blur-xl border-b border-[#1a232e]">
+      <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+        {/* Brand Logo */}
+        <Link to="/discover" className="flex items-center gap-3 shrink-0 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10b981] to-[#00ff88] flex items-center justify-center text-[#08090a] font-extrabold text-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] group-hover:scale-105 transition-transform">
+            ⚡
+          </div>
+          <div className="flex flex-col">
+            <span className="font-extrabold text-xl text-[#00ff88] tracking-tight leading-none drop-shadow-[0_0_10px_rgba(0,255,136,0.5)]">
+              lapulga
+            </span>
+            <span className="text-[11px] text-[#849585] hidden sm:block tracking-wide">
+              Find people who understand you
+            </span>
+          </div>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* 4 Main Navigation Links (Desktop) */}
+        <nav className="hidden md:flex items-center gap-1 bg-[#0d1117] p-1 rounded-xl border border-[#1a232e]">
           {navItems.map((item) => {
             const active = isActive(item.path)
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '10px',
-                  fontSize: '13.5px',
-                  fontWeight: active ? 700 : 500,
-                  color: active ? '#7c5cbf' : '#4b5563',
-                  backgroundColor: active ? '#f5f0ff' : 'transparent',
-                  border: active ? '1px solid #ede9fe' : '1px solid transparent',
-                  transition: 'all 0.15s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
+                className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                  active
+                    ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shadow-[0_0_12px_rgba(0,255,136,0.25)]'
+                    : 'text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c]'
+                }`}
               >
-                <span>{item.icon}</span>
+                <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
-        {/* Right Actions: Notification Bell + User info (Desktop) / Hamburger (Mobile) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <NotificationBell />
-
-          {/* Desktop User Info & Logout */}
-          <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f5f0ff',
-                  border: '1.5px solid #7c5cbf',
-                  color: '#7c5cbf',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {(user?.username || '?')[0].toUpperCase()}
-              </span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                @{user?.username}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid #fee2e2',
-                backgroundColor: '#fff5f5',
-                color: '#ef4444',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#fecaca'
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff5f5'
-              }}
-            >
-              Đăng xuất
-            </button>
+        {/* Right Actions: Search + Notification Bell + Profile */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Quick Search */}
+          <div className="relative hidden lg:flex items-center">
+            <span className="material-symbols-outlined absolute left-3 text-[#64748b] text-[18px] pointer-events-none">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={handleSearchSubmit}
+              placeholder="Tìm bạn bè, sở thích..."
+              className="w-56 xl:w-64 h-9 pl-9 pr-3 rounded-xl bg-[#0d1117] border border-[#1a232e] text-[#f8fafc] placeholder:text-[#64748b] text-xs focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] focus:shadow-[0_0_10px_rgba(0,255,136,0.2)] transition-all"
+            />
           </div>
 
-          {/* Mobile Hamburger Toggle Button */}
+          {/* Notification Bell */}
+          <NotificationBell />
+
+          {/* User Profile Avatar with dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center gap-2 p-1 rounded-full border border-[#1a232e] hover:border-[#00ff88]/50 transition-all focus:outline-none"
+              title="Tài khoản cá nhân"
+            >
+              <div className="relative">
+                <img
+                  src={userAvatar}
+                  alt={user?.username || 'Avatar'}
+                  className="w-8 h-8 rounded-full object-cover border border-[#00ff88]/40"
+                  onError={(e) => {
+                    e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=user`
+                  }}
+                />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] border-2 border-[#08090a] shadow-[0_0_6px_#00ff88]" />
+              </div>
+            </button>
+
+            {/* Profile Menu Dropdown */}
+            {profileDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setProfileDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#11151c] border border-[#1a232e] shadow-[0_10px_30px_rgba(0,0,0,0.7)] p-2 z-50 animate-fadeIn">
+                  <div className="px-3 py-2 border-b border-[#1a232e] mb-1">
+                    <p className="text-sm font-bold text-[#f8fafc] truncate">
+                      {user?.display_name || user?.username}
+                    </p>
+                    <p className="text-xs text-[#10b981] truncate">@{user?.username}</p>
+                  </div>
+
+                  <Link
+                    to="/profile"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#161c26] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">account_circle</span>
+                    Hồ sơ cá nhân
+                  </Link>
+
+                  <Link
+                    to="/survey"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#161c26] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">quiz</span>
+                    Khảo sát đồng điệu
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      setProfileDropdownOpen(false)
+                      handleLogout()
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 border-t border-[#1a232e] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">logout</span>
+                    Đăng xuất
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
           <button
-            type="button"
-            className="nav-mobile-btn"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              background: '#f5f0ff',
-              border: '1px solid #ede9fe',
-              color: '#7c5cbf',
-              borderRadius: '10px',
-              padding: '8px 12px',
-              fontSize: '18px',
-              cursor: 'pointer',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Toggle Navigation Menu"
+            className="md:hidden p-2 rounded-xl text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c] border border-[#1a232e] transition-all"
+            aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? '✕' : '☰'}
+            <span className="material-symbols-outlined text-[20px]">
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div
-          className="nav-mobile-drawer"
-          style={{
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #ede9fe',
-            padding: '16px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-            animation: 'fadeIn 0.2s ease-in-out',
-          }}
-        >
+        <div className="md:hidden bg-[#0d1117] border-b border-[#1a232e] px-4 py-3 flex flex-col gap-1.5 shadow-2xl animate-fadeIn">
           {navItems.map((item) => {
             const active = isActive(item.path)
             return (
@@ -209,50 +188,29 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: active ? 700 : 500,
-                  color: active ? '#7c5cbf' : '#374151',
-                  backgroundColor: active ? '#f5f0ff' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
+                className={`px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2.5 transition-all ${
+                  active
+                    ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shadow-[0_0_10px_rgba(0,255,136,0.2)]'
+                    : 'text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c]'
+                }`}
               >
-                <span>{item.icon}</span>
+                <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             )
           })}
 
-          <div
-            style={{
-              borderTop: '1px solid #f3f4f6',
-              paddingTop: '12px',
-              marginTop: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>
-              Đăng nhập với @{user?.username}
-            </span>
+          <div className="pt-2 mt-1 border-t border-[#1a232e] flex items-center justify-between">
+            <Link
+              to="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-xs text-[#00ff88] font-semibold"
+            >
+              Hồ sơ: @{user?.username}
+            </Link>
             <button
-              type="button"
               onClick={handleLogout}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: '1px solid #fecaca',
-                backgroundColor: '#fff5f5',
-                color: '#ef4444',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="px-3 py-1 text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg hover:bg-red-500/20"
             >
               Đăng xuất
             </button>

@@ -31,13 +31,13 @@ const STATUS_FILTER_OPTIONS = [
 ]
 
 const CONNECTION_TYPE_OPTIONS = [
-  'Tất cả kiểu kết nối',
+  'Tất cả mục tiêu',
   'Kết nối bạn bè 1-1',
   'Nhóm bạn nhỏ cùng chung mục tiêu',
   'Người đồng hành học tập/công việc',
 ]
 
-function Discover() {
+export default function Discover() {
   const navigate = useNavigate()
   const [matches, setMatches] = useState([])
   const [hasSurvey, setHasSurvey] = useState(true)
@@ -46,23 +46,28 @@ function Discover() {
 
   // Trạng thái kết nối: { [userId]: 'accepted' | 'pending_sent' | 'pending_received' }
   const [connectionStatuses, setConnectionStatuses] = useState({})
-  const [incomingRequestMap, setIncomingRequestMap] = useState({}) // { [senderUserId]: connectionId }
+  const [incomingRequestMap, setIncomingRequestMap] = useState({})
   const [sendingConnectId, setSendingConnectId] = useState(null)
   const [actionLoadingId, setActionLoadingId] = useState(null)
 
   // Bộ lọc
   const [selectedAge, setSelectedAge] = useState('Tất cả độ tuổi')
   const [selectedStatus, setSelectedStatus] = useState('Tất cả tình trạng')
-  const [selectedConnType, setSelectedConnType] = useState('Tất cả kiểu kết nối')
+  const [selectedConnType, setSelectedConnType] = useState('Tất cả mục tiêu')
   const [searchKeyword, setSearchKeyword] = useState('')
 
   // Modal xem chi tiết profile
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
   const [reportTargetUser, setReportTargetUser] = useState(null)
   const [blockTargetUser, setBlockTargetUser] = useState(null)
-
-  // Thông báo khi bấm Kết nối hoặc Chặn
   const [connectToast, setConnectToast] = useState('')
+
+  useEffect(() => {
+    if (connectToast) {
+      const t = setTimeout(() => setConnectToast(''), 3500)
+      return () => clearTimeout(t)
+    }
+  }, [connectToast])
 
   const handleBlockSuccess = (msg) => {
     if (blockTargetUser) {
@@ -86,7 +91,6 @@ function Discover() {
       setMatches(data.matches || [])
       setHasSurvey(data.has_survey !== false)
 
-      // Tạo map trạng thái kết nối và map connectionId để chấp nhận tức thì
       const statusMap = {}
       const reqMap = {}
       conns.forEach((c) => {
@@ -97,7 +101,7 @@ function Discover() {
       })
       reqs.incoming?.forEach((r) => {
         statusMap[r.user.id] = 'pending_received'
-        reqMap[r.user.id] = r.id // Lưu ID connection để bấm Chấp nhận ngay lập tức trên thẻ
+        reqMap[r.user.id] = r.id
       })
       setConnectionStatuses(statusMap)
       setIncomingRequestMap(reqMap)
@@ -105,7 +109,7 @@ function Discover() {
       console.error('Lỗi khi tải matches:', err)
       setError(
         err.response?.data?.detail ||
-          'Không thể tải danh sách kết nối. Bạn hãy chắc chắn rằng đã hoàn thành Onboarding Survey!'
+          'Không thể tải danh sách kết nối. Vui lòng thử lại sau.'
       )
     } finally {
       setLoading(false)
@@ -116,12 +120,10 @@ function Discover() {
     fetchMatches()
   }, [])
 
-  // Phím Esc để đóng modal
+  // Đóng modal bằng phím Escape
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setSelectedUserForProfile(null)
-      }
+      if (e.key === 'Escape') setSelectedUserForProfile(null)
     }
     if (selectedUserForProfile) {
       window.addEventListener('keydown', handleKeyDown)
@@ -129,26 +131,19 @@ function Discover() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedUserForProfile])
 
-  // Lọc dữ liệu client-side nhanh chóng
+  // Lọc dữ liệu client-side
   const filteredMatches = useMemo(() => {
     return matches.filter((item) => {
       const u = item.user
-      // Lọc tuổi
-      if (selectedAge !== 'Tất cả độ tuổi' && u.age_group !== selectedAge) {
+      if (selectedAge !== 'Tất cả độ tuổi' && u.age_group !== selectedAge) return false
+      if (selectedStatus !== 'Tất cả tình trạng' && u.current_status !== selectedStatus)
         return false
-      }
-      // Lọc tình trạng
-      if (selectedStatus !== 'Tất cả tình trạng' && u.current_status !== selectedStatus) {
-        return false
-      }
-      // Lọc kiểu kết nối mong muốn
       if (
-        selectedConnType !== 'Tất cả kiểu kết nối' &&
+        selectedConnType !== 'Tất cả mục tiêu' &&
         !u.desired_connection_types?.includes(selectedConnType)
       ) {
         return false
       }
-      // Lọc từ khóa tìm kiếm (theo tên, sở thích, mục tiêu)
       if (searchKeyword.trim()) {
         const kw = searchKeyword.toLowerCase()
         const matchName =
@@ -156,9 +151,7 @@ function Discover() {
           u.username?.toLowerCase().includes(kw)
         const matchInterest = u.interests?.some((i) => i.toLowerCase().includes(kw))
         const matchGoal = u.goals?.some((g) => g.toLowerCase().includes(kw))
-        if (!matchName && !matchInterest && !matchGoal) {
-          return false
-        }
+        if (!matchName && !matchInterest && !matchGoal) return false
       }
       return true
     })
@@ -167,969 +160,628 @@ function Discover() {
   const handleResetFilters = () => {
     setSelectedAge('Tất cả độ tuổi')
     setSelectedStatus('Tất cả tình trạng')
-    setSelectedConnType('Tất cả kiểu kết nối')
+    setSelectedConnType('Tất cả mục tiêu')
     setSearchKeyword('')
   }
 
-  const handleConnectClick = async (targetUser) => {
-    setSendingConnectId(targetUser.id)
+  // Gửi lời mời kết nối
+  const handleConnect = async (targetUserId) => {
+    setSendingConnectId(targetUserId)
     try {
-      await sendConnectionRequest(targetUser.id)
-      setConnectionStatuses((prev) => ({
-        ...prev,
-        [targetUser.id]: 'pending_sent',
-      }))
-      setConnectToast(`Đã gửi lời mời kết nối tới ${targetUser.display_name || targetUser.username}! 🎉`)
-      setTimeout(() => setConnectToast(''), 4000)
+      await sendConnectionRequest(targetUserId)
+      setConnectionStatuses((prev) => ({ ...prev, [targetUserId]: 'pending_sent' }))
+      setConnectToast('Đã gửi lời mời kết nối thành công! ⚡')
     } catch (err) {
-      console.error('Lỗi khi gửi kết nối:', err)
-      alert(err.response?.data?.detail || 'Không thể gửi lời mời kết nối. Vui lòng thử lại.')
+      console.error('Lỗi kết nối:', err)
+      setConnectToast(err.response?.data?.detail || 'Không thể gửi kết nối.')
     } finally {
       setSendingConnectId(null)
     }
   }
 
-  // Chấp nhận lời mời kết nối trực tiếp ngay trên thẻ hoặc trong modal
-  const handleAcceptClick = async (targetUser) => {
-    const connId = incomingRequestMap[targetUser.id]
-    if (!connId) {
-      navigate('/connections?tab=received')
-      return
-    }
-
-    setActionLoadingId(targetUser.id)
+  // Chấp nhận kết bạn trực tiếp
+  const handleInlineAccept = async (targetUserId) => {
+    const connId = incomingRequestMap[targetUserId]
+    if (!connId) return
+    setActionLoadingId(targetUserId)
     try {
       await acceptConnection(connId)
-      setConnectionStatuses((prev) => ({
-        ...prev,
-        [targetUser.id]: 'accepted',
-      }))
-      setConnectToast(`Đã đồng ý kết bạn với ${targetUser.display_name || targetUser.username}! 🎉 Giờ hai bạn đã có thể nhắn tin.`)
-      setTimeout(() => setConnectToast(''), 4500)
+      setConnectionStatuses((prev) => ({ ...prev, [targetUserId]: 'accepted' }))
+      setConnectToast('Đã trở thành bạn bè! Bây giờ bạn có thể trò chuyện. 🎉')
     } catch (err) {
-      console.error('Lỗi khi chấp nhận kết nối:', err)
-      alert(err.response?.data?.detail || 'Không thể chấp nhận lời mời. Vui lòng thử lại.')
+      console.error('Lỗi chấp nhận kết nối:', err)
+      setConnectToast(err.response?.data?.detail || 'Không thể chấp nhận lời mời.')
     } finally {
       setActionLoadingId(null)
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-[#00ff88]">
       <Navbar />
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px' }}>
-        {/* Banner tiêu đề */}
-        <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Khám phá những người <span style={{ color: '#7c5cbf' }}>đồng điệu</span>
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '600px', margin: '0 auto' }}>
-            Hệ thống phân tích hồ sơ và khảo sát của bạn để tìm ra những người có hoàn cảnh, mục tiêu và sở thích tương đồng nhất.
-          </p>
-        </div>
+      {/* Main Container */}
+      <main className="w-full pt-20 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Ambient Atmospheric Cyber Glow Blobs */}
+        <div className="pointer-events-none fixed -top-24 left-1/4 w-96 h-96 rounded-full bg-[#00ff88]/10 blur-[150px] -z-10" />
+        <div className="pointer-events-none fixed top-1/3 right-10 w-80 h-80 rounded-full bg-[#10b981]/10 blur-[140px] -z-10" />
 
-        {/* Thông báo kết nối nhanh */}
+        {/* Toast thông báo */}
         {connectToast && (
-          <div className="alert alert-success" style={{ maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
-            {connectToast}
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#11151c] text-[#00ff88] border border-[#00ff88]/40 px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(0,255,136,0.3)] animate-fadeIn text-sm font-semibold backdrop-blur-md">
+            <span>⚡</span>
+            <span>{connectToast}</span>
           </div>
         )}
 
-        {/* BỘ LỌC (Filter Bar) */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            padding: '20px',
-            marginBottom: '32px',
-            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '12px',
-            alignItems: 'center',
-          }}
-        >
-          {/* Ô tìm kiếm từ khóa */}
-          <div style={{ flex: '1 1 220px' }}>
-            <input
-              type="text"
-              placeholder="Tìm theo tên, sở thích, mục tiêu..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: '1.5px solid #e5e7eb',
-                fontSize: '14px',
-                outline: 'none',
-              }}
-            />
-          </div>
+        {/* 1. Header & Telemetry Overview */}
+        <div className="flex flex-col gap-6 mt-4 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#11151c] border border-[#00ff88]/30 text-[#00ff88] mb-3 shadow-[0_0_14px_rgba(0,255,136,0.18)]">
+                <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_8px_#00ff88]" />
+                <span className="text-[11px] font-mono tracking-wider font-semibold uppercase text-[#00ff88]">
+                  TF-IDF & Cosine Similarity Engine
+                </span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f8fafc] tracking-tight">
+                Discover & Match
+              </h1>
+              <p className="text-[#94a3b8] text-sm sm:text-base mt-2 leading-relaxed">
+                Tìm kiếm những người bạn cùng tần số, đồng điệu về hoàn cảnh, tư duy và sẵn sàng
+                lắng nghe, sẻ chia chân thành nhất.
+              </p>
+            </div>
 
-          {/* Lọc nhóm tuổi */}
-          <select
-            value={selectedAge}
-            onChange={(e) => setSelectedAge(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: '1.5px solid #e5e7eb',
-              fontSize: '14px',
-              backgroundColor: '#ffffff',
-              cursor: 'pointer',
-            }}
-          >
-            {AGE_FILTER_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            {/* Quick Stats Strip */}
+            <div className="flex items-center gap-3 bg-[#11151c]/90 backdrop-blur-md p-2 rounded-2xl border border-[#1a232e] shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d1117] border border-[#1a232e]">
+                <span className="material-symbols-outlined text-[#00ff88] text-[20px]">
+                  sensors
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-[#64748b]">Cộng đồng</span>
+                  <span className="text-sm font-bold text-[#f8fafc]">
+                    {matches.length} Gợi ý
+                  </span>
+                </div>
+              </div>
 
-          {/* Lọc tình trạng */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: '1.5px solid #e5e7eb',
-              fontSize: '14px',
-              backgroundColor: '#ffffff',
-              cursor: 'pointer',
-            }}
-          >
-            {STATUS_FILTER_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-
-          {/* Lọc kiểu kết nối */}
-          <select
-            value={selectedConnType}
-            onChange={(e) => setSelectedConnType(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: '1.5px solid #e5e7eb',
-              fontSize: '14px',
-              backgroundColor: '#ffffff',
-              cursor: 'pointer',
-            }}
-          >
-            {CONNECTION_TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-
-          {/* Nút reset */}
-          {(selectedAge !== 'Tất cả độ tuổi' ||
-            selectedStatus !== 'Tất cả tình trạng' ||
-            selectedConnType !== 'Tất cả kiểu kết nối' ||
-            searchKeyword.trim()) && (
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              style={{
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: '#f3f4f6',
-                color: '#4b5563',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Đặt lại
-            </button>
-          )}
-        </div>
-
-        {/* 1. TRẠNG THÁI: LOADING */}
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid #e5e7eb',
-                borderTop: '3px solid #7c5cbf',
-                borderRadius: '50%',
-                margin: '0 auto 16px auto',
-                animation: 'spin 1s linear infinite',
-              }}
-            ></div>
-            <p style={{ color: '#6b7280', fontSize: '15px' }}>
-              Đang phân tích sở thích và tìm kiếm người phù hợp với bạn...
-            </p>
-            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
-
-        {/* 2. TRẠNG THÁI: ERROR */}
-        {!loading && error && (
-          <div className="card" style={{ maxWidth: '500px', margin: '40px auto', textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>⚠️</div>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Không thể tải danh sách</h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>{error}</p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <Link to="/survey">
-                <button className="btn-primary" style={{ padding: '10px 16px' }}>
-                  Làm khảo sát Onboarding
-                </button>
-              </Link>
-              <button
-                type="button"
-                onClick={fetchMatches}
-                className="btn-secondary"
-                style={{ padding: '10px 16px' }}
-              >
-                Thử lại
-              </button>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d1117] border border-[#00ff88]/25 shadow-[0_0_12px_rgba(0,255,136,0.12)]">
+                <span className="material-symbols-outlined text-[#00ff88] text-[20px]">bolt</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-[#64748b]">Độ hợp cao</span>
+                  <span className="text-sm font-bold text-[#00ff88] drop-shadow-[0_0_6px_rgba(0,255,136,0.4)]">
+                    {matches.filter((m) => m.match_score >= 60).length} Người
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* 3a. TRẠNG THÁI: CHƯA HOÀN THÀNH KHẢO SÁT (GỢI Ý LÀM KHẢO SÁT) */}
-        {!loading && !error && !hasSurvey && (
-          <div
-            className="card"
-            style={{
-              maxWidth: '580px',
-              margin: '30px auto',
-              textAlign: 'center',
-              padding: '40px 32px',
-              border: '2px dashed #c084fc',
-              backgroundColor: '#faf5ff',
-              borderRadius: '20px',
-              boxShadow: '0 8px 30px rgba(124, 92, 191, 0.08)',
-            }}
-          >
-            <div style={{ fontSize: '52px', marginBottom: '16px' }}>📝</div>
-            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', marginBottom: '10px' }}>
-              Bạn chưa làm khảo sát Onboarding
-            </h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-              Kindred sử dụng thuật toán TF-IDF & Cosine Similarity để phân tích sở thích, mục tiêu và hoàn cảnh của bạn nhằm gợi ý những người bạn đồng điệu nhất.
-              <br />
-              Hãy dành 1–2 phút hoàn thành bài khảo sát ngắn để mở khóa danh sách gợi ý kết đôi nhé!
-            </p>
-            <Link to="/survey">
-              <button
-                type="button"
-                className="btn-primary"
-                style={{
-                  padding: '12px 30px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  boxShadow: '0 4px 14px rgba(124, 92, 191, 0.4)',
-                  cursor: 'pointer',
-                  borderRadius: '12px',
-                }}
+          {/* Banner nhắc làm khảo sát nếu chưa hoàn thành */}
+          {!hasSurvey && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11151c] to-[#0d1117] border border-[#00ff88]/40 shadow-[0_0_25px_rgba(0,255,136,0.15)] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#00ff88]/20 flex items-center justify-center text-[#00ff88] text-xl shrink-0">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#f8fafc] text-sm">
+                    Bạn chưa hoàn thành Khảo sát đồng điệu
+                  </h3>
+                  <p className="text-xs text-[#94a3b8] mt-0.5">
+                    Làm khảo sát 6 bước để thuật toán gợi ý những người có độ tương đồng chính xác
+                    nhất.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/survey"
+                className="px-4 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.4)] hover:bg-[#00e67a] transition-all shrink-0"
               >
-                Làm khảo sát ngay 🚀
-              </button>
-            </Link>
-          </div>
-        )}
+                Làm khảo sát ngay →
+              </Link>
+            </div>
+          )}
 
-        {/* 3b. TRẠNG THÁI: EMPTY (ĐÃ LÀM KHẢO SÁT NHƯNG CHƯA CÓ AI KHỚP) */}
-        {!loading && !error && hasSurvey && filteredMatches.length === 0 && (
-          <div className="card" style={{ maxWidth: '540px', margin: '40px auto', textAlign: 'center' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
-              Không tìm thấy người phù hợp
-            </h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-              {matches.length === 0
-                ? 'Hiện chưa có thêm người dùng mới hoàn thành khảo sát để gợi ý kết đôi. Hãy mời thêm bạn bè cùng tham gia nhé!'
-                : 'Không có ai khớp với các tiêu chí lọc hiện tại. Thử nới lỏng hoặc xóa bộ lọc xem sao!'}
-            </p>
-            {matches.length > 0 && (
+          {/* 2. Filter Toolbar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 p-3.5 bg-[#11151c]/90 backdrop-blur-xl rounded-2xl border border-[#1a232e] shadow-xl">
+            {/* Search Input */}
+            <div className="lg:col-span-5 relative flex items-center">
+              <span className="material-symbols-outlined absolute left-3.5 text-[#64748b] text-[20px] pointer-events-none">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="Tìm theo tên, sở thích, mục tiêu, từ khóa..."
+                className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#08090a] border border-[#1a232e] text-[#f8fafc] placeholder:text-[#64748b] text-xs focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] focus:shadow-[0_0_12px_rgba(0,255,136,0.2)] transition-all"
+              />
+            </div>
+
+            {/* Age Dropdown */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={selectedAge}
+                onChange={(e) => setSelectedAge(e.target.value)}
+                className="w-full h-11 px-3 appearance-none rounded-xl bg-[#08090a] border border-[#1a232e] text-[#f8fafc] text-xs focus:outline-none focus:border-[#00ff88] cursor-pointer pr-8 transition-all"
+              >
+                {AGE_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt} className="bg-[#11151c] text-[#f8fafc]">
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-2.5 top-3 text-[#64748b] pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
+
+            {/* Status Dropdown */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full h-11 px-3 appearance-none rounded-xl bg-[#08090a] border border-[#1a232e] text-[#f8fafc] text-xs focus:outline-none focus:border-[#00ff88] cursor-pointer pr-8 transition-all"
+              >
+                {STATUS_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt} className="bg-[#11151c] text-[#f8fafc]">
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-2.5 top-3 text-[#64748b] pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
+
+            {/* Connection Type Dropdown */}
+            <div className="lg:col-span-3 relative">
+              <select
+                value={selectedConnType}
+                onChange={(e) => setSelectedConnType(e.target.value)}
+                className="w-full h-11 px-3 appearance-none rounded-xl bg-[#08090a] border border-[#1a232e] text-[#f8fafc] text-xs focus:outline-none focus:border-[#00ff88] cursor-pointer pr-8 transition-all"
+              >
+                {CONNECTION_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt} className="bg-[#11151c] text-[#f8fafc]">
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-2.5 top-3 text-[#64748b] pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
+          </div>
+
+          {/* Active Filter Tags & Reset */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span className="text-[#94a3b8]">
+              Hiển thị{' '}
+              <span className="text-[#00ff88] font-bold">{filteredMatches.length}</span> người
+              phù hợp
+            </span>
+
+            {(selectedAge !== 'Tất cả độ tuổi' ||
+              selectedStatus !== 'Tất cả tình trạng' ||
+              selectedConnType !== 'Tất cả mục tiêu' ||
+              searchKeyword) && (
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="btn-primary"
-                style={{ maxWidth: '200px', margin: '0 auto' }}
+                className="inline-flex items-center gap-1.5 text-[#00ff88] hover:underline"
               >
-                Xóa bộ lọc
+                <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                Đặt lại bộ lọc
               </button>
             )}
           </div>
-        )}
+        </div>
 
-        {/* 4. TRẠNG THÁI: NORMAL (Danh sách các thẻ kết nối) */}
-        {!loading && !error && filteredMatches.length > 0 && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '24px',
-            }}
-          >
-            {filteredMatches.map((item) => {
-              const u = item.user
-              const isHighMatch = item.match_score >= 60
-
-              return (
-                <div
-                  key={u.id}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    border: '1px solid #f3f4f6',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                  }}
-                >
-                  <div>
-                    {/* Header Thẻ: Avatar + Tên + Badge Tương đồng */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        {/* Avatar */}
-                        <div
-                          style={{
-                            width: '54px',
-                            height: '54px',
-                            borderRadius: '50%',
-                            backgroundColor: '#f5f0ff',
-                            border: '2px solid #7c5cbf',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            fontSize: '20px',
-                            fontWeight: 700,
-                            color: '#7c5cbf',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {u.avatar_url ? (
-                            <img
-                              src={u.avatar_url}
-                              alt={u.display_name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => { e.target.style.display = 'none' }}
-                            />
-                          ) : (
-                            (u.display_name || u.username)[0].toUpperCase()
-                          )}
-                        </div>
-
-                        {/* Tên & Username */}
-                        <div>
-                          <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-                            {u.display_name || u.username}
-                          </h3>
-                          <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                            @{u.username}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Match Percentage Badge */}
-                      <div
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          background: isHighMatch
-                            ? 'linear-gradient(135deg, #7c5cbf, #9b7fe8)'
-                            : '#f3f4f6',
-                          color: isHighMatch ? '#ffffff' : '#374151',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          boxShadow: isHighMatch ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
-                        }}
-                      >
-                        <span>{item.match_score}%</span>
-                        <span style={{ fontSize: '11px', opacity: 0.9 }}>Match</span>
-                      </div>
-                    </div>
-
-                    {/* Tags: Độ tuổi & Tình trạng */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                      {u.age_group && (
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            backgroundColor: '#f3f4f6',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            color: '#4b5563',
-                          }}
-                        >
-                          {u.age_group}
-                        </span>
-                      )}
-                      {u.current_status && (
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            backgroundColor: '#f3f4f6',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            color: '#4b5563',
-                          }}
-                        >
-                          {u.current_status}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Bio ngắn gọn */}
-                    {u.bio && (
-                      <p
-                        style={{
-                          fontSize: '13px',
-                          color: '#4b5563',
-                          lineHeight: '1.5',
-                          marginBottom: '14px',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        "{u.bio}"
-                      </p>
-                    )}
-
-                    {/* Lý do kết nối (Match reasons) */}
-                    {item.match_reasons?.length > 0 && (
-                      <div
-                        style={{
-                          backgroundColor: '#faf8ff',
-                          border: '1px solid #f0ebfa',
-                          borderRadius: '10px',
-                          padding: '10px 12px',
-                          marginBottom: '14px',
-                        }}
-                      >
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c5cbf', textTransform: 'uppercase' }}>
-                          Điểm tương đồng
-                        </span>
-                        <ul style={{ margin: '4px 0 0 0', paddingLeft: '16px', fontSize: '12px', color: '#4b5563' }}>
-                          {item.match_reasons.slice(0, 3).map((r, idx) => (
-                            <li key={idx} style={{ marginBottom: '2px' }}>
-                              {r}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Sở thích chung (Common Interests) */}
-                    {item.common_interests?.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <span style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '6px' }}>
-                          Sở thích chung:
-                        </span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {item.common_interests.map((ci, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                padding: '3px 8px',
-                                backgroundColor: '#f5f0ff',
-                                border: '1px solid #e9d5ff',
-                                borderRadius: '12px',
-                                fontSize: '11px',
-                                fontWeight: 500,
-                                color: '#7c5cbf',
-                              }}
-                            >
-                              ★ {ci}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hành động: Xem hồ sơ & Kết nối */}
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUserForProfile(item)}
-                      className="btn-secondary"
-                      style={{ flex: 1, padding: '10px', fontSize: '13px' }}
-                    >
-                      Xem hồ sơ
-                    </button>
-
-                    {connectionStatuses[u.id] === 'accepted' ? (
-                      <Link
-                        to="/messages"
-                        state={{ userId: u.id }}
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          fontSize: '13px',
-                          borderRadius: '8px',
-                          border: '1px solid #a7f3d0',
-                          backgroundColor: '#ecfdf5',
-                          color: '#059669',
-                          fontWeight: 600,
-                          textAlign: 'center',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        💬 Nhắn tin
-                      </Link>
-                    ) : connectionStatuses[u.id] === 'pending_sent' ? (
-                      <button
-                        type="button"
-                        disabled
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          fontSize: '13px',
-                          borderRadius: '8px',
-                          border: '1px solid #fde68a',
-                          backgroundColor: '#fef3c7',
-                          color: '#b45309',
-                          fontWeight: 600,
-                          cursor: 'default',
-                        }}
-                      >
-                        ⏳ Đang chờ
-                      </button>
-                    ) : connectionStatuses[u.id] === 'pending_received' ? (
-                      <div style={{ flex: 1, display: 'flex', gap: '6px' }}>
-                        <button
-                          type="button"
-                          disabled={actionLoadingId === u.id}
-                          onClick={() => handleAcceptClick(u)}
-                          style={{
-                            flex: 1,
-                            padding: '10px 8px',
-                            fontSize: '13px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            backgroundColor: '#10b981',
-                            color: '#ffffff',
-                            fontWeight: 700,
-                            cursor: actionLoadingId === u.id ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                          }}
-                        >
-                          {actionLoadingId === u.id ? 'Đang nhận...' : '🤝 Đồng ý'}
-                        </button>
-                        <Link
-                          to="/connections?tab=received"
-                          style={{
-                            padding: '10px 10px',
-                            fontSize: '12px',
-                            borderRadius: '8px',
-                            border: '1px solid #ddd6fe',
-                            backgroundColor: '#f5f0ff',
-                            color: '#7c5cbf',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          title="Xem chi tiết lời mời trong trang Kết nối"
-                        >
-                          Xem ↗
-                        </Link>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={sendingConnectId === u.id}
-                        onClick={() => handleConnectClick(u)}
-                        className="btn-primary"
-                        style={{ flex: 1, padding: '10px', fontSize: '13px', marginTop: 0 }}
-                      >
-                        {sendingConnectId === u.id ? 'Đang gửi...' : 'Kết nối'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+        {/* 3. Loading & Error States */}
+        {loading && (
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <div className="w-10 h-10 border-2 border-[#1a232e] border-t-[#00ff88] rounded-full animate-spin mb-4" />
+            <p className="text-sm text-[#94a3b8] font-medium font-mono">
+              Đang tính toán ma trận tương quan TF-IDF...
+            </p>
           </div>
         )}
-      </div>
 
-      {/* MODAL: XEM HỒ SƠ PUBLIC CỦA USER */}
-      {selectedUserForProfile && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-          }}
-          onClick={() => setSelectedUserForProfile(null)}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '520px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: '32px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-              position: 'relative',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Nút đóng */}
-            <button
-              type="button"
-              onClick={() => setSelectedUserForProfile(null)}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'none',
-                border: 'none',
-                fontSize: '22px',
-                color: '#9ca3af',
-                cursor: 'pointer',
-              }}
-            >
-              ✕
-            </button>
+        {error && !loading && (
+          <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-center my-8">
+            <span className="material-symbols-outlined text-3xl mb-2">error</span>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
 
-            {/* Avatar & Tên trong Modal */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div
-                style={{
-                  width: '68px',
-                  height: '68px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f5f0ff',
-                  border: '2px solid #7c5cbf',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  fontSize: '26px',
-                  fontWeight: 700,
-                  color: '#7c5cbf',
-                  flexShrink: 0,
-                }}
-              >
-                {selectedUserForProfile.user.avatar_url ? (
-                  <img
-                    src={selectedUserForProfile.user.avatar_url}
-                    alt="Avatar"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  (selectedUserForProfile.user.display_name || selectedUserForProfile.user.username)[0].toUpperCase()
-                )}
-              </div>
-
-              <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
-                  {selectedUserForProfile.user.display_name || selectedUserForProfile.user.username}
-                </h2>
-                <div style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>
-                  @{selectedUserForProfile.user.username}
-                </div>
-                <div
-                  style={{
-                    display: 'inline-block',
-                    marginTop: '6px',
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    backgroundColor: '#f5f0ff',
-                    color: '#7c5cbf',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {selectedUserForProfile.match_score}% Độ tương đồng với bạn
-                </div>
-              </div>
-            </div>
-
-            {/* Thông tin cơ bản */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-              {selectedUserForProfile.user.age_group && (
-                <span style={{ padding: '6px 12px', borderRadius: '10px', backgroundColor: '#f3f4f6', fontSize: '13px' }}>
-                  Độ tuổi: <strong>{selectedUserForProfile.user.age_group}</strong>
+        {/* 4. Match Cards 3-Column Grid */}
+        {!loading && !error && (
+          <>
+            {filteredMatches.length === 0 ? (
+              <div className="py-24 text-center rounded-3xl bg-[#11151c]/60 border border-[#1a232e] p-8">
+                <span className="material-symbols-outlined text-5xl text-[#64748b] mb-3">
+                  person_search
                 </span>
-              )}
-              {selectedUserForProfile.user.current_status && (
-                <span style={{ padding: '6px 12px', borderRadius: '10px', backgroundColor: '#f3f4f6', fontSize: '13px' }}>
-                  Tình trạng: <strong>{selectedUserForProfile.user.current_status}</strong>
-                </span>
-              )}
-            </div>
-
-            {/* Giới thiệu (Bio) */}
-            {selectedUserForProfile.user.bio && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Giới thiệu
-                </h4>
-                <p style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', margin: 0 }}>
-                  {selectedUserForProfile.user.bio}
+                <h3 className="text-base font-bold text-[#f8fafc]">
+                  Không tìm thấy người dùng phù hợp với bộ lọc
+                </h3>
+                <p className="text-xs text-[#94a3b8] mt-1 max-w-md mx-auto">
+                  Hãy thử mở rộng tiêu chuẩn tìm kiếm hoặc xóa các từ khóa hiện tại.
                 </p>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="mt-4 px-4 py-2 rounded-xl bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 font-semibold text-xs hover:bg-[#00ff88]/25 transition-all"
+                >
+                  Xóa tất cả bộ lọc
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredMatches.map((item) => {
+                  const u = item.user
+                  const score = item.match_score
+                  const status = connectionStatuses[u.id]
+                  const avatarUrl =
+                    u.avatar_url ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
+
+                  return (
+                    <div
+                      key={u.id}
+                      className="group relative flex flex-col justify-between bg-[#11151c]/90 rounded-2xl border border-[#1a232e] hover:border-[#00ff88]/50 transition-all duration-300 p-5 hover:shadow-[0_0_30px_-5px_rgba(0,255,136,0.25)] hover:-translate-y-1"
+                    >
+                      <div className="flex flex-col gap-3.5">
+                        {/* Header: Avatar, Name, % Match Badge */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="relative shrink-0">
+                              <img
+                                src={avatarUrl}
+                                alt={u.display_name || u.username}
+                                className="w-13 h-13 rounded-xl object-cover border border-[#1a232e] bg-[#0d1117]"
+                                onError={(e) => {
+                                  e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`
+                                }}
+                              />
+                              <span
+                                className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#00ff88] border-2 border-[#11151c] shadow-[0_0_8px_#00ff88]"
+                                title="Trực tuyến"
+                              />
+                            </div>
+
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h3 className="font-bold text-sm text-[#f8fafc] truncate">
+                                  {u.display_name || u.username}
+                                </h3>
+                                <span
+                                  className="material-symbols-outlined text-[#00ff88] text-[16px]"
+                                  title="Đã xác thực"
+                                >
+                                  verified
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-[#64748b] truncate">
+                                @{u.username}
+                              </span>
+                              <span className="text-[11px] text-[#10b981] mt-0.5 font-medium truncate">
+                                {u.age_group || 'Chưa rõ tuổi'} • {u.current_status || 'Cộng đồng'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Match Score Badge */}
+                          <div
+                            className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-mono font-bold shadow-sm ${
+                              score >= 80
+                                ? 'bg-[#00ff88]/20 border-[#00ff88]/50 text-[#00ff88] shadow-[0_0_12px_rgba(0,255,136,0.3)]'
+                                : score >= 50
+                                ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]'
+                                : 'bg-[#1a232e] border-[#223344] text-[#94a3b8]'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[13px]">
+                              {score >= 80 ? 'local_fire_department' : 'bolt'}
+                            </span>
+                            <span>{score}% Match</span>
+                          </div>
+                        </div>
+
+                        {/* Bio / Quote */}
+                        {u.bio && (
+                          <p className="text-xs text-[#94a3b8] line-clamp-2 italic leading-relaxed">
+                            "{u.bio}"
+                          </p>
+                        )}
+
+                        {/* Why You Match Insight Box */}
+                        {item.match_reasons && item.match_reasons.length > 0 && (
+                          <div className="flex items-start gap-2 p-2.5 rounded-xl bg-[#08090a] border border-[#00ff88]/20 shadow-[0_0_10px_rgba(0,255,136,0.05)]">
+                            <span className="material-symbols-outlined text-[#00ff88] text-[16px] shrink-0 mt-0.5">
+                              neurology
+                            </span>
+                            <div className="flex flex-col text-[11px]">
+                              <span className="text-[#64748b] uppercase font-semibold tracking-wider">
+                                Điểm chạm tương đồng
+                              </span>
+                              <span className="text-[#00ff88] font-medium leading-snug line-clamp-1">
+                                {item.match_reasons[0]}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Common Interest Tags */}
+                        {item.common_interests && item.common_interests.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {item.common_interests.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2 py-0.5 rounded-md bg-[#0d1117] text-[#94a3b8] text-[11px] border border-[#1a232e] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition-colors"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                            {item.common_interests.length > 3 && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-[#0d1117] text-[#64748b] text-[10px]">
+                                +{item.common_interests.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-4 mt-3 border-t border-[#1a232e]">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserForProfile(item)}
+                          className="w-full h-9 px-2 rounded-xl bg-[#0d1117] hover:bg-[#161c26] border border-[#1a232e] hover:border-[#00ff88]/40 text-[#94a3b8] hover:text-[#f8fafc] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">visibility</span>
+                          <span>Hồ sơ</span>
+                        </button>
+
+                        {/* Connection State Button */}
+                        {status === 'accepted' ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/messages', { state: { userId: u.id } })}
+                            className="w-full h-9 px-2 rounded-xl bg-[#00ff88]/15 hover:bg-[#00ff88]/25 text-[#00ff88] border border-[#00ff88]/40 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-[0_0_10px_rgba(0,255,136,0.15)]"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">chat</span>
+                            <span>Nhắn tin</span>
+                          </button>
+                        ) : status === 'pending_received' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleInlineAccept(u.id)}
+                            disabled={actionLoadingId === u.id}
+                            className="w-full h-9 px-2 rounded-xl bg-[#00ff88] hover:bg-[#00e67a] text-[#08090a] text-xs font-bold flex items-center justify-center gap-1 shadow-[0_0_15px_rgba(0,255,136,0.3)] transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">handshake</span>
+                            <span>{actionLoadingId === u.id ? '...' : 'Đồng ý'}</span>
+                          </button>
+                        ) : status === 'pending_sent' ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full h-9 px-2 rounded-xl bg-[#11151c] border border-[#1a232e] text-[#64748b] text-xs font-semibold flex items-center justify-center gap-1 cursor-not-allowed"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">schedule</span>
+                            <span>Đã gửi</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleConnect(u.id)}
+                            disabled={sendingConnectId === u.id}
+                            className="w-full h-9 px-2 rounded-xl bg-[#00ff88] hover:bg-[#00e67a] text-[#08090a] text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,255,136,0.35)] transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">handshake</span>
+                            <span>{sendingConnectId === u.id ? 'Đang gửi...' : 'Kết nối'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
+          </>
+        )}
 
-            {/* Mục tiêu trong cộng đồng */}
-            {selectedUserForProfile.user.goals?.length > 0 && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  Mục tiêu tham gia
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selectedUserForProfile.user.goals.map((g, idx) => (
-                    <span key={idx} style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#eef2ff', color: '#4338ca', fontSize: '12px' }}>
-                      {g}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tất cả sở thích & chủ đề */}
-            {selectedUserForProfile.user.interests?.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  Sở thích & Chủ đề quan tâm
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selectedUserForProfile.user.interests.map((it, idx) => {
-                    const isCommon = selectedUserForProfile.common_interests?.includes(it)
-                    return (
-                      <span
-                        key={idx}
-                        style={{
-                          padding: '5px 10px',
-                          borderRadius: '12px',
-                          backgroundColor: isCommon ? '#f5f0ff' : '#f3f4f6',
-                          border: isCommon ? '1px solid #c084fc' : '1px solid transparent',
-                          color: isCommon ? '#7c5cbf' : '#4b5563',
-                          fontSize: '12px',
-                          fontWeight: isCommon ? 600 : 400,
-                        }}
-                      >
-                        {isCommon ? `★ ${it}` : it}
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Nút Kết nối từ trong Modal */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+        {/* 5. Detail Profile Modal (Frosted Cyber Emerald Glass) */}
+        {selectedUserForProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#11151c] border border-[#1a232e] shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-6 text-left">
+              {/* Close Button */}
               <button
                 type="button"
                 onClick={() => setSelectedUserForProfile(null)}
-                className="btn-secondary"
-                style={{ flex: 1, padding: '12px' }}
+                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#0d1117] border border-[#1a232e] text-[#94a3b8] hover:text-[#f8fafc] flex items-center justify-center transition-colors"
               >
-                Đóng
+                ✕
               </button>
 
-              {connectionStatuses[selectedUserForProfile.user.id] === 'accepted' ? (
-                <Link
-                  to="/messages"
-                  state={{ userId: selectedUserForProfile.user.id }}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #a7f3d0',
-                    backgroundColor: '#ecfdf5',
-                    color: '#059669',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  💬 Nhắn tin
-                </Link>
-              ) : connectionStatuses[selectedUserForProfile.user.id] === 'pending_sent' ? (
-                <button
-                  type="button"
-                  disabled
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #fde68a',
-                    backgroundColor: '#fef3c7',
-                    color: '#b45309',
-                    fontWeight: 600,
-                    cursor: 'default',
-                  }}
-                >
-                  ⏳ Đang chờ phản hồi
-                </button>
-              ) : connectionStatuses[selectedUserForProfile.user.id] === 'pending_received' ? (
-                <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+              {/* User Header */}
+              <div className="flex items-center gap-4 mb-6">
+                <img
+                  src={
+                    selectedUserForProfile.user.avatar_url ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedUserForProfile.user.username}`
+                  }
+                  alt={selectedUserForProfile.user.display_name}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#00ff88]/50 shadow-[0_0_15px_rgba(0,255,136,0.3)]"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-[#f8fafc]">
+                      {selectedUserForProfile.user.display_name ||
+                        selectedUserForProfile.user.username}
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full bg-[#00ff88]/20 border border-[#00ff88]/40 text-[#00ff88] text-xs font-mono font-bold">
+                      {selectedUserForProfile.match_score}% Match
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#64748b]">
+                    @{selectedUserForProfile.user.username} •{' '}
+                    <span className="text-[#10b981]">
+                      {selectedUserForProfile.user.age_group} •{' '}
+                      {selectedUserForProfile.user.current_status}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Bio */}
+              {selectedUserForProfile.user.bio && (
+                <div className="mb-4 p-3.5 rounded-2xl bg-[#08090a] border border-[#1a232e]">
+                  <p className="text-xs text-[#94a3b8] italic leading-relaxed">
+                    "{selectedUserForProfile.user.bio}"
+                  </p>
+                </div>
+              )}
+
+              {/* Reasons */}
+              {selectedUserForProfile.match_reasons?.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-xs font-bold text-[#00ff88] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">psychology</span>
+                    Lý do thuật toán ghép đôi
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {selectedUserForProfile.match_reasons.map((r, i) => (
+                      <li
+                        key={i}
+                        className="text-xs text-[#e3e2e3] bg-[#0d1117] p-2.5 rounded-xl border border-[#1a232e] flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]" />
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Interests & Goals */}
+              <div className="space-y-3 mb-6">
+                {selectedUserForProfile.user.interests?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-[#94a3b8] mb-1.5">Chủ đề & Sở thích:</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedUserForProfile.user.interests.map((it) => (
+                        <span
+                          key={it}
+                          className="px-2.5 py-1 rounded-lg bg-[#08090a] border border-[#1a232e] text-xs text-[#94a3b8]"
+                        >
+                          #{it}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedUserForProfile.user.goals?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-[#94a3b8] mb-1.5">
+                      Mục tiêu trong cộng đồng:
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedUserForProfile.user.goals.map((g) => (
+                        <span
+                          key={g}
+                          className="px-2.5 py-1 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 text-xs text-[#00ff88]"
+                        >
+                          🎯 {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Actions: Connect + Report/Block */}
+              <div className="flex items-center justify-between pt-4 border-t border-[#1a232e]">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={actionLoadingId === selectedUserForProfile.user.id}
-                    onClick={() => handleAcceptClick(selectedUserForProfile.user)}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: '#10b981',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      cursor: actionLoadingId === selectedUserForProfile.user.id ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                    onClick={() => {
+                      setReportTargetUser(selectedUserForProfile.user)
                     }}
+                    className="text-xs text-[#64748b] hover:text-red-400 transition-colors flex items-center gap-1"
                   >
-                    {actionLoadingId === selectedUserForProfile.user.id ? 'Đang nhận...' : '🤝 Đồng ý kết nối'}
+                    <span className="material-symbols-outlined text-[15px]">flag</span>
+                    Báo cáo
                   </button>
-                  <Link
-                    to="/connections?tab=received"
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #ddd6fe',
-                      backgroundColor: '#f5f0ff',
-                      color: '#7c5cbf',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                  <span className="text-[#23283b]">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlockTargetUser(selectedUserForProfile.user)
                     }}
+                    className="text-xs text-[#64748b] hover:text-red-400 transition-colors flex items-center gap-1"
                   >
-                    Xem lời mời ↗
-                  </Link>
+                    <span className="material-symbols-outlined text-[15px]">block</span>
+                    Chặn
+                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={sendingConnectId === selectedUserForProfile.user.id}
-                  onClick={async () => {
-                    await handleConnectClick(selectedUserForProfile.user)
-                    setSelectedUserForProfile(null)
-                  }}
-                  className="btn-primary"
-                  style={{ flex: 1, padding: '12px', marginTop: 0 }}
-                >
-                  {sendingConnectId === selectedUserForProfile.user.id ? 'Đang gửi...' : 'Kết nối ngay'}
-                </button>
-              )}
-            </div>
 
-            {/* Tùy chọn an toàn: Báo cáo & Chặn */}
-            <div
-              style={{
-                marginTop: '16px',
-                paddingTop: '14px',
-                borderTop: '1px solid #f3f4f6',
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '16px',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setReportTargetUser(selectedUserForProfile.user)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#6b7280',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>🚩</span>
-                <span>Báo cáo vi phạm</span>
-              </button>
-              <span style={{ color: '#d1d5db' }}>•</span>
-              <button
-                type="button"
-                onClick={() => setBlockTargetUser(selectedUserForProfile.user)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#ef4444',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>🚫</span>
-                <span>Chặn người này</span>
-              </button>
+                <div className="flex items-center gap-2">
+                  {connectionStatuses[selectedUserForProfile.user.id] === 'accepted' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUserForProfile(null)
+                        navigate('/messages', {
+                          state: { userId: selectedUserForProfile.user.id },
+                        })
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 font-bold text-xs"
+                    >
+                      Nhắn tin ngay
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleConnect(selectedUserForProfile.user.id)
+                      }}
+                      disabled={sendingConnectId === selectedUserForProfile.user.id}
+                      className="px-5 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:bg-[#00e67a]"
+                    >
+                      {sendingConnectId === selectedUserForProfile.user.id
+                        ? 'Đang gửi...'
+                        : 'Gửi kết nối 🤝'}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Modal Báo cáo */}
-      {reportTargetUser && (
-        <ReportModal
-          targetUser={reportTargetUser}
-          onClose={() => setReportTargetUser(null)}
-          onSuccess={(msg) => setConnectToast(msg)}
-        />
-      )}
+        {/* Modal Báo Cáo & Chặn */}
+        {reportTargetUser && (
+          <ReportModal
+            user={reportTargetUser}
+            onClose={() => setReportTargetUser(null)}
+            onSuccess={(msg) => setConnectToast(msg)}
+          />
+        )}
 
-      {/* Modal Xác nhận Chặn */}
-      {blockTargetUser && (
-        <BlockConfirmModal
-          targetUser={blockTargetUser}
-          onClose={() => setBlockTargetUser(null)}
-          onSuccess={handleBlockSuccess}
-        />
-      )}
+        {blockTargetUser && (
+          <BlockConfirmModal
+            user={blockTargetUser}
+            onClose={() => setBlockTargetUser(null)}
+            onSuccess={handleBlockSuccess}
+          />
+        )}
+      </main>
     </div>
   )
 }
-
-export default Discover

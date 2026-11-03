@@ -747,8 +747,8 @@ export default function CallModal({
                 height: '100%',
                 borderRadius: '50%',
                 objectFit: 'cover',
-                border: '3px solid #7c5cbf',
-                boxShadow: '0 0 20px rgba(124, 92, 191, 0.6)',
+                border: '3px solid #00ff88',
+                boxShadow: '0 0 24px rgba(0, 255, 136, 0.6)',
               }}
             />
             <span
@@ -987,8 +987,9 @@ export default function CallModal({
                         right: -10,
                         bottom: -10,
                         borderRadius: '50%',
-                        border: '2px solid #7c5cbf',
+                        border: '2px solid #00ff88',
                         animation: 'ripple 2s infinite ease-out',
+                        boxShadow: '0 0 20px rgba(0, 255, 136, 0.4)',
                       }}
                     />
                   )}
@@ -1003,7 +1004,8 @@ export default function CallModal({
                       height: '100%',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '3px solid #7c5cbf',
+                      border: '3px solid #00ff88',
+                      boxShadow: '0 0 24px rgba(0, 255, 136, 0.4)',
                     }}
                   />
                 </div>

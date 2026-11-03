@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -10,99 +10,80 @@ const COMMUNITIES_DATA = [
     name: 'Lập trình viên & Tech Creators',
     category: 'Công nghệ',
     icon: '💻',
-    bgGradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
     membersCount: 1240,
     description:
-      'Dành cho những bạn đam mê coding, xây dựng sản phẩm công nghệ, chia sẻ kinh nghiệm học thuật và trao đổi kiến thức dự án.',
-    tags: ['Python', 'React', 'AI / ML', 'Web Dev', 'Startups'],
+      'Dành cho những bạn đam mê coding, xây dựng sản phẩm AI, công nghệ, chia sẻ kinh nghiệm học thuật và dự án nguồn mở.',
+    tags: ['Python', 'React', 'AI / ML', 'WebRTC', 'CyberUI'],
     activeTopic: 'Chia sẻ các dự án cá nhân tâm đắc nhất bạn từng làm',
-    keyword: 'Lập trình',
   },
   {
     id: 2,
     name: 'Sách & Phát triển bản thân',
-    category: 'Học tập & Sự nghiệp',
+    category: 'Sách & Tư duy',
     icon: '📚',
-    bgGradient: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
     membersCount: 980,
     description:
       'Nơi cùng nhau chia sẻ những cuốn sách hay, đúc kết tư duy tích cực, xây dựng kỷ luật và thói quen tốt mỗi ngày.',
-    tags: ['Đọc sách', 'Tư duy', 'Thói quen', 'Tâm lý học', 'Phát triển bản thân'],
+    tags: ['Đọc sách', 'Tư duy', 'Thói quen', 'Tâm lý học', 'DeepWork'],
     activeTopic: 'Cuốn sách nào đã thay đổi góc nhìn cuộc sống của bạn?',
-    keyword: 'Đọc sách',
   },
   {
     id: 3,
     name: 'Nghệ thuật & Sáng tạo',
-    category: 'Nghệ thuật',
+    category: 'Nghệ thuật & Sáng tạo',
     icon: '🎨',
-    bgGradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
     membersCount: 750,
     description:
       'Không gian ấm cúng dành cho những tâm hồn yêu vẽ, nhiếp ảnh, âm nhạc, thiết kế đồ họa và sáng tác nội dung.',
-    tags: ['Hội họa', 'Nhiếp ảnh', 'Thiết kế', 'Âm nhạc', 'Viết lách'],
+    tags: ['Hội họa', 'Nhiếp ảnh', 'Thiết kế', 'Âm nhạc', '3D / Shader'],
     activeTopic: 'Tác phẩm sáng tạo gần đây khiến bạn tự hào nhất',
-    keyword: 'Nghệ thuật',
   },
   {
     id: 4,
     name: 'Sức khỏe, Thể thao & Running',
-    category: 'Đời sống & Sở thích',
+    category: 'Thể thao & Sức khỏe',
     icon: '🏃',
-    bgGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     membersCount: 860,
     description:
       'Cùng nhau rèn luyện thể lực, chia sẻ lộ trình chạy bộ, tập gym, yoga và xây dựng lối sống lành mạnh, giàu năng lượng.',
     tags: ['Chạy bộ', 'Gym & Fitness', 'Yoga', 'Dinh dưỡng', 'Marathon'],
     activeTopic: 'Mục tiêu chạy bộ / thể thao của bạn trong tháng này',
-    keyword: 'Chạy bộ',
   },
   {
     id: 5,
-    name: 'Sinh viên & Định hướng tương lai',
-    category: 'Học tập & Sự nghiệp',
-    icon: '🎓',
-    bgGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    membersCount: 1520,
+    name: 'Freelance & Khởi nghiệp',
+    category: 'Freelance & Khởi nghiệp',
+    icon: '☕',
+    membersCount: 690,
     description:
-      'Đồng hành cùng các bạn trẻ trong giai đoạn học đại học, thực tập, làm đồ án tốt nghiệp và định hình sự nghiệp đầu đời.',
-    tags: ['Sinh viên', 'Thực tập', 'Định hướng', 'Kỹ năng mềm', 'Tìm việc'],
-    activeTopic: 'Kinh nghiệm phỏng vấn thực tập lần đầu không bị run',
-    keyword: 'Sinh viên',
+      'Mạng lưới gắn kết cho những người làm việc tự do hoặc khởi nghiệp, tìm bạn đồng hành tại quán cafe và chia sẻ dự án.',
+    tags: ['Freelance', 'Remote Work', 'Co-working', 'Khởi nghiệp', 'Cà phê'],
+    activeTopic: 'Địa điểm làm việc cafe yêu thích nhất của bạn',
   },
   {
     id: 6,
-    name: 'Freelancer & Remote Workers',
-    category: 'Đời sống & Sở thích',
-    icon: '☕',
-    bgGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-    membersCount: 690,
+    name: 'Game & Esports Gaming',
+    category: 'Game & Esports',
+    icon: '🎮',
+    membersCount: 1120,
     description:
-      'Mạng lưới gắn kết cho những người làm việc tự do hoặc làm việc từ xa, tìm bạn đồng hành tại quán cafe và chia sẻ dự án.',
-    tags: ['Freelance', 'Remote Work', 'Co-working', 'Quản lý thời gian', 'Cà phê'],
-    activeTopic: 'Địa điểm làm việc cafe yêu thích nhất của bạn',
-    keyword: 'Freelancer',
+      'Không gian thảo luận chiến thuật, tìm đồng đội leo rank và chia sẻ đam mê game đa nền tảng.',
+    tags: ['Esports', 'Steam', 'Indie Games', 'Co-op', 'Discord'],
+    activeTopic: 'Tựa game nào khiến bạn đắm chìm nhiều giờ nhất?',
   },
 ]
 
 const CATEGORIES = [
   'Tất cả',
-  'Công nghệ',
-  'Học tập & Sự nghiệp',
-  'Nghệ thuật',
-  'Đời sống & Sở thích',
-  'Tâm sự & Cảm xúc',
+  'Công nghệ & Lập trình',
+  'Sách & Tư duy',
+  'Nghệ thuật & Sáng tạo',
+  'Thể thao & Sức khỏe',
+  'Freelance & Khởi nghiệp',
+  'Game & Esports',
 ]
 
-const MOODS = [
-  '😊 Vui vẻ',
-  '🤔 Suy ngẫm',
-  '☕ Thư giãn',
-  '🚀 Quyết tâm',
-  '🌧️ Cần chia sẻ',
-  '✨ Truyền cảm hứng',
-  '🎯 Tập trung',
-]
+const MOODS = ['😊 Vui vẻ', '☕ Thư giãn', '🌧️ Cần chia sẻ', '🚀 Quyết tâm', '✨ Truyền cảm hứng']
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -124,31 +105,26 @@ export default function Communities() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Chế độ xem: 'feed' (Bảng tin bài viết) hoặc 'groups' (Danh sách nhóm)
-  const [activeTab, setActiveTab] = useState('feed')
-
-  // Phân loại chủ đề
+  const [activeTab, setActiveTab] = useState('feed') // 'feed' | 'groups'
   const [selectedCategory, setSelectedCategory] = useState('Tất cả')
   const [joinedCommunities, setJoinedCommunities] = useState([1, 2])
   const [toastMessage, setToastMessage] = useState('')
 
-  // State cho Bảng tin (Feed)
+  // State cho Bảng tin
   const [posts, setPosts] = useState([])
   const [loadingPosts, setLoadingPosts] = useState(true)
 
-  // State cho Đăng bài mới
+  // State cho Tạo bài viết
   const [newContent, setNewContent] = useState('')
-  const [newCategory, setNewCategory] = useState('Công nghệ')
-  const [newMood, setNewMood] = useState('😊 Vui vẻ')
+  const [newCategory, setNewCategory] = useState('Công nghệ & Lập trình')
+  const [newMood, setNewMood] = useState('🚀 Quyết tâm')
   const [newImageUrl, setNewImageUrl] = useState('')
   const [showImageInput, setShowImageInput] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Quản lý mở bình luận cho từng bài viết: { [postId]: boolean }
+  // Quản lý comments
   const [expandedComments, setExpandedComments] = useState({})
-  // Dữ liệu chi tiết bình luận: { [postId]: CommentResponse[] }
   const [commentsMap, setCommentsMap] = useState({})
-  // Input bình luận của từng bài: { [postId]: string }
   const [commentInputs, setCommentInputs] = useState({})
   const [submittingComment, setSubmittingComment] = useState({})
 
@@ -157,7 +133,6 @@ export default function Communities() {
     setTimeout(() => setToastMessage(''), 3500)
   }
 
-  // Tải danh sách bài viết từ Backend
   const loadPosts = async () => {
     setLoadingPosts(true)
     try {
@@ -180,7 +155,6 @@ export default function Communities() {
     }
   }, [activeTab, selectedCategory])
 
-  // Xử lý tạo bài viết mới
   const handleCreatePost = async (e) => {
     e.preventDefault()
     if (!newContent.trim()) {
@@ -197,12 +171,11 @@ export default function Communities() {
         image_url: newImageUrl.trim() || null,
       })
 
-      // Đưa bài viết mới lên đầu danh sách
       setPosts((prev) => [created, ...prev])
       setNewContent('')
       setNewImageUrl('')
       setShowImageInput(false)
-      showToast('Đã đăng bài viết lên cộng đồng thành công! 🎉')
+      showToast('Đã đăng bài viết lên cộng đồng lapulga! 🎉')
     } catch (err) {
       console.error('Lỗi khi đăng bài viết:', err)
       showToast(err.response?.data?.detail || 'Lỗi khi đăng bài viết')
@@ -211,9 +184,7 @@ export default function Communities() {
     }
   }
 
-  // Thả tim / Hủy thả tim bài viết
   const handleToggleLike = async (postId) => {
-    // Optimistic UI update
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -232,12 +203,10 @@ export default function Communities() {
       await postService.toggleLike(postId)
     } catch (err) {
       console.error('Lỗi khi thả tim:', err)
-      // Rollback nếu thất bại
       loadPosts()
     }
   }
 
-  // Mở/Đóng phần bình luận
   const handleToggleComments = async (postId) => {
     const isExpanded = !!expandedComments[postId]
     setExpandedComments((prev) => ({ ...prev, [postId]: !isExpanded }))
@@ -252,7 +221,6 @@ export default function Communities() {
     }
   }
 
-  // Gửi bình luận
   const handleAddComment = async (postId) => {
     const text = commentInputs[postId]?.trim()
     if (!text) return
@@ -260,16 +228,13 @@ export default function Communities() {
     setSubmittingComment((prev) => ({ ...prev, [postId]: true }))
     try {
       const newComment = await postService.addComment(postId, text)
-      // Cập nhật danh sách bình luận
       setCommentsMap((prev) => ({
         ...prev,
         [postId]: [...(prev[postId] || []), newComment],
       }))
-      // Cập nhật đếm số lượng bình luận
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p))
       )
-      // Xóa input
       setCommentInputs((prev) => ({ ...prev, [postId]: '' }))
       showToast('Đã đăng bình luận! 💬')
     } catch (err) {
@@ -280,7 +245,6 @@ export default function Communities() {
     }
   }
 
-  // Xóa bài viết
   const handleDeletePost = async (postId) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) return
     try {
@@ -293,995 +257,586 @@ export default function Communities() {
     }
   }
 
-  // Xóa bình luận
-  const handleDeleteComment = async (postId, commentId) => {
-    if (!window.confirm('Xóa bình luận này?')) return
-    try {
-      await postService.deleteComment(commentId)
-      setCommentsMap((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] || []).filter((c) => c.id !== commentId),
-      }))
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p
-        )
-      )
-      showToast('Đã xóa bình luận.')
-    } catch (err) {
-      console.error('Lỗi khi xóa bình luận:', err)
-      showToast('Không thể xóa bình luận.')
-    }
+  const handleToggleJoinGroup = (groupId) => {
+    setJoinedCommunities((prev) => {
+      const isJoined = prev.includes(groupId)
+      if (isJoined) {
+        showToast('Đã rời khỏi nhóm.')
+        return prev.filter((id) => id !== groupId)
+      } else {
+        showToast('Đã tham gia nhóm thành công! 🌟')
+        return [...prev, groupId]
+      }
+    })
   }
 
-  const handleToggleJoin = (comm) => {
-    if (joinedCommunities.includes(comm.id)) {
-      setJoinedCommunities((prev) => prev.filter((id) => id !== comm.id))
-      showToast(`Đã rời khỏi nhóm ${comm.name}`)
-    } else {
-      setJoinedCommunities((prev) => [...prev, comm.id])
-      showToast(`Đã tham gia cộng đồng ${comm.name}! 🎉`)
-    }
-  }
-
-  const handleExploreMembers = (comm) => {
-    navigate('/discover')
-  }
-
-  // Chuyển sang xem bài viết của nhóm cụ thể
-  const handleViewCommunityPosts = (comm) => {
-    setSelectedCategory(comm.category)
-    setActiveTab('feed')
-    window.scrollTo({ top: 300, behavior: 'smooth' })
-  }
-
-  const filteredCommunities = COMMUNITIES_DATA.filter((c) => {
-    if (selectedCategory === 'Tất cả') return true
-    return c.category === selectedCategory
-  })
+  const userAvatar =
+    user?.avatar_url ||
+    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 16px 64px' }}>
-        {/* Banner tiêu đề */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 14px',
-              borderRadius: '20px',
-              backgroundColor: '#f5f0ff',
-              border: '1px solid #ede9fe',
-              color: '#7c5cbf',
-              fontSize: '13px',
-              fontWeight: 700,
-              marginBottom: '12px',
-            }}
-          >
-            <span>🌟 Không gian Cộng đồng & Bảng tin Đồng điệu</span>
-          </div>
-
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Kết nối cùng những người <span style={{ color: '#7c5cbf' }}>chung đam mê</span>
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '600px', margin: '0 auto' }}>
-            Đọc bài viết chia sẻ, thảo luận tâm tư và tham gia các nhóm cộng đồng ấm áp.
-          </p>
-        </div>
-
-        {/* Toast thông báo */}
+      <main className="w-full pt-20 min-h-[calc(100vh-80px)] pb-16">
+        {/* Toast */}
         {toastMessage && (
-          <div
-            style={{
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              marginBottom: '20px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              animation: 'fadeIn 0.2s ease-in-out',
-            }}
-          >
-            <span style={{ fontWeight: 600, fontSize: '14px' }}>✓ {toastMessage}</span>
-            <button
-              onClick={() => setToastMessage('')}
-              style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: '16px' }}
-            >
-              ✕
-            </button>
+          <div className="fixed top-24 right-6 z-50 animate-bounce">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00ff88]/50 bg-[#11151c]/95 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-[20px]">check_circle</span>
+              <span className="text-sm font-medium">{toastMessage}</span>
+            </div>
           </div>
         )}
 
-        {/* Tabs lớn chuyển đổi giữa Bảng tin và Danh sách nhóm */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: '#ede9fe',
-            padding: '4px',
-            borderRadius: '14px',
-            marginBottom: '24px',
-            maxWidth: '440px',
-            margin: '0 auto 28px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('feed')}
-            style={{
-              flex: 1,
-              padding: '10px 18px',
-              borderRadius: '10px',
-              border: 'none',
-              backgroundColor: activeTab === 'feed' ? '#7c5cbf' : 'transparent',
-              color: activeTab === 'feed' ? '#ffffff' : '#4b5563',
-              fontSize: '14px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'feed' ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
-            }}
-          >
-            <span>📰</span>
-            <span>Bảng tin thảo luận</span>
-          </button>
+        {/* Core Hero Header */}
+        <section className="relative w-full overflow-hidden bg-[#0d0e0f] border-b border-[#1a232e] py-10 md:py-12">
+          {/* Ambient Glows */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[280px] bg-[#00ff88]/10 blur-[130px] rounded-full pointer-events-none"></div>
+          <div className="absolute top-1/2 -left-32 w-80 h-80 bg-[#44fb8a]/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('groups')}
-            style={{
-              flex: 1,
-              padding: '10px 18px',
-              borderRadius: '10px',
-              border: 'none',
-              backgroundColor: activeTab === 'groups' ? '#7c5cbf' : 'transparent',
-              color: activeTab === 'groups' ? '#ffffff' : '#4b5563',
-              fontSize: '14px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'groups' ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
-            }}
-          >
-            <span>👥</span>
-            <span>Khám phá Nhóm ({COMMUNITIES_DATA.length})</span>
-          </button>
-        </div>
-
-        {/* Bộ lọc danh mục (Category Pills) */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            paddingBottom: '12px',
-            marginBottom: '24px',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '20px',
-                  border: isSelected ? '1.5px solid #7c5cbf' : '1px solid #e5e7eb',
-                  backgroundColor: isSelected ? '#7c5cbf' : '#ffffff',
-                  color: isSelected ? '#ffffff' : '#4b5563',
-                  fontSize: '13px',
-                  fontWeight: isSelected ? 700 : 500,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 2px 8px rgba(124, 92, 191, 0.25)' : 'none',
-                }}
-              >
-                {cat}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ========================================================= */}
-        {/* VIEW 1: BẢNG TIN BÀI VIẾT & KHOẢNH KHẮC (COMMUNITY FEED)  */}
-        {/* ========================================================= */}
-        {activeTab === 'feed' && (
-          <div>
-            {/* KHUNG TẠO BÀI VIẾT MỚI (POST CREATOR) */}
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid #ede9fe',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                marginBottom: '28px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <img
-                  src={
-                    user?.avatar_url ||
-                    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
-                  }
-                  alt="avatar"
-                  style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    border: '2px solid #7c5cbf',
-                    backgroundColor: '#f5f0ff',
-                  }}
-                />
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1a1a2e' }}>
-                    {user?.display_name || user?.username || 'Bạn'}
-                  </h4>
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                    Chia sẻ khoảnh khắc hoặc cảm nghĩ cùng mọi người
-                  </span>
-                </div>
+          <div className="max-w-[1440px] mx-auto px-4 md:px-8 relative z-10">
+            {/* Title & Subtitle */}
+            <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181d26] border border-[#1a232e] mb-3 shadow-[0_0_12px_rgba(0,255,136,0.15)]">
+                <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+                <span className="text-[11px] font-mono text-[#00ff88] uppercase tracking-widest">
+                  Protocol Sync • V2.4
+                </span>
               </div>
+              <h1 className="text-3xl md:text-5xl font-extrabold text-[#f1ffef] tracking-tight">
+                Community Hub
+              </h1>
+              <p className="text-sm md:text-base text-[#b9cbb9] mt-2 max-w-xl">
+                Kết nối những tâm hồn cùng tần số, chia sẻ góc nhìn và xây dựng nhóm chung đam mê
+                trong không gian số bảo mật.
+              </p>
+            </div>
 
-              <form onSubmit={handleCreatePost}>
-                <textarea
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Bạn đang nghĩ gì? Chia sẻ câu chuyện, kinh nghiệm hoặc cảm xúc hôm nay nhé..."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    borderRadius: '14px',
-                    border: '1px solid #e5e7eb',
-                    backgroundColor: '#f9fafb',
-                    fontSize: '14px',
-                    outline: 'none',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit',
-                    lineHeight: '1.5',
-                  }}
-                />
-
-                {/* Ô nhập ảnh tuỳ chọn */}
-                {showImageInput && (
-                  <div style={{ marginTop: '10px' }}>
-                    <input
-                      type="url"
-                      placeholder="Dán URL hình ảnh (ví dụ: https://images.unsplash.com/...)"
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '13px',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Tùy chọn Chủ đề + Cảm xúc + Nút Đăng */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: '14px',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
+            {/* Tab Controller Switcher */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="inline-flex items-center p-1 rounded-full bg-[#11151c] border border-[#1a232e]">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('feed')}
+                  className={`px-6 py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                    activeTab === 'feed'
+                      ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_20px_rgba(0,255,136,0.45)]'
+                      : 'text-[#b9cbb9] hover:text-[#f1ffef]'
+                  }`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    {/* Chọn chủ đề */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>Chủ đề:</span>
+                  <span className="material-symbols-outlined text-[18px]">dynamic_feed</span>
+                  <span>📰 Bảng tin (Feed)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('groups')}
+                  className={`px-6 py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                    activeTab === 'groups'
+                      ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_20px_rgba(0,255,136,0.45)]'
+                      : 'text-[#b9cbb9] hover:text-[#f1ffef]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">group_work</span>
+                  <span>👥 Nhóm chủ đề ({COMMUNITIES_DATA.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Horizontal Scrollable Category Pills */}
+            <div className="w-full flex items-center justify-start md:justify-center overflow-x-auto pb-2 gap-2 no-scrollbar">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                      : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content Layout */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Feed or Groups Grid */}
+          <div className="lg:col-span-8 flex flex-col gap-6 max-w-[740px] mx-auto w-full">
+            {activeTab === 'feed' ? (
+              <>
+                {/* Create Post Box Component */}
+                <div className="w-full rounded-2xl bg-[#11151c] border border-[#1a232e] p-5 shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-[#181d26] overflow-hidden border border-[#00ff88]/30">
+                        <img
+                          src={userAvatar}
+                          alt="User Avatar"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                              user?.username || 'user'
+                            )}`
+                          }}
+                        />
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+                    </div>
+
+                    <div className="flex-1">
+                      <textarea
+                        value={newContent}
+                        onChange={(e) => setNewContent(e.target.value)}
+                        placeholder="Bạn đang nghĩ gì hoặc muốn chia sẻ điều gì với cộng đồng?"
+                        rows={3}
+                        className="w-full p-3 rounded-xl bg-[#08090a] text-[#f1ffef] placeholder:text-[#849585] text-sm focus:outline-none focus:ring-1 focus:ring-[#00ff88] focus:shadow-[0_0_16px_rgba(0,255,136,0.2)] border border-[#1a232e] resize-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mood Selector Row */}
+                  <div className="mt-3 pt-3 flex flex-wrap items-center gap-1.5 bg-[#08090a]/50 p-2 rounded-xl border border-[#1a232e]">
+                    <span className="text-[11px] font-mono text-[#849585] mr-1">Tâm trạng:</span>
+                    {MOODS.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setNewMood(m)}
+                        className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                          newMood === m
+                            ? 'font-bold text-[#00210c] bg-[#00ff88] shadow-[0_0_10px_rgba(0,255,136,0.35)]'
+                            : 'text-[#b9cbb9] bg-[#181d26] hover:bg-[#1f2021]'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Image input if opened */}
+                  {showImageInput && (
+                    <div className="mt-3">
+                      <input
+                        type="url"
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="Dán URL ảnh đính kèm (https://...)"
+                        className="w-full h-10 px-3 rounded-xl bg-[#08090a] text-xs text-[#f1ffef] border border-[#1a232e] focus:outline-none focus:ring-1 focus:ring-[#00ff88]"
+                      />
+                    </div>
+                  )}
+
+                  {/* Bottom Action Toolbar */}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <select
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #d1d5db',
-                          backgroundColor: '#ffffff',
-                          fontSize: '12.5px',
-                          fontWeight: 600,
-                          color: '#4b5563',
-                        }}
+                        className="h-9 px-3 rounded-xl bg-[#181d26] text-[#00ff88] text-xs font-mono border border-[#1a232e] focus:outline-none cursor-pointer"
                       >
                         {CATEGORIES.filter((c) => c !== 'Tất cả').map((c) => (
-                          <option key={c} value={c}>
+                          <option key={c} value={c} className="bg-[#11151c] text-[#f1ffef]">
                             {c}
                           </option>
                         ))}
                       </select>
-                    </div>
 
-                    {/* Chọn tâm trạng */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>Tâm trạng:</span>
-                      <select
-                        value={newMood}
-                        onChange={(e) => setNewMood(e.target.value)}
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #d1d5db',
-                          backgroundColor: '#ffffff',
-                          fontSize: '12.5px',
-                          fontWeight: 600,
-                          color: '#4b5563',
-                        }}
+                      <button
+                        type="button"
+                        onClick={() => setShowImageInput(!showImageInput)}
+                        className={`p-2 rounded-xl transition-all cursor-pointer ${
+                          showImageInput
+                            ? 'bg-[#00ff88]/20 text-[#00ff88]'
+                            : 'bg-[#181d26] hover:bg-[#1f2021] text-[#b9cbb9]'
+                        }`}
+                        title="Đính kèm link ảnh"
                       >
-                        {MOODS.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
+                        <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                      </button>
                     </div>
 
-                    {/* Nút bật/tắt dán ảnh */}
                     <button
                       type="button"
-                      onClick={() => setShowImageInput((prev) => !prev)}
-                      style={{
-                        background: 'none',
-                        border: '1px dashed #7c5cbf',
-                        color: '#7c5cbf',
-                        padding: '5px 10px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                      }}
+                      onClick={handleCreatePost}
+                      disabled={isSubmitting}
+                      className="px-5 py-2 rounded-xl text-xs font-bold bg-[#00ff88] text-[#00210c] shadow-[0_0_20px_rgba(0,255,136,0.4)] hover:shadow-[0_0_28px_rgba(0,255,136,0.6)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
-                      {showImageInput ? '✕ Bỏ ảnh' : '📷 Thêm ảnh'}
+                      <span>{isSubmitting ? 'Đang gửi...' : 'Đăng bài'}</span>
+                      <span className="material-symbols-outlined text-[16px]">send</span>
                     </button>
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !newContent.trim()}
-                    style={{
-                      padding: '8px 20px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      backgroundColor: '#7c5cbf',
-                      color: '#ffffff',
-                      fontSize: '13.5px',
-                      fontWeight: 700,
-                      cursor: isSubmitting || !newContent.trim() ? 'not-allowed' : 'pointer',
-                      opacity: isSubmitting || !newContent.trim() ? 0.6 : 1,
-                      boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {isSubmitting ? 'Đang đăng...' : 'Đăng bài ✨'}
-                  </button>
                 </div>
-              </form>
-            </div>
 
-            {/* DANH SÁCH BÀI VIẾT (FEED ITEMS) */}
-            {loadingPosts ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280', fontSize: '15px' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏳</div>
-                Đang tải các bài viết cộng đồng...
-              </div>
-            ) : posts.length === 0 ? (
-              <div
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '20px',
-                  padding: '48px 24px',
-                  textAlign: 'center',
-                  border: '1px solid #ede9fe',
-                }}
-              >
-                <div style={{ fontSize: '48px', marginBottom: '14px' }}>📝</div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1a1a2e', marginBottom: '6px' }}>
-                  Chưa có bài viết nào trong chủ đề "{selectedCategory}"
-                </h3>
-                <p style={{ color: '#6b7280', fontSize: '14px', maxWidth: '400px', margin: '0 auto 18px' }}>
-                  Hãy là người đầu tiên chia sẻ cảm nghĩ, mở lời thảo luận để kết nối cùng những người đồng điệu!
-                </p>
-                <button
-                  type="button"
-                  onClick={() => window.scrollTo({ top: 200, behavior: 'smooth' })}
-                  className="btn-primary"
-                  style={{ padding: '8px 20px', fontSize: '13.5px' }}
-                >
-                  Viết bài ngay ✍️
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {posts.map((post) => {
-                  const isAuthor = user?.id === post.author.id
-                  const isAdmin = user?.role === 'admin'
-                  const isCommentsOpen = !!expandedComments[post.id]
-                  const comments = commentsMap[post.id] || []
+                {/* Feed Stream */}
+                {loadingPosts ? (
+                  <div className="py-20 text-center text-[#849585] font-mono text-sm">
+                    Đang tải bảng tin cộng đồng...
+                  </div>
+                ) : posts.length > 0 ? (
+                  posts.map((post) => {
+                    const author = post.author || {}
+                    const avatar =
+                      author.avatar_url ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                        author.username || 'user'
+                      )}`
+                    const isMyPost = user?.id === author.id
 
-                  return (
-                    <div
-                      key={post.id}
-                      style={{
-                        backgroundColor: '#ffffff',
-                        borderRadius: '20px',
-                        border: '1px solid #ede9fe',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                        overflow: 'hidden',
-                        padding: '24px',
-                        transition: 'box-shadow 0.2s ease',
-                      }}
-                    >
-                      {/* Post Header: Tác giả + Nhãn chủ đề + Cảm xúc + Nút xóa */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '14px',
-                        }}
+                    return (
+                      <article
+                        key={post.id}
+                        className="w-full rounded-2xl bg-[#11151c] border border-[#1a232e] p-6 shadow-md transition-all hover:border-[#00ff88]/30 space-y-4"
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img
-                            src={
-                              post.author.avatar_url ||
-                              `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                post.author.username
-                              )}`
-                            }
-                            alt={post.author.display_name || post.author.username}
-                            style={{
-                              width: '44px',
-                              height: '44px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: '2px solid #7c5cbf',
-                              backgroundColor: '#f5f0ff',
-                            }}
-                          />
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1a1a2e' }}>
-                                {post.author.display_name || post.author.username}
-                              </h4>
-                              <span style={{ fontSize: '12px', color: '#9ca3af' }}>@{post.author.username}</span>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <img
+                                src={avatar}
+                                alt={author.username}
+                                className="w-12 h-12 rounded-xl object-cover bg-[#08090a] border border-[#00ff88]/30"
+                                onError={(e) => {
+                                  e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                                    author.username || 'user'
+                                  )}`
+                                }}
+                              />
+                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
                             </div>
-                            <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                              {formatTimeAgo(post.created_at)}
-                            </span>
+
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-[#f1ffef] text-sm md:text-base">
+                                  {author.display_name || author.username}
+                                </span>
+                                <span
+                                  className="material-symbols-outlined text-[#00ff88] text-[16px]"
+                                  style={{ fontVariationSettings: "'FILL' 1" }}
+                                >
+                                  verified
+                                </span>
+                                <span className="text-xs text-[#849585] font-mono">
+                                  @{author.username}
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-mono text-[#849585]">
+                                {formatTimeAgo(post.created_at)}
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Badges: Chủ đề & Cảm xúc */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              fontSize: '11.5px',
-                              fontWeight: 700,
-                              backgroundColor: '#f5f0ff',
-                              color: '#7c5cbf',
-                              padding: '3px 10px',
-                              borderRadius: '12px',
-                              border: '1px solid #ede9fe',
-                            }}
-                          >
-                            #{post.category}
-                          </span>
-
-                          {post.mood && (
-                            <span
-                              style={{
-                                fontSize: '11.5px',
-                                fontWeight: 600,
-                                backgroundColor: '#fef3c7',
-                                color: '#92400e',
-                                padding: '3px 8px',
-                                borderRadius: '12px',
-                              }}
-                            >
-                              {post.mood}
-                            </span>
-                          )}
-
-                          {(isAuthor || isAdmin) && (
+                          {isMyPost && (
                             <button
                               type="button"
                               onClick={() => handleDeletePost(post.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#ef4444',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                padding: '4px',
-                                marginLeft: '4px',
-                              }}
+                              className="p-1.5 rounded-lg text-[#849585] hover:text-red-400 hover:bg-red-500/15 transition-all"
                               title="Xóa bài viết"
                             >
-                              🗑️
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
                             </button>
                           )}
                         </div>
-                      </div>
 
-                      {/* Post Content */}
-                      <p
-                        style={{
-                          fontSize: '15px',
-                          color: '#374151',
-                          lineHeight: '1.65',
-                          margin: '0 0 16px 0',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {post.content}
-                      </p>
-
-                      {/* Post Image (nếu có) */}
-                      {post.image_url && (
-                        <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden' }}>
-                          <img
-                            src={post.image_url}
-                            alt="Khoảnh khắc"
-                            style={{
-                              width: '100%',
-                              maxHeight: '400px',
-                              objectFit: 'cover',
-                              borderRadius: '14px',
-                            }}
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Action Bar: Thả tim & Bình luận */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          paddingTop: '12px',
-                          borderTop: '1px solid #f3f4f6',
-                        }}
-                      >
-                        {/* Nút Thả tim */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleLike(post.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: post.is_liked_by_me ? '#fef2f2' : 'none',
-                            border: post.is_liked_by_me ? '1px solid #fecaca' : '1px solid #e5e7eb',
-                            borderRadius: '10px',
-                            padding: '6px 14px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: post.is_liked_by_me ? '#ef4444' : '#4b5563',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <span>{post.is_liked_by_me ? '❤️' : '🤍'}</span>
-                          <span>{post.likes_count}</span>
-                        </button>
-
-                        {/* Nút Mở Bình luận */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleComments(post.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: isCommentsOpen ? '#f5f0ff' : 'none',
-                            border: isCommentsOpen ? '1px solid #ddd6fe' : '1px solid #e5e7eb',
-                            borderRadius: '10px',
-                            padding: '6px 14px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: isCommentsOpen ? '#7c5cbf' : '#4b5563',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <span>💬</span>
-                          <span>{post.comments_count} bình luận</span>
-                        </button>
-                      </div>
-
-                      {/* KHU VỰC BÌNH LUẬN (COMMENTS ACCORDION) */}
-                      {isCommentsOpen && (
-                        <div
-                          style={{
-                            marginTop: '16px',
-                            paddingTop: '16px',
-                            borderTop: '1px dashed #e5e7eb',
-                            backgroundColor: '#faf9fe',
-                            padding: '16px',
-                            borderRadius: '14px',
-                          }}
-                        >
-                          {/* Danh sách bình luận */}
-                          {comments.length === 0 ? (
-                            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 12px 0', fontStyle: 'italic' }}>
-                              Chưa có bình luận nào. Hãy để lại lời nhắn đầu tiên!
-                            </p>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
-                              {comments.map((c) => {
-                                const canDeleteComment = user?.id === c.author.id || isAuthor || isAdmin
-                                return (
-                                  <div
-                                    key={c.id}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'flex-start',
-                                      gap: '10px',
-                                      backgroundColor: '#ffffff',
-                                      padding: '10px 14px',
-                                      borderRadius: '12px',
-                                      border: '1px solid #ede9fe',
-                                    }}
-                                  >
-                                    <img
-                                      src={
-                                        c.author.avatar_url ||
-                                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                          c.author.username
-                                        )}`
-                                      }
-                                      alt={c.author.display_name || c.author.username}
-                                      style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0 }}
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1a2e' }}>
-                                          {c.author.display_name || c.author.username}
-                                        </span>
-                                        <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                                          {formatTimeAgo(c.created_at)}
-                                        </span>
-                                      </div>
-                                      <p style={{ margin: '2px 0 0 0', fontSize: '13.5px', color: '#374151' }}>
-                                        {c.content}
-                                      </p>
-                                    </div>
-                                    {canDeleteComment && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteComment(post.id, c.id)}
-                                        style={{
-                                          background: 'none',
-                                          border: 'none',
-                                          color: '#9ca3af',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                        }}
-                                        title="Xóa bình luận"
-                                      >
-                                        ✕
-                                      </button>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
+                        {/* Badges */}
+                        <div className="flex items-center gap-2">
+                          {post.mood && (
+                            <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#181d26] text-[#00ff88] border border-[#00ff88]/20">
+                              {post.mood}
+                            </span>
                           )}
+                          {post.category && (
+                            <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#08090a] text-[#4edea3] border border-[#1a232e]">
+                              {post.category}
+                            </span>
+                          )}
+                        </div>
 
-                          {/* Khung nhập bình luận mới */}
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                              type="text"
-                              placeholder="Viết bình luận của bạn..."
-                              value={commentInputs[post.id] || ''}
-                              onChange={(e) =>
-                                setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault()
-                                  handleAddComment(post.id)
-                                }
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                border: '1px solid #d1d5db',
-                                fontSize: '13px',
-                                outline: 'none',
-                              }}
+                        {/* Content */}
+                        <p className="text-sm md:text-base text-[#e3e2e3] leading-relaxed whitespace-pre-wrap">
+                          {post.content}
+                        </p>
+
+                        {/* Image */}
+                        {post.image_url && (
+                          <div className="w-full rounded-xl overflow-hidden max-h-96 border border-[#1a232e]">
+                            <img
+                              src={post.image_url}
+                              alt="Post attachment"
+                              className="w-full h-full object-cover"
                             />
+                          </div>
+                        )}
+
+                        {/* Action stats */}
+                        <div className="flex items-center justify-between pt-2 border-t border-[#1a232e] text-[#b9cbb9] text-xs font-mono">
+                          <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => handleAddComment(post.id)}
-                              disabled={submittingComment[post.id] || !commentInputs[post.id]?.trim()}
-                              style={{
-                                padding: '8px 16px',
-                                borderRadius: '10px',
-                                border: 'none',
-                                backgroundColor: '#7c5cbf',
-                                color: '#ffffff',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                cursor:
-                                  submittingComment[post.id] || !commentInputs[post.id]?.trim()
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                                opacity:
-                                  submittingComment[post.id] || !commentInputs[post.id]?.trim() ? 0.6 : 1,
-                              }}
+                              onClick={() => handleToggleLike(post.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                                post.is_liked_by_me
+                                  ? 'bg-[#00ff88]/15 text-[#00ff88] font-bold shadow-[0_0_10px_rgba(0,255,136,0.2)]'
+                                  : 'hover:bg-[#181d26] hover:text-[#f1ffef]'
+                              }`}
                             >
-                              Gửi
+                              <span
+                                className="material-symbols-outlined text-[18px]"
+                                style={{
+                                  fontVariationSettings: post.is_liked_by_me ? "'FILL' 1" : "'FILL' 0",
+                                }}
+                              >
+                                favorite
+                              </span>
+                              <span>{post.likes_count || 0}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleComments(post.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-[#181d26] hover:text-[#f1ffef] transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                chat_bubble
+                              </span>
+                              <span>{post.comments_count || 0}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(window.location.href)
+                                showToast('Đã sao chép liên kết bài viết!')
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-[#181d26] hover:text-[#f1ffef] transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">share</span>
                             </button>
                           </div>
                         </div>
-                      )}
+
+                        {/* Expandable Comments Drawer */}
+                        {expandedComments[post.id] && (
+                          <div className="pt-3 border-t border-[#1a232e] space-y-3">
+                            {commentsMap[post.id] && commentsMap[post.id].length > 0 ? (
+                              <div className="space-y-2">
+                                {commentsMap[post.id].map((c) => (
+                                  <div
+                                    key={c.id}
+                                    className="p-3 rounded-xl bg-[#08090a] border border-[#1a232e] text-xs space-y-1"
+                                  >
+                                    <div className="flex items-center justify-between text-[#849585] font-mono">
+                                      <span className="text-[#00ff88] font-bold">
+                                        @{c.author?.username || 'member'}
+                                      </span>
+                                      <span>{formatTimeAgo(c.created_at)}</span>
+                                    </div>
+                                    <p className="text-[#e3e2e3]">{c.content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-[#849585] italic py-2">
+                                Chưa có bình luận nào. Hãy là người đầu tiên!
+                              </p>
+                            )}
+
+                            {/* Comment input form */}
+                            <div className="flex items-center gap-2 pt-2">
+                              <input
+                                type="text"
+                                value={commentInputs[post.id] || ''}
+                                onChange={(e) =>
+                                  setCommentInputs((prev) => ({
+                                    ...prev,
+                                    [post.id]: e.target.value,
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddComment(post.id)
+                                }}
+                                placeholder="Viết phản hồi của bạn..."
+                                className="flex-1 h-10 px-3.5 rounded-xl bg-[#08090a] text-xs text-[#f1ffef] placeholder:text-[#849585] border border-[#1a232e] focus:outline-none focus:ring-1 focus:ring-[#00ff88]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddComment(post.id)}
+                                disabled={submittingComment[post.id]}
+                                className="h-10 px-4 rounded-xl bg-[#00ff88] text-[#00210c] text-xs font-bold shadow-[0_0_12px_rgba(0,255,136,0.3)] hover:shadow-[0_0_16px_rgba(0,255,136,0.5)] transition-all cursor-pointer"
+                              >
+                                Gửi
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    )
+                  })
+                ) : (
+                  <div className="py-20 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] text-[#849585] space-y-2">
+                    <span className="material-symbols-outlined text-[36px] text-[#00ff88]">
+                      feed
+                    </span>
+                    <p className="text-sm">Chưa có bài viết nào trong chủ đề này.</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Groups View */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {COMMUNITIES_DATA.map((group) => {
+                  const isJoined = joinedCommunities.includes(group.id)
+                  return (
+                    <div
+                      key={group.id}
+                      className="rounded-2xl bg-[#11151c] border border-[#1a232e] p-5 shadow-lg flex flex-col justify-between hover:border-[#00ff88]/30 transition-all space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <span className="text-3xl p-2.5 rounded-xl bg-[#181d26] border border-[#1a232e]">
+                            {group.icon}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#08090a] text-[#4edea3] text-[11px] font-mono border border-[#4edea3]/20">
+                            {group.membersCount.toLocaleString()} thành viên
+                          </span>
+                        </div>
+
+                        <div>
+                          <h3 className="text-base font-bold text-[#f1ffef]">{group.name}</h3>
+                          <p className="text-xs text-[#849585] font-mono mt-0.5">{group.category}</p>
+                        </div>
+
+                        <p className="text-xs text-[#b9cbb9] leading-relaxed line-clamp-3">
+                          {group.description}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1">
+                          {group.tags.map((t) => (
+                            <span
+                              key={t}
+                              className="px-2 py-0.5 rounded bg-[#08090a] text-[#849585] text-[10px] font-mono"
+                            >
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleJoinGroup(group.id)}
+                        className={`w-full h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          isJoined
+                            ? 'bg-[#181d26] text-[#b9cbb9] hover:text-red-400 hover:bg-red-500/15 border border-[#1a232e]'
+                            : 'bg-[#00ff88] text-[#00210c] shadow-[0_0_16px_rgba(0,255,136,0.35)] hover:shadow-[0_0_22px_rgba(0,255,136,0.6)]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          {isJoined ? 'check' : 'add'}
+                        </span>
+                        <span>{isJoined ? 'Đã tham gia' : 'Tham gia nhóm'}</span>
+                      </button>
                     </div>
                   )
                 })}
               </div>
             )}
           </div>
-        )}
 
-        {/* ========================================================= */}
-        {/* VIEW 2: KHÁM PHÁ CÁC NHÓM CỘNG ĐỒNG (GROUPS HUB)          */}
-        {/* ========================================================= */}
-        {activeTab === 'groups' && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
-              gap: '24px',
-            }}
-          >
-            {filteredCommunities.map((comm) => {
-              const isJoined = joinedCommunities.includes(comm.id)
-              return (
-                <div
-                  key={comm.id}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '20px',
-                    border: '1px solid #ede9fe',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  }}
-                  className="card-hover"
-                >
-                  <div>
-                    {/* Card Header Banner */}
-                    <div
-                      style={{
-                        background: comm.bgGradient,
-                        padding: '24px 20px',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span
-                          style={{
-                            fontSize: '32px',
-                            backgroundColor: 'rgba(255,255,255,0.2)',
-                            width: '54px',
-                            height: '54px',
-                            borderRadius: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {comm.icon}
-                        </span>
-                        <div>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px',
-                              opacity: 0.9,
-                            }}
-                          >
-                            {comm.category}
-                          </span>
-                          <h3 style={{ fontSize: '17px', fontWeight: 800, margin: '2px 0 0 0' }}>
-                            {comm.name}
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Body */}
-                    <div style={{ padding: '20px' }}>
-                      {/* Member Count */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>
-                          👥 {comm.membersCount.toLocaleString()} thành viên
-                        </span>
-                        {isJoined && (
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              backgroundColor: '#ecfdf5',
-                              color: '#059669',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '10px',
-                            }}
-                          >
-                            ✓ Đã tham gia
-                          </span>
-                        )}
-                      </div>
-
-                      <p style={{ fontSize: '13.5px', color: '#4b5563', lineHeight: '1.5', margin: '0 0 16px 0' }}>
-                        {comm.description}
-                      </p>
-
-                      {/* Chủ đề thảo luận sôi nổi */}
-                      <div
-                        style={{
-                          backgroundColor: '#faf9fe',
-                          border: '1px dashed #ddd6fe',
-                          borderRadius: '12px',
-                          padding: '10px 12px',
-                          marginBottom: '16px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: '#7c5cbf',
-                            display: 'block',
-                            marginBottom: '2px',
-                          }}
-                        >
-                          🔥 THẢO LUẬN SÔI NỔI:
-                        </span>
-                        <span style={{ fontSize: '12.5px', color: '#374151', fontStyle: 'italic' }}>
-                          "{comm.activeTopic}"
-                        </span>
-                      </div>
-
-                      {/* Tags */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {comm.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              fontSize: '11.5px',
-                              backgroundColor: '#f3f4f6',
-                              color: '#4b5563',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              fontWeight: 500,
-                            }}
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+          {/* Right Tactical Sidebar */}
+          <aside className="lg:col-span-4 flex flex-col gap-6">
+            {/* User Quick Status HUD */}
+            <div className="w-full rounded-2xl bg-[#11151c] border border-[#1a232e] p-5 shadow-md">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-xl bg-[#181d26] border border-[#00ff88]/40 flex items-center justify-center text-lg text-[#00ff88] font-bold font-mono">
+                    LP
                   </div>
-
-                  {/* Card Actions Footer: Xem bài viết + Tham gia + Tìm bạn */}
-                  <div
-                    style={{
-                      padding: '14px 20px',
-                      borderTop: '1px solid #f3f4f6',
-                      display: 'flex',
-                      gap: '8px',
-                      backgroundColor: '#ffffff',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleViewCommunityPosts(comm)}
-                      style={{
-                        flex: 1.2,
-                        padding: '9px 6px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        backgroundColor: '#7c5cbf',
-                        color: '#ffffff',
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(124, 92, 191, 0.25)',
-                      }}
-                    >
-                      <span>📰</span>
-                      <span>Xem bài viết</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleToggleJoin(comm)}
-                      style={{
-                        flex: 1,
-                        padding: '9px 6px',
-                        borderRadius: '10px',
-                        border: isJoined ? '1px solid #d1d5db' : '1px solid #7c5cbf',
-                        backgroundColor: isJoined ? '#ffffff' : '#f5f0ff',
-                        color: isJoined ? '#4b5563' : '#7c5cbf',
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      {isJoined ? 'Rời nhóm' : 'Tham gia'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleExploreMembers(comm)}
-                      style={{
-                        padding: '9px 12px',
-                        borderRadius: '10px',
-                        border: '1px solid #ede9fe',
-                        backgroundColor: '#ffffff',
-                        color: '#7c5cbf',
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                      title="Tìm bạn bè cùng sở thích trong Discover"
-                    >
-                      ✨
-                    </button>
-                  </div>
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#f1ffef]">Trạm Kết Nối Của Bạn</h4>
+                  <p className="text-[11px] font-mono text-[#849585]">
+                    Tần số: 104.2 MHz [Online]
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#08090a] border border-[#1a232e] text-center mb-4 font-mono">
+                <div>
+                  <div className="text-base md:text-lg font-bold text-[#00ff88]">
+                    {joinedCommunities.length}
+                  </div>
+                  <div className="text-[10px] text-[#849585]">Nhóm</div>
+                </div>
+                <div>
+                  <div className="text-base md:text-lg font-bold text-[#44fb8a]">{posts.length}</div>
+                  <div className="text-[10px] text-[#849585]">Bài viết</div>
+                </div>
+                <div>
+                  <div className="text-base md:text-lg font-bold text-[#62ff96]">98.2%</div>
+                  <div className="text-[10px] text-[#849585]">Cộng hưởng</div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] font-mono">
+                  <span className="text-[#b9cbb9]">Chỉ số cộng hưởng tuần</span>
+                  <span className="text-[#00ff88] font-bold">+18.5%</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-[#181d26] overflow-hidden">
+                  <div
+                    className="h-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]"
+                    style={{ width: '78%' }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Trending Radar Topics */}
+            <div className="w-full rounded-2xl bg-[#11151c] border border-[#1a232e] p-5 shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-[#00ff88]">radar</span>
+                  <h4 className="text-sm font-bold text-[#f1ffef]">Chủ đề thịnh hành</h4>
+                </div>
+                <span className="text-[10px] font-mono text-[#849585] uppercase">Trực tiếp</span>
+              </div>
+
+              <div className="flex flex-col gap-2.5 text-xs">
+                <div className="p-2.5 rounded-xl bg-[#08090a] border border-[#1a232e] flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-[#f1ffef]">#DeepWorkVietnam</div>
+                    <div className="text-[10px] font-mono text-[#849585]">1.8k thảo luận</div>
+                  </div>
+                  <span className="text-[#00ff88] font-mono">HOT</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#08090a] border border-[#1a232e] flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-[#f1ffef]">#OllamaLocalLLM</div>
+                    <div className="text-[10px] font-mono text-[#849585]">950 chia sẻ</div>
+                  </div>
+                  <span className="text-[#44fb8a] font-mono">NEW</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#08090a] border border-[#1a232e] flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-[#f1ffef]">#SáchHayMỗiNgày</div>
+                    <div className="text-[10px] font-mono text-[#849585]">1.2k phản hồi</div>
+                  </div>
+                  <span className="text-[#62ff96] font-mono">TOP</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
     </div>
   )
 }
