@@ -24,6 +24,22 @@ export function CallProvider({ children }) {
     return () => callSignalListenersRef.current.delete(listener)
   }, [])
 
+  // Lắng nghe tín hiệu gọi dự phòng từ socket phòng chat Messages (hai luồng tín hiệu song song đảm bảo 100% không mất tin)
+  useEffect(() => {
+    const handleSignalEvent = (e) => {
+      const data = e.detail
+      if (data && data.type && data.type.startsWith('call:') && data.type !== 'call:offer') {
+        callSignalListenersRef.current.forEach((listener) => {
+          try {
+            listener(data)
+          } catch (err) {}
+        })
+      }
+    }
+    window.addEventListener('call-signal-received', handleSignalEvent)
+    return () => window.removeEventListener('call-signal-received', handleSignalEvent)
+  }, [])
+
   // 1. Duy trì kết nối WebSocket toàn cục tới /api/ws/user
   useEffect(() => {
     if (!token || !user) {
@@ -161,18 +177,27 @@ export function CallProvider({ children }) {
     })
   }, [])
 
-  // 3. Gửi tín hiệu WebRTC qua WebSocket toàn cục
+  // 3. Gửi tín hiệu WebRTC qua WebSocket toàn cục (có cơ chế hàng đợi retry an toàn nếu socket đang kết nối lại)
   const sendCallSignal = useCallback((payload) => {
-    const ws = socketRef.current
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      const currentSession = callSessionRef.current
-      const enriched = {
-        ...payload,
-        target_user_id: payload.target_user_id || currentSession?.partner?.id,
-        conversation_id: payload.conversation_id || currentSession?.conversationId,
-      }
-      ws.send(JSON.stringify(enriched))
+    const currentSession = callSessionRef.current
+    const enriched = {
+      ...payload,
+      target_user_id: payload.target_user_id || currentSession?.partner?.id,
+      conversation_id: payload.conversation_id || currentSession?.conversationId,
     }
+
+    const trySend = (retries = 6) => {
+      const ws = socketRef.current
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(enriched))
+      } else if (ws && ws.readyState === WebSocket.CONNECTING && retries > 0) {
+        setTimeout(() => trySend(retries - 1), 200)
+      } else {
+        console.warn('WebSocket toàn cục chưa sẵn sàng để gửi tín hiệu:', enriched.type)
+      }
+    }
+
+    trySend()
   }, [])
 
   // 4. Kết thúc phiên gọi

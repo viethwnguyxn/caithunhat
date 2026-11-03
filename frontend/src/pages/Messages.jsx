@@ -356,7 +356,9 @@ export default function Messages() {
             })
           )
         } else if (data.type && data.type.startsWith('call:')) {
-          // Tín hiệu cuộc gọi WebRTC đã được CallContext xử lý tập trung toàn cục
+          // Chuyển tiếp tín hiệu gọi WebRTC vào CallContext qua CustomEvent (dự phòng song song đảm bảo không mất gói tin)
+          window.dispatchEvent(new CustomEvent('call-signal-received', { detail: data }))
+
           if (data.type === 'call:end' || data.type === 'call:reject') {
             setTimeout(() => {
               getMessages(activeConversation.id)

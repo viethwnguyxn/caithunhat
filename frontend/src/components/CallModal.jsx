@@ -291,6 +291,11 @@ export default function CallModal({
 
     // Nhận stream Audio/Video từ đối phương - gom các track liên tục vào stream chung
     pc.ontrack = (event) => {
+      // Khi đã nhận được track media từ đối phương -> Khẳng định kết nối thành công, vào Live ngay
+      setCallStatus('connected')
+      audioSynth.stop()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+
       if (!remoteStreamRef.current) {
         remoteStreamRef.current = new MediaStream()
       }
@@ -567,13 +572,18 @@ export default function CallModal({
     const pc = peerConnectionRef.current
 
     if (type === 'call:answer') {
+      // Triệt tiêu chuông đổ và hủy ngay bộ đếm tự động ngắt 45s khi đối phương đã nhấc máy
+      audioSynth.stop()
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current)
+        ringTimeoutRef.current = null
+      }
+      setCallStatus('connecting')
+
       if (pc) {
         try {
           if (sdp && pc.signalingState !== 'stable') {
             await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-            setCallStatus('connecting')
-            audioSynth.stop()
-            if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
 
             // Áp dụng tất cả ICE candidate đang xếp hàng chờ
             while (iceCandidateQueueRef.current.length > 0) {
@@ -604,7 +614,10 @@ export default function CallModal({
       }
     } else if (type === 'call:reject' || type === 'call:end') {
       audioSynth.stop()
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current)
+        ringTimeoutRef.current = null
+      }
       setErrorMessage(
         type === 'call:reject'
           ? (reason === 'busy' ? 'Đối phương đang bận' : 'Đối phương đã từ chối cuộc gọi')
@@ -613,7 +626,7 @@ export default function CallModal({
       setTimeout(() => {
         cleanupCall()
         onEndCall({ duration, reason: reason || 'remote_ended' })
-      }, 1200)
+      }, 600)
     } else if (type === 'call:unavailable') {
       audioSynth.stop()
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
