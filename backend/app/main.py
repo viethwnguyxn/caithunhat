@@ -58,21 +58,26 @@ if str(engine.url).startswith("sqlite"):
             pass
 
 
-def migrate_notification_titles():
+def migrate_notification_schema():
     if not inspect(engine).has_table("notifications"):
         return
 
     columns = {column["name"] for column in inspect(engine).get_columns("notifications")}
-    if "title" in columns:
-        return
-
     with engine.begin() as conn:
-        conn.execute(
-            text(
-                "ALTER TABLE notifications "
-                "ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT ''"
+        if "title" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE notifications "
+                    "ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT ''"
+                )
             )
-        )
+        if "content" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE notifications "
+                    "ADD COLUMN content TEXT NOT NULL DEFAULT ''"
+                )
+            )
         conn.execute(
             text(
                 """
@@ -93,7 +98,7 @@ def migrate_notification_titles():
         )
 
 
-migrate_notification_titles()
+migrate_notification_schema()
 
 
 def ensure_admin_user():
