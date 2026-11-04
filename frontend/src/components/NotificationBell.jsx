@@ -173,8 +173,8 @@ export default function NotificationBell() {
           width: '38px',
           height: '38px',
           borderRadius: '10px',
-          border: isOpen ? '1.5px solid #7c5cbf' : '1px solid #ede9fe',
-          backgroundColor: isOpen ? '#f5f0ff' : '#ffffff',
+          border: isOpen ? '1.5px solid #245745' : '1px solid #dce8e2',
+          backgroundColor: isOpen ? '#e1efe8' : '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -226,8 +226,8 @@ export default function NotificationBell() {
             maxWidth: '90vw',
             backgroundColor: '#ffffff',
             borderRadius: '16px',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(124, 92, 191, 0.08)',
-            border: '1px solid #ede9fe',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(36, 87, 69, 0.08)',
+            border: '1px solid #dce8e2',
             zIndex: 1000,
             overflow: 'hidden',
             animation: 'fadeIn 0.15s ease-out',
@@ -241,7 +241,7 @@ export default function NotificationBell() {
               justifyContent: 'space-between',
               padding: '14px 18px',
               borderBottom: '1px solid #f3f4f6',
-              backgroundColor: '#faf8ff',
+              backgroundColor: '#f1f7f3',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -251,8 +251,8 @@ export default function NotificationBell() {
               {unreadCount > 0 && (
                 <span
                   style={{
-                    backgroundColor: '#ede9fe',
-                    color: '#7c5cbf',
+                    backgroundColor: '#dce8e2',
+                    color: '#245745',
                     fontSize: '11px',
                     fontWeight: 700,
                     padding: '2px 8px',
@@ -272,7 +272,7 @@ export default function NotificationBell() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#7c5cbf',
+                  color: '#245745',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -280,7 +280,7 @@ export default function NotificationBell() {
                   borderRadius: '6px',
                   transition: 'background 0.15s ease',
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#ede9fe')}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#dce8e2')}
                 onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 Đọc tất cả
@@ -340,7 +340,7 @@ export default function NotificationBell() {
                       width: '36px',
                       height: '36px',
                       borderRadius: '10px',
-                      backgroundColor: item.is_read ? '#f3f4f6' : '#ede9fe',
+                      backgroundColor: item.is_read ? '#f3f4f6' : '#dce8e2',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -405,7 +405,7 @@ export default function NotificationBell() {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: '#7c5cbf',
+                        backgroundColor: '#245745',
                         flexShrink: 0,
                         marginTop: '6px',
                       }}

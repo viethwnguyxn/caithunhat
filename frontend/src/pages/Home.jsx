@@ -43,7 +43,7 @@ export default function Home() {
   const displayName = profile?.display_name || user?.username || 'Bạn'
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '32px 16px 64px' }}>
@@ -52,12 +52,12 @@ export default function Home() {
         {/* ========================================================= */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #7c5cbf 0%, #9b7fe8 100%)',
+            background: 'linear-gradient(135deg, #245745 0%, #3d705c 100%)',
             borderRadius: '24px',
             padding: '36px 32px',
             color: '#ffffff',
             marginBottom: '32px',
-            boxShadow: '0 8px 24px rgba(124, 92, 191, 0.25)',
+            boxShadow: '0 8px 24px rgba(36, 87, 69, 0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -79,7 +79,7 @@ export default function Home() {
                 marginBottom: '14px',
               }}
             >
-              <span>◎ Kindred Community</span>
+              <span>◎ La Pulga Community</span>
             </div>
 
             <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.5px' }}>
@@ -99,7 +99,7 @@ export default function Home() {
                     borderRadius: '10px',
                     border: 'none',
                     backgroundColor: '#ffffff',
-                    color: '#7c5cbf',
+                    color: '#245745',
                     fontSize: '14px',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -145,7 +145,7 @@ export default function Home() {
                 borderRadius: '50%',
                 border: '3px solid rgba(255, 255, 255, 0.8)',
                 objectFit: 'cover',
-                backgroundColor: '#f5f0ff',
+                backgroundColor: '#e1efe8',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
               }}
             />
@@ -172,7 +172,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               padding: '20px',
               borderRadius: '18px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
               display: 'flex',
               alignItems: 'center',
@@ -192,8 +192,8 @@ export default function Home() {
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
+                backgroundColor: '#e1efe8',
+                color: '#245745',
                 fontSize: '12px',
                 fontWeight: 600,
               }}
@@ -208,7 +208,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               padding: '20px',
               borderRadius: '18px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
               display: 'flex',
               alignItems: 'center',
@@ -228,8 +228,8 @@ export default function Home() {
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
+                backgroundColor: '#e1efe8',
+                color: '#245745',
                 fontSize: '12px',
                 fontWeight: 600,
               }}
@@ -244,7 +244,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               padding: '20px',
               borderRadius: '18px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
               display: 'flex',
               alignItems: 'center',
@@ -264,8 +264,8 @@ export default function Home() {
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
+                backgroundColor: '#e1efe8',
+                color: '#245745',
                 fontSize: '12px',
                 fontWeight: 600,
               }}
@@ -298,7 +298,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               borderRadius: '20px',
               padding: '24px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               display: 'flex',
               flexDirection: 'column',
@@ -311,7 +311,7 @@ export default function Home() {
                   width: '48px',
                   height: '48px',
                   borderRadius: '14px',
-                  backgroundColor: '#f5f0ff',
+                  backgroundColor: '#e1efe8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -328,7 +328,7 @@ export default function Home() {
                 Xem danh sách những người có điểm số tương đồng cao nhất dựa trên khảo sát và hồ sơ cá nhân của bạn.
               </p>
             </div>
-            <span style={{ marginTop: '20px', color: '#7c5cbf', fontWeight: 700, fontSize: '13px' }}>
+            <span style={{ marginTop: '20px', color: '#245745', fontWeight: 700, fontSize: '13px' }}>
               Khám phá ngay →
             </span>
           </Link>
@@ -341,7 +341,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               borderRadius: '20px',
               padding: '24px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               display: 'flex',
               flexDirection: 'column',
@@ -384,7 +384,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               borderRadius: '20px',
               padding: '24px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               display: 'flex',
               flexDirection: 'column',
@@ -427,7 +427,7 @@ export default function Home() {
               backgroundColor: '#ffffff',
               borderRadius: '20px',
               padding: '24px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               display: 'flex',
               flexDirection: 'column',
@@ -471,7 +471,7 @@ export default function Home() {
             backgroundColor: '#ffffff',
             borderRadius: '20px',
             padding: '28px',
-            border: '1px solid #ede9fe',
+            border: '1px solid #dce8e2',
             display: 'flex',
             alignItems: 'center',
             gap: '20px',
@@ -483,7 +483,7 @@ export default function Home() {
               width: '54px',
               height: '54px',
               borderRadius: '50%',
-              backgroundColor: '#f5f0ff',
+              backgroundColor: '#e1efe8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -495,7 +495,7 @@ export default function Home() {
           </div>
           <div style={{ flex: 1, minWidth: '240px' }}>
             <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px 0' }}>
-              Lời khuyên kết nối từ Kindred
+              Lời khuyên kết nối từ La Pulga
             </h4>
             <p style={{ fontSize: '13.5px', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
               Một lời chào chân thành và nhắc đến điểm tương đồng mà hai bạn cùng chia sẻ trong khảo sát sẽ là khởi đầu tuyệt vời cho một tình bạn lâu dài!

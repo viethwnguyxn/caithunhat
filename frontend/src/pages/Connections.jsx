@@ -133,14 +133,14 @@ export default function Connections() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 16px' }}>
         {/* Banner tiêu đề */}
         <div style={{ marginBottom: '28px', textAlign: 'center' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Kết nối & <span style={{ color: '#7c5cbf' }}>Bạn bè</span>
+            Kết nối & <span style={{ color: '#245745' }}>Bạn bè</span>
           </h1>
           <p style={{ color: '#6b7280', fontSize: '15px' }}>
             Quản lý mạng lưới bạn bè đồng điệu và những lời mời kết nối của bạn.
@@ -226,7 +226,7 @@ export default function Connections() {
             borderRadius: '16px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             marginBottom: '24px',
-            border: '1px solid #ede9fe',
+            border: '1px solid #dce8e2',
           }}
         >
           <button
@@ -245,7 +245,7 @@ export default function Connections() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'connections' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'connections' ? '#245745' : 'transparent',
               color: activeTab === 'connections' ? '#ffffff' : '#6b7280',
             }}
           >
@@ -279,7 +279,7 @@ export default function Connections() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'received' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'received' ? '#245745' : 'transparent',
               color: activeTab === 'received' ? '#ffffff' : '#6b7280',
             }}
           >
@@ -316,7 +316,7 @@ export default function Connections() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'sent' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'sent' ? '#245745' : 'transparent',
               color: activeTab === 'sent' ? '#ffffff' : '#6b7280',
             }}
           >
@@ -343,15 +343,15 @@ export default function Connections() {
               padding: '60px 20px',
               backgroundColor: '#ffffff',
               borderRadius: '20px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
             }}
           >
             <div
               style={{
                 width: '40px',
                 height: '40px',
-                border: '4px solid #ede9fe',
-                borderTop: '4px solid #7c5cbf',
+                border: '4px solid #dce8e2',
+                borderTop: '4px solid #245745',
                 borderRadius: '50%',
                 margin: '0 auto 16px',
                 animation: 'spin 1s linear infinite',
@@ -374,7 +374,7 @@ export default function Connections() {
                       padding: '60px 20px',
                       backgroundColor: '#ffffff',
                       borderRadius: '20px',
-                      border: '1px solid #ede9fe',
+                      border: '1px solid #dce8e2',
                       boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                     }}
                   >
@@ -409,8 +409,8 @@ export default function Connections() {
                             backgroundColor: '#ffffff',
                             borderRadius: '16px',
                             padding: '20px',
-                            border: '1px solid #ede9fe',
-                            boxShadow: '0 4px 16px rgba(124, 92, 191, 0.05)',
+                            border: '1px solid #dce8e2',
+                            boxShadow: '0 4px 16px rgba(36, 87, 69, 0.05)',
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'space-between',
@@ -428,9 +428,9 @@ export default function Connections() {
                                   width: '56px',
                                   height: '56px',
                                   borderRadius: '50%',
-                                  border: '2px solid #7c5cbf',
+                                  border: '2px solid #245745',
                                   objectFit: 'cover',
-                                  backgroundColor: '#f5f0ff',
+                                  backgroundColor: '#e1efe8',
                                 }}
                               />
                               <div>
@@ -513,8 +513,8 @@ export default function Connections() {
                                 flex: 1,
                                 padding: '10px',
                                 borderRadius: '10px',
-                                border: '1px solid #7c5cbf',
-                                backgroundColor: '#7c5cbf',
+                                border: '1px solid #245745',
+                                backgroundColor: '#245745',
                                 color: '#ffffff',
                                 fontWeight: 600,
                                 fontSize: '13px',
@@ -524,7 +524,7 @@ export default function Connections() {
                                 justifyContent: 'center',
                                 gap: '6px',
                                 transition: 'all 0.2s ease',
-                                boxShadow: '0 2px 8px rgba(124, 92, 191, 0.25)',
+                                boxShadow: '0 2px 8px rgba(36, 87, 69, 0.25)',
                               }}
                             >
                               <span>💬</span>
@@ -643,7 +643,7 @@ export default function Connections() {
                       padding: '60px 20px',
                       backgroundColor: '#ffffff',
                       borderRadius: '20px',
-                      border: '1px solid #ede9fe',
+                      border: '1px solid #dce8e2',
                       boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                     }}
                   >
@@ -667,7 +667,7 @@ export default function Connections() {
                             backgroundColor: '#ffffff',
                             borderRadius: '16px',
                             padding: '20px',
-                            border: '1px solid #ede9fe',
+                            border: '1px solid #dce8e2',
                             boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
                             display: 'flex',
                             alignItems: 'center',
@@ -687,9 +687,9 @@ export default function Connections() {
                                 width: '54px',
                                 height: '54px',
                                 borderRadius: '50%',
-                                border: '2px solid #7c5cbf',
+                                border: '2px solid #245745',
                                 objectFit: 'cover',
-                                backgroundColor: '#f5f0ff',
+                                backgroundColor: '#e1efe8',
                               }}
                             />
                             <div>
@@ -736,13 +736,13 @@ export default function Connections() {
                                 padding: '8px 20px',
                                 borderRadius: '10px',
                                 border: 'none',
-                                backgroundColor: '#7c5cbf',
+                                backgroundColor: '#245745',
                                 color: '#ffffff',
                                 fontSize: '13px',
                                 fontWeight: 600,
                                 cursor: isProcessing ? 'not-allowed' : 'pointer',
                                 opacity: isProcessing ? 0.6 : 1,
-                                boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
+                                boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
                               }}
                             >
                               {isProcessing ? 'Đang xử lý...' : 'Chấp nhận'}
@@ -766,7 +766,7 @@ export default function Connections() {
                       padding: '60px 20px',
                       backgroundColor: '#ffffff',
                       borderRadius: '20px',
-                      border: '1px solid #ede9fe',
+                      border: '1px solid #dce8e2',
                       boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                     }}
                   >
@@ -789,7 +789,7 @@ export default function Connections() {
                             backgroundColor: '#ffffff',
                             borderRadius: '16px',
                             padding: '20px',
-                            border: '1px solid #ede9fe',
+                            border: '1px solid #dce8e2',
                             boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
                             display: 'flex',
                             alignItems: 'center',
@@ -901,7 +901,7 @@ export default function Connections() {
                 width: '64px',
                 height: '64px',
                 borderRadius: '50%',
-                backgroundColor: '#f5f0ff',
+                backgroundColor: '#e1efe8',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

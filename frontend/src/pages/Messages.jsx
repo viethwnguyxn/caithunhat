@@ -515,7 +515,7 @@ export default function Messages() {
         height: '100vh',
         maxHeight: '100vh',
         overflow: 'hidden',
-        backgroundColor: '#f8f7ff',
+        backgroundColor: '#f7faf8',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -547,7 +547,7 @@ export default function Messages() {
             display: isMobile && activeConversation ? 'none' : 'flex',
             backgroundColor: '#ffffff',
             borderRadius: '20px',
-            border: '1px solid #ede9fe',
+            border: '1px solid #dce8e2',
             boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -563,9 +563,9 @@ export default function Messages() {
                 type="button"
                 onClick={() => navigate('/connections')}
                 style={{
-                  background: '#f5f0ff',
-                  border: '1px solid #ede9fe',
-                  color: '#7c5cbf',
+                  background: '#e1efe8',
+                  border: '1px solid #dce8e2',
+                  color: '#245745',
                   fontSize: '12px',
                   fontWeight: 600,
                   padding: '6px 10px',
@@ -633,12 +633,12 @@ export default function Messages() {
                       borderRadius: '14px',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      backgroundColor: isActive ? '#f5f0ff' : 'transparent',
+                      backgroundColor: isActive ? '#e1efe8' : 'transparent',
                       border: isActive ? '1px solid #ddd6fe' : '1px solid transparent',
                       marginBottom: '4px',
                     }}
                     onMouseOver={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = '#faf9fe'
+                      if (!isActive) e.currentTarget.style.backgroundColor = '#f3f7f4'
                     }}
                     onMouseOut={(e) => {
                       if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'
@@ -656,7 +656,7 @@ export default function Messages() {
                           height: '46px',
                           borderRadius: '50%',
                           objectFit: 'cover',
-                          border: '2px solid #7c5cbf',
+                          border: '2px solid #245745',
                           backgroundColor: '#f3f4f6',
                         }}
                       />
@@ -725,7 +725,7 @@ export default function Messages() {
                         {conv.unread_count > 0 && !isActive && (
                           <span
                             style={{
-                              backgroundColor: '#7c5cbf',
+                              backgroundColor: '#245745',
                               color: '#ffffff',
                               borderRadius: '10px',
                               padding: '1px 6px',
@@ -759,7 +759,7 @@ export default function Messages() {
             display: isMobile && !activeConversation ? 'none' : 'flex',
             backgroundColor: '#ffffff',
             borderRadius: '20px',
-            border: '1px solid #ede9fe',
+            border: '1px solid #dce8e2',
             boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -785,9 +785,9 @@ export default function Messages() {
                       type="button"
                       onClick={() => setActiveConversation(null)}
                       style={{
-                        background: '#f5f0ff',
-                        border: '1px solid #ede9fe',
-                        color: '#7c5cbf',
+                        background: '#e1efe8',
+                        border: '1px solid #dce8e2',
+                        color: '#245745',
                         borderRadius: '8px',
                         padding: '6px 10px',
                         fontWeight: 700,
@@ -815,7 +815,7 @@ export default function Messages() {
                       padding: '4px 8px',
                       borderRadius: '12px',
                       transition: 'all 0.15s ease',
-                      backgroundColor: isHoveringPartner ? '#f5f0ff' : 'transparent',
+                      backgroundColor: isHoveringPartner ? '#e1efe8' : 'transparent',
                     }}
                     title="Nhấp để xem hồ sơ cá nhân"
                   >
@@ -833,8 +833,8 @@ export default function Messages() {
                           height: '44px',
                           borderRadius: '50%',
                           objectFit: 'cover',
-                          border: '2px solid #7c5cbf',
-                          backgroundColor: '#f5f0ff',
+                          border: '2px solid #245745',
+                          backgroundColor: '#e1efe8',
                           transition: 'transform 0.15s ease',
                           transform: isHoveringPartner ? 'scale(1.06)' : 'scale(1)',
                         }}
@@ -860,7 +860,7 @@ export default function Messages() {
                           style={{
                             fontSize: '16px',
                             fontWeight: 700,
-                            color: isHoveringPartner ? '#7c5cbf' : '#1a1a2e',
+                            color: isHoveringPartner ? '#245745' : '#1a1a2e',
                             margin: 0,
                             transition: 'color 0.15s ease',
                           }}
@@ -872,8 +872,8 @@ export default function Messages() {
                           style={{
                             fontSize: '11px',
                             fontWeight: 600,
-                            backgroundColor: isHoveringPartner ? '#7c5cbf' : '#ede9fe',
-                            color: isHoveringPartner ? '#ffffff' : '#7c5cbf',
+                            backgroundColor: isHoveringPartner ? '#245745' : '#dce8e2',
+                            color: isHoveringPartner ? '#ffffff' : '#245745',
                             padding: '2px 8px',
                             borderRadius: '10px',
                             transition: 'all 0.15s ease',
@@ -958,9 +958,9 @@ export default function Messages() {
                         width: '36px',
                         height: '36px',
                         borderRadius: '10px',
-                        border: '1px solid #ede9fe',
-                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#f5f0ff',
-                        color: activeConversation.is_blocked ? '#9ca3af' : '#7c5cbf',
+                        border: '1px solid #dce8e2',
+                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#e1efe8',
+                        color: activeConversation.is_blocked ? '#9ca3af' : '#245745',
                         fontSize: '16px',
                         cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
                         display: 'flex',
@@ -970,10 +970,10 @@ export default function Messages() {
                       }}
                       title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi thoại'}
                       onMouseOver={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#ede9fe'
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#dce8e2'
                       }}
                       onMouseOut={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#f5f0ff'
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
                       }}
                     >
                       📞
@@ -987,9 +987,9 @@ export default function Messages() {
                         width: '36px',
                         height: '36px',
                         borderRadius: '10px',
-                        border: '1px solid #ede9fe',
-                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#f5f0ff',
-                        color: activeConversation.is_blocked ? '#9ca3af' : '#7c5cbf',
+                        border: '1px solid #dce8e2',
+                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#e1efe8',
+                        color: activeConversation.is_blocked ? '#9ca3af' : '#245745',
                         fontSize: '16px',
                         cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
                         display: 'flex',
@@ -999,10 +999,10 @@ export default function Messages() {
                       }}
                       title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi video'}
                       onMouseOver={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#ede9fe'
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#dce8e2'
                       }}
                       onMouseOut={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#f5f0ff'
+                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
                       }}
                     >
                       📹
@@ -1176,7 +1176,7 @@ export default function Messages() {
                   minHeight: 0,
                   padding: '20px',
                   overflowY: 'auto',
-                  backgroundColor: '#faf9fe',
+                  backgroundColor: '#f3f7f4',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
@@ -1261,21 +1261,21 @@ export default function Messages() {
                               borderRadius: '50%',
                               marginBottom: '4px',
                               backgroundColor: '#ffffff',
-                              border: '1px solid #ede9fe',
+                              border: '1px solid #dce8e2',
                             }}
                           />
                         )}
 
                         <div
                           style={{
-                            backgroundColor: isMe ? '#7c5cbf' : '#ffffff',
+                            backgroundColor: isMe ? '#245745' : '#ffffff',
                             color: isMe ? '#ffffff' : '#1a1a2e',
                             padding: '10px 14px',
                             borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                             boxShadow: isMe
-                              ? '0 2px 8px rgba(124, 92, 191, 0.25)'
+                              ? '0 2px 8px rgba(36, 87, 69, 0.25)'
                               : '0 2px 8px rgba(0, 0, 0, 0.04)',
-                            border: isMe ? 'none' : '1px solid #ede9fe',
+                            border: isMe ? 'none' : '1px solid #dce8e2',
                             wordBreak: 'break-word',
                           }}
                         >
@@ -1385,7 +1385,7 @@ export default function Messages() {
                     type="submit"
                     disabled={!inputText.trim() || isSending}
                     style={{
-                      backgroundColor: '#7c5cbf',
+                      backgroundColor: '#245745',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '12px',
@@ -1394,7 +1394,7 @@ export default function Messages() {
                       fontSize: '14px',
                       cursor: !inputText.trim() || isSending ? 'not-allowed' : 'pointer',
                       opacity: !inputText.trim() || isSending ? 0.5 : 1,
-                      boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
+                      boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
                       transition: 'all 0.15s ease',
                       whiteSpace: 'nowrap',
                     }}
@@ -1423,7 +1423,7 @@ export default function Messages() {
                   width: '80px',
                   height: '80px',
                   borderRadius: '50%',
-                  backgroundColor: '#f5f0ff',
+                  backgroundColor: '#e1efe8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1434,7 +1434,7 @@ export default function Messages() {
                 💬
               </div>
               <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-                Hộp thư tin nhắn Kindred
+                Hộp thư tin nhắn La Pulga
               </h3>
               <p style={{ fontSize: '14px', maxWidth: '380px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
                 Chọn một người bạn ở danh sách bên trái hoặc ghé thăm trang Kết nối để bắt đầu trò chuyện realtime ngay!
@@ -1561,8 +1561,8 @@ export default function Messages() {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  border: '2px solid #7c5cbf',
-                  backgroundColor: '#f5f0ff',
+                  border: '2px solid #245745',
+                  backgroundColor: '#e1efe8',
                   overflow: 'hidden',
                   flexShrink: 0,
                   display: 'flex',
@@ -1616,7 +1616,7 @@ export default function Messages() {
             </div>
 
             {loadingPartnerProfile && (
-              <div style={{ fontSize: '12px', color: '#7c5cbf', marginBottom: '12px', fontStyle: 'italic' }}>
+              <div style={{ fontSize: '12px', color: '#245745', marginBottom: '12px', fontStyle: 'italic' }}>
                 Đang tải chi tiết hồ sơ...
               </div>
             )}
@@ -1626,8 +1626,8 @@ export default function Messages() {
               {partnerProfileModal.age_group && (
                 <span
                   style={{
-                    backgroundColor: '#f5f0ff',
-                    color: '#7c5cbf',
+                    backgroundColor: '#e1efe8',
+                    color: '#245745',
                     padding: '4px 10px',
                     borderRadius: '8px',
                     fontSize: '12px',
@@ -1640,7 +1640,7 @@ export default function Messages() {
               {partnerProfileModal.current_status && (
                 <span
                   style={{
-                    backgroundColor: '#ede9fe',
+                    backgroundColor: '#dce8e2',
                     color: '#6b21a8',
                     padding: '4px 10px',
                     borderRadius: '8px',
@@ -1663,7 +1663,7 @@ export default function Messages() {
                   fontSize: '14px',
                   color: '#4b5563',
                   lineHeight: '1.6',
-                  backgroundColor: '#faf9fe',
+                  backgroundColor: '#f3f7f4',
                   padding: '12px 14px',
                   borderRadius: '12px',
                   margin: 0,
@@ -1753,9 +1753,9 @@ export default function Messages() {
                     style={{
                       padding: '10px 16px',
                       borderRadius: '10px',
-                      border: '1px solid #ede9fe',
-                      backgroundColor: '#f5f0ff',
-                      color: '#7c5cbf',
+                      border: '1px solid #dce8e2',
+                      backgroundColor: '#e1efe8',
+                      color: '#245745',
                       fontSize: '13.5px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -1777,7 +1777,7 @@ export default function Messages() {
                       padding: '10px 16px',
                       borderRadius: '10px',
                       border: 'none',
-                      backgroundColor: '#7c5cbf',
+                      backgroundColor: '#245745',
                       color: '#ffffff',
                       fontSize: '13.5px',
                       fontWeight: 600,
@@ -1785,7 +1785,7 @@ export default function Messages() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
+                      boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
                     }}
                   >
                     📹 Gọi video

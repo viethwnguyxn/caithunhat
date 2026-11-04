@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function Landing() {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff', display: 'flex', flexDirection: 'column' }}>
+    <div className="landing-page" style={{ minHeight: '100vh', backgroundColor: '#f7faf8', display: 'flex', flexDirection: 'column' }}>
       {/* Landing Header */}
       <header
         style={{
@@ -15,26 +16,17 @@ export default function Landing() {
           width: '100%',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '22px', color: '#7c5cbf' }}>
-          <span
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '18px',
-            }}
-          >
-            ◎
-          </span>
-          <span>Kindred</span>
-        </div>
+        <Link to="/" className="landing-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '22px', color: '#245745' }}>
+          <img
+            src="/logo-lapulga.png"
+            alt=""
+            style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '50%' }}
+          />
+          <span>La Pulga</span>
+        </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <ThemeToggle />
           <Link
             to="/login"
             style={{
@@ -56,8 +48,8 @@ export default function Landing() {
               fontSize: '14px',
               fontWeight: 700,
               color: '#ffffff',
-              background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-              boxShadow: '0 2px 10px rgba(124, 92, 191, 0.25)',
+              background: 'linear-gradient(135deg, #245745, #3d705c)',
+              boxShadow: '0 2px 10px rgba(36, 87, 69, 0.25)',
             }}
           >
             Bắt đầu ngay
@@ -76,9 +68,9 @@ export default function Landing() {
               gap: '6px',
               padding: '6px 16px',
               borderRadius: '20px',
-              backgroundColor: '#f5f0ff',
-              border: '1px solid #ede9fe',
-              color: '#7c5cbf',
+              backgroundColor: '#e1efe8',
+              border: '1px solid #dce8e2',
+              color: '#245745',
               fontSize: '13px',
               fontWeight: 700,
               marginBottom: '24px',
@@ -98,7 +90,7 @@ export default function Landing() {
               letterSpacing: '-1px',
             }}
           >
-            Find people who <span style={{ color: '#7c5cbf' }}>understand you</span>
+            Find people who <span style={{ color: '#245745' }}>understand you</span>
           </h1>
 
           {/* Subtitle */}
@@ -157,7 +149,7 @@ export default function Landing() {
                 backgroundColor: '#ffffff',
                 padding: '24px',
                 borderRadius: '16px',
-                border: '1px solid #ede9fe',
+                border: '1px solid #dce8e2',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
@@ -175,7 +167,7 @@ export default function Landing() {
                 backgroundColor: '#ffffff',
                 padding: '24px',
                 borderRadius: '16px',
-                border: '1px solid #ede9fe',
+                border: '1px solid #dce8e2',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
@@ -193,7 +185,7 @@ export default function Landing() {
                 backgroundColor: '#ffffff',
                 padding: '24px',
                 borderRadius: '16px',
-                border: '1px solid #ede9fe',
+                border: '1px solid #dce8e2',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
@@ -212,7 +204,7 @@ export default function Landing() {
       {/* Landing Footer */}
       <footer
         style={{
-          borderTop: '1px solid #ede9fe',
+          borderTop: '1px solid #dce8e2',
           padding: '24px 16px',
           textAlign: 'center',
           color: '#9ca3af',
@@ -221,7 +213,7 @@ export default function Landing() {
         }}
       >
         <p style={{ margin: 0 }}>
-          ◎ Kindred Community Connection Platform • <em>"Find people who understand you"</em>
+          ◎ La Pulga Community Connection Platform • <em>"Find people who understand you"</em>
         </p>
       </footer>
     </div>

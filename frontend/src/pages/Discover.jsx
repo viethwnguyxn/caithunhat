@@ -215,14 +215,14 @@ function Discover() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px' }}>
         {/* Banner tiêu đề */}
         <div style={{ marginBottom: '28px', textAlign: 'center' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Khám phá những người <span style={{ color: '#7c5cbf' }}>đồng điệu</span>
+            Khám phá những người <span style={{ color: '#245745' }}>đồng điệu</span>
           </h1>
           <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '600px', margin: '0 auto' }}>
             Hệ thống phân tích hồ sơ và khảo sát của bạn để tìm ra những người có hoàn cảnh, mục tiêu và sở thích tương đồng nhất.
@@ -360,7 +360,7 @@ function Discover() {
                 width: '40px',
                 height: '40px',
                 border: '3px solid #e5e7eb',
-                borderTop: '3px solid #7c5cbf',
+                borderTop: '3px solid #245745',
                 borderRadius: '50%',
                 margin: '0 auto 16px auto',
                 animation: 'spin 1s linear infinite',
@@ -409,7 +409,7 @@ function Discover() {
               border: '2px dashed #c084fc',
               backgroundColor: '#faf5ff',
               borderRadius: '20px',
-              boxShadow: '0 8px 30px rgba(124, 92, 191, 0.08)',
+              boxShadow: '0 8px 30px rgba(36, 87, 69, 0.08)',
             }}
           >
             <div style={{ fontSize: '52px', marginBottom: '16px' }}>📝</div>
@@ -417,7 +417,7 @@ function Discover() {
               Bạn chưa làm khảo sát Onboarding
             </h2>
             <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-              Kindred sử dụng thuật toán TF-IDF & Cosine Similarity để phân tích sở thích, mục tiêu và hoàn cảnh của bạn nhằm gợi ý những người bạn đồng điệu nhất.
+              La Pulga sử dụng thuật toán TF-IDF & Cosine Similarity để phân tích sở thích, mục tiêu và hoàn cảnh của bạn nhằm gợi ý những người bạn đồng điệu nhất.
               <br />
               Hãy dành 1–2 phút hoàn thành bài khảo sát ngắn để mở khóa danh sách gợi ý kết đôi nhé!
             </p>
@@ -429,7 +429,7 @@ function Discover() {
                   padding: '12px 30px',
                   fontSize: '15px',
                   fontWeight: 700,
-                  boxShadow: '0 4px 14px rgba(124, 92, 191, 0.4)',
+                  boxShadow: '0 4px 14px rgba(36, 87, 69, 0.4)',
                   cursor: 'pointer',
                   borderRadius: '12px',
                 }}
@@ -503,15 +503,15 @@ function Discover() {
                             width: '54px',
                             height: '54px',
                             borderRadius: '50%',
-                            backgroundColor: '#f5f0ff',
-                            border: '2px solid #7c5cbf',
+                            backgroundColor: '#e1efe8',
+                            border: '2px solid #245745',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             overflow: 'hidden',
                             fontSize: '20px',
                             fontWeight: 700,
-                            color: '#7c5cbf',
+                            color: '#245745',
                             flexShrink: 0,
                           }}
                         >
@@ -544,7 +544,7 @@ function Discover() {
                           padding: '6px 12px',
                           borderRadius: '20px',
                           background: isHighMatch
-                            ? 'linear-gradient(135deg, #7c5cbf, #9b7fe8)'
+                            ? 'linear-gradient(135deg, #245745, #3d705c)'
                             : '#f3f4f6',
                           color: isHighMatch ? '#ffffff' : '#374151',
                           fontSize: '13px',
@@ -552,7 +552,7 @@ function Discover() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px',
-                          boxShadow: isHighMatch ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
+                          boxShadow: isHighMatch ? '0 2px 8px rgba(36, 87, 69, 0.3)' : 'none',
                         }}
                       >
                         <span>{item.match_score}%</span>
@@ -612,14 +612,14 @@ function Discover() {
                     {item.match_reasons?.length > 0 && (
                       <div
                         style={{
-                          backgroundColor: '#faf8ff',
+                          backgroundColor: '#f1f7f3',
                           border: '1px solid #f0ebfa',
                           borderRadius: '10px',
                           padding: '10px 12px',
                           marginBottom: '14px',
                         }}
                       >
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c5cbf', textTransform: 'uppercase' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#245745', textTransform: 'uppercase' }}>
                           Điểm tương đồng
                         </span>
                         <ul style={{ margin: '4px 0 0 0', paddingLeft: '16px', fontSize: '12px', color: '#4b5563' }}>
@@ -644,12 +644,12 @@ function Discover() {
                               key={idx}
                               style={{
                                 padding: '3px 8px',
-                                backgroundColor: '#f5f0ff',
+                                backgroundColor: '#e1efe8',
                                 border: '1px solid #e9d5ff',
                                 borderRadius: '12px',
                                 fontSize: '11px',
                                 fontWeight: 500,
-                                color: '#7c5cbf',
+                                color: '#245745',
                               }}
                             >
                               ★ {ci}
@@ -744,8 +744,8 @@ function Discover() {
                             fontSize: '12px',
                             borderRadius: '8px',
                             border: '1px solid #ddd6fe',
-                            backgroundColor: '#f5f0ff',
-                            color: '#7c5cbf',
+                            backgroundColor: '#e1efe8',
+                            color: '#245745',
                             fontWeight: 600,
                             textDecoration: 'none',
                             display: 'flex',
@@ -831,15 +831,15 @@ function Discover() {
                   width: '68px',
                   height: '68px',
                   borderRadius: '50%',
-                  backgroundColor: '#f5f0ff',
-                  border: '2px solid #7c5cbf',
+                  backgroundColor: '#e1efe8',
+                  border: '2px solid #245745',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
                   fontSize: '26px',
                   fontWeight: 700,
-                  color: '#7c5cbf',
+                  color: '#245745',
                   flexShrink: 0,
                 }}
               >
@@ -867,8 +867,8 @@ function Discover() {
                     marginTop: '6px',
                     padding: '3px 10px',
                     borderRadius: '12px',
-                    backgroundColor: '#f5f0ff',
-                    color: '#7c5cbf',
+                    backgroundColor: '#e1efe8',
+                    color: '#245745',
                     fontSize: '12px',
                     fontWeight: 700,
                   }}
@@ -935,9 +935,9 @@ function Discover() {
                         style={{
                           padding: '5px 10px',
                           borderRadius: '12px',
-                          backgroundColor: isCommon ? '#f5f0ff' : '#f3f4f6',
+                          backgroundColor: isCommon ? '#e1efe8' : '#f3f4f6',
                           border: isCommon ? '1px solid #c084fc' : '1px solid transparent',
-                          color: isCommon ? '#7c5cbf' : '#4b5563',
+                          color: isCommon ? '#245745' : '#4b5563',
                           fontSize: '12px',
                           fontWeight: isCommon ? 600 : 400,
                         }}
@@ -1030,8 +1030,8 @@ function Discover() {
                       padding: '12px 14px',
                       borderRadius: '8px',
                       border: '1px solid #ddd6fe',
-                      backgroundColor: '#f5f0ff',
-                      color: '#7c5cbf',
+                      backgroundColor: '#e1efe8',
+                      color: '#245745',
                       fontWeight: 600,
                       textDecoration: 'none',
                       display: 'flex',

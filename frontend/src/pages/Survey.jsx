@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Navbar from '../components/Navbar'
 import { getSurvey, submitSurvey } from '../services/surveyService'
 
 const AGE_GROUPS = [
@@ -241,9 +242,9 @@ function Survey() {
         style={{
           padding: '14px 18px',
           borderRadius: '12px',
-          border: isSelected ? '2px solid #7c5cbf' : '1.5px solid #e5e7eb',
-          backgroundColor: isSelected ? '#f5f0ff' : '#ffffff',
-          color: isSelected ? '#5b3a99' : '#374151',
+          border: isSelected ? '2px solid #245745' : '1.5px solid #e5e7eb',
+          backgroundColor: isSelected ? '#e1efe8' : '#ffffff',
+          color: isSelected ? '#2e5948' : '#374151',
           fontWeight: isSelected ? 600 : 400,
           fontSize: '15px',
           cursor: 'pointer',
@@ -251,7 +252,7 @@ function Survey() {
           alignItems: 'center',
           justifyContent: 'space-between',
           transition: 'all 0.15s ease',
-          boxShadow: isSelected ? '0 2px 8px rgba(124, 92, 191, 0.15)' : 'none',
+          boxShadow: isSelected ? '0 2px 8px rgba(36, 87, 69, 0.15)' : 'none',
           userSelect: 'none',
         }}
       >
@@ -262,7 +263,7 @@ function Survey() {
               width: '20px',
               height: '20px',
               borderRadius: isMulti ? '6px' : '50%',
-              backgroundColor: '#7c5cbf',
+              backgroundColor: '#245745',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
@@ -281,19 +282,21 @@ function Survey() {
 
   if (initialLoading) {
     return (
-      <div className="page">
+      <div className="survey-page">
+        <Navbar />
         <p style={{ color: '#6b7280' }}>Đang tải khảo sát...</p>
       </div>
     )
   }
 
   return (
-    <div className="page" style={{ padding: '32px 16px' }}>
+    <div className="survey-page">
+      <Navbar />
       <div className="card" style={{ maxWidth: '620px', padding: '36px' }}>
         {/* Progress Bar */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#7c5cbf', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#245745', textTransform: 'uppercase' }}>
               Bước {step} / {totalSteps}
             </span>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>
@@ -305,7 +308,7 @@ function Survey() {
               style={{
                 height: '100%',
                 width: `${(step / totalSteps) * 100}%`,
-                background: 'linear-gradient(90deg, #7c5cbf, #9b7fe8)',
+                background: 'linear-gradient(90deg, #245745, #3d705c)',
                 transition: 'width 0.3s ease',
               }}
             ></div>
@@ -453,14 +456,14 @@ function Survey() {
                         style={{
                           padding: '10px 16px',
                           borderRadius: '24px',
-                          border: isChecked ? '2px solid #7c5cbf' : '1.5px solid #e5e7eb',
-                          backgroundColor: isChecked ? '#7c5cbf' : '#ffffff',
+                          border: isChecked ? '2px solid #245745' : '1.5px solid #e5e7eb',
+                          backgroundColor: isChecked ? '#245745' : '#ffffff',
                           color: isChecked ? '#ffffff' : '#374151',
                           fontSize: '14px',
                           fontWeight: isChecked ? 600 : 400,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
-                          boxShadow: isChecked ? '0 2px 8px rgba(124, 92, 191, 0.25)' : 'none',
+                          boxShadow: isChecked ? '0 2px 8px rgba(36, 87, 69, 0.25)' : 'none',
                         }}
                       >
                         {isChecked ? `✓ ${topic}` : topic}
