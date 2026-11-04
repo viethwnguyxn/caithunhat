@@ -265,6 +265,18 @@ def migrate_profile_schema():
                     definition += " NOT NULL DEFAULT CURRENT_TIMESTAMP"
             conn.execute(text(definition))
 
+        if engine.dialect.name == "postgresql":
+            model_columns = {column.name for column in table.columns}
+            legacy_columns = inspect(engine).get_columns("profiles")
+            for column in legacy_columns:
+                if column["name"] not in model_columns and not column["nullable"]:
+                    conn.execute(
+                        text(
+                            f"ALTER TABLE {preparer.quote(table.name)} "
+                            f"ALTER COLUMN {preparer.quote(column['name'])} DROP NOT NULL"
+                        )
+                    )
+
         if engine.dialect.name == "sqlite":
             for field in ("created_at", "updated_at"):
                 if field not in columns:
