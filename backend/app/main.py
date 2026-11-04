@@ -78,6 +78,10 @@ def migrate_notification_schema():
                     "ADD COLUMN content TEXT NOT NULL DEFAULT ''"
                 )
             )
+        if "related_id" not in columns:
+            conn.execute(
+                text("ALTER TABLE notifications ADD COLUMN related_id INTEGER")
+            )
         conn.execute(
             text(
                 """
