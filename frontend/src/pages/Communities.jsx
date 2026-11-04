@@ -1,5 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  Activity,
+  BookOpen,
+  Check,
+  Code2,
+  Coffee,
+  GraduationCap,
+  Heart,
+  ImagePlus,
+  MessageCircle,
+  Palette,
+  Sparkles,
+  Trash2,
+  UsersRound,
+  X,
+} from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -9,7 +25,7 @@ const COMMUNITIES_DATA = [
     id: 1,
     name: 'Lập trình viên & Tech Creators',
     category: 'Công nghệ',
-    icon: '💻',
+    icon: Code2,
     bgGradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
     membersCount: 1240,
     description:
@@ -22,7 +38,7 @@ const COMMUNITIES_DATA = [
     id: 2,
     name: 'Sách & Phát triển bản thân',
     category: 'Học tập & Sự nghiệp',
-    icon: '📚',
+    icon: BookOpen,
     bgGradient: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
     membersCount: 980,
     description:
@@ -35,7 +51,7 @@ const COMMUNITIES_DATA = [
     id: 3,
     name: 'Nghệ thuật & Sáng tạo',
     category: 'Nghệ thuật',
-    icon: '🎨',
+    icon: Palette,
     bgGradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
     membersCount: 750,
     description:
@@ -48,7 +64,7 @@ const COMMUNITIES_DATA = [
     id: 4,
     name: 'Sức khỏe, Thể thao & Running',
     category: 'Đời sống & Sở thích',
-    icon: '🏃',
+    icon: Activity,
     bgGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     membersCount: 860,
     description:
@@ -61,7 +77,7 @@ const COMMUNITIES_DATA = [
     id: 5,
     name: 'Sinh viên & Định hướng tương lai',
     category: 'Học tập & Sự nghiệp',
-    icon: '🎓',
+    icon: GraduationCap,
     bgGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
     membersCount: 1520,
     description:
@@ -74,7 +90,7 @@ const COMMUNITIES_DATA = [
     id: 6,
     name: 'Freelancer & Remote Workers',
     category: 'Đời sống & Sở thích',
-    icon: '☕',
+    icon: Coffee,
     bgGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
     membersCount: 690,
     description:
@@ -202,7 +218,7 @@ export default function Communities() {
       setNewContent('')
       setNewImageUrl('')
       setShowImageInput(false)
-      showToast('Đã đăng bài viết lên cộng đồng thành công! 🎉')
+      showToast('Đã đăng bài viết lên cộng đồng thành công!')
     } catch (err) {
       console.error('Lỗi khi đăng bài viết:', err)
       showToast(err.response?.data?.detail || 'Lỗi khi đăng bài viết')
@@ -271,7 +287,7 @@ export default function Communities() {
       )
       // Xóa input
       setCommentInputs((prev) => ({ ...prev, [postId]: '' }))
-      showToast('Đã đăng bình luận! 💬')
+      showToast('Đã đăng bình luận!')
     } catch (err) {
       console.error('Lỗi khi đăng bình luận:', err)
       showToast('Không thể gửi bình luận, vui lòng thử lại.')
@@ -320,7 +336,7 @@ export default function Communities() {
       showToast(`Đã rời khỏi nhóm ${comm.name}`)
     } else {
       setJoinedCommunities((prev) => [...prev, comm.id])
-      showToast(`Đã tham gia cộng đồng ${comm.name}! 🎉`)
+      showToast(`Đã tham gia cộng đồng ${comm.name}!`)
     }
   }
 
@@ -389,12 +405,14 @@ export default function Communities() {
               animation: 'fadeIn 0.2s ease-in-out',
             }}
           >
-            <span style={{ fontWeight: 600, fontSize: '14px' }}>✓ {toastMessage}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '14px' }}>
+              <Check size={16} aria-hidden="true" /> {toastMessage}
+            </span>
             <button
               onClick={() => setToastMessage('')}
               style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: '16px' }}
             >
-              ✕
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -457,7 +475,7 @@ export default function Communities() {
               boxShadow: activeTab === 'groups' ? '0 2px 8px rgba(36, 87, 69, 0.3)' : 'none',
             }}
           >
-            <span>👥</span>
+            <UsersRound size={16} aria-hidden="true" />
             <span>Khám phá Nhóm ({COMMUNITIES_DATA.length})</span>
           </button>
         </div>
@@ -658,7 +676,7 @@ export default function Communities() {
                         fontWeight: 600,
                       }}
                     >
-                      {showImageInput ? '✕ Bỏ ảnh' : '📷 Thêm ảnh'}
+                      {showImageInput ? <><X size={14} /> Bỏ ảnh</> : <><ImagePlus size={14} /> Thêm ảnh</>}
                     </button>
                   </div>
 
@@ -679,7 +697,7 @@ export default function Communities() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    {isSubmitting ? 'Đang đăng...' : 'Đăng bài ✨'}
+                    {isSubmitting ? 'Đang đăng...' : <>Đăng bài <Sparkles size={14} /></>}
                   </button>
                 </div>
               </form>
@@ -701,7 +719,7 @@ export default function Communities() {
                   border: '1px solid #dce8e2',
                 }}
               >
-                <div style={{ fontSize: '48px', marginBottom: '14px' }}>📝</div>
+                <MessageCircle size={42} style={{ marginBottom: '14px' }} aria-hidden="true" />
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1a1a2e', marginBottom: '6px' }}>
                   Chưa có bài viết nào trong chủ đề "{selectedCategory}"
                 </h3>
@@ -714,7 +732,7 @@ export default function Communities() {
                   className="btn-primary"
                   style={{ padding: '8px 20px', fontSize: '13.5px' }}
                 >
-                  Viết bài ngay ✍️
+                  Viết bài ngay
                 </button>
               </div>
             ) : (
@@ -824,7 +842,7 @@ export default function Communities() {
                               }}
                               title="Xóa bài viết"
                             >
-                              🗑️
+                              <Trash2 size={15} aria-hidden="true" />
                             </button>
                           )}
                         </div>
@@ -892,7 +910,11 @@ export default function Communities() {
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          <span>{post.is_liked_by_me ? '❤️' : '🤍'}</span>
+                          <Heart
+                            size={16}
+                            aria-hidden="true"
+                            fill={post.is_liked_by_me ? 'currentColor' : 'none'}
+                          />
                           <span>{post.likes_count}</span>
                         </button>
 
@@ -915,7 +937,7 @@ export default function Communities() {
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          <span>💬</span>
+                          <MessageCircle size={16} aria-hidden="true" />
                           <span>{post.comments_count} bình luận</span>
                         </button>
                       </div>
@@ -990,7 +1012,7 @@ export default function Communities() {
                                         }}
                                         title="Xóa bình luận"
                                       >
-                                        ✕
+                                        <X size={14} aria-hidden="true" />
                                       </button>
                                     )}
                                   </div>
@@ -1110,7 +1132,7 @@ export default function Communities() {
                             justifyContent: 'center',
                           }}
                         >
-                          {comm.icon}
+                          <comm.icon size={26} aria-hidden="true" />
                         </span>
                         <div>
                           <span
@@ -1136,7 +1158,7 @@ export default function Communities() {
                       {/* Member Count */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
                         <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>
-                          👥 {comm.membersCount.toLocaleString()} thành viên
+                          <UsersRound size={14} aria-hidden="true" /> {comm.membersCount.toLocaleString()} thành viên
                         </span>
                         {isJoined && (
                           <span
@@ -1149,7 +1171,7 @@ export default function Communities() {
                               borderRadius: '10px',
                             }}
                           >
-                            ✓ Đã tham gia
+                            <Check size={12} aria-hidden="true" /> Đã tham gia
                           </span>
                         )}
                       </div>
@@ -1273,7 +1295,7 @@ export default function Communities() {
                       }}
                       title="Tìm bạn bè cùng sở thích trong Discover"
                     >
-                      ✨
+                      <Sparkles size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Check, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getSurvey, submitSurvey } from '../services/surveyService'
@@ -273,7 +274,7 @@ function Survey() {
               flexShrink: 0,
             }}
           >
-            ✓
+            <Check size={14} aria-hidden="true" />
           </span>
         )}
       </div>
@@ -284,6 +285,14 @@ function Survey() {
     return (
       <div className="survey-page">
         <Navbar />
+        <button
+          type="button"
+          className="survey-page-close"
+          onClick={() => navigate('/home')}
+          aria-label="Đóng khảo sát"
+        >
+          <X size={20} aria-hidden="true" />
+        </button>
         <p style={{ color: '#6b7280' }}>Đang tải khảo sát...</p>
       </div>
     )
@@ -292,6 +301,14 @@ function Survey() {
   return (
     <div className="survey-page">
       <Navbar />
+      <button
+        type="button"
+        className="survey-page-close"
+        onClick={() => navigate('/home')}
+        aria-label="Đóng khảo sát"
+      >
+        <X size={20} aria-hidden="true" />
+      </button>
       <div className="card" style={{ maxWidth: '620px', padding: '36px' }}>
         {/* Progress Bar */}
         <div style={{ marginBottom: '24px' }}>
@@ -466,7 +483,7 @@ function Survey() {
                           boxShadow: isChecked ? '0 2px 8px rgba(36, 87, 69, 0.25)' : 'none',
                         }}
                       >
-                        {isChecked ? `✓ ${topic}` : topic}
+                        {isChecked && <Check size={14} aria-hidden="true" />} {topic}
                       </button>
                     )
                   })}

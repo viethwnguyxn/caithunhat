@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, ImagePlus, MessageCircle, Sparkles, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -18,41 +19,46 @@ const MOODS = [
 const RELAXATION_REELS = [
   {
     id: 'breathing',
-    icon: '🌬️',
     title: 'Thở chậm cùng mình',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Thả lỏng vai, hít vào nhẹ nhàng rồi thở ra chậm hơn.',
     steps: ['Ngồi thoải mái và đặt hai chân vững trên sàn.', 'Hít vào bằng mũi trong 4 nhịp.', 'Thở ra chậm trong 6 nhịp. Lặp lại nhẹ nhàng trong một phút.'],
   },
   {
     id: 'grounding',
-    icon: '🌱',
     title: 'Trở về với hiện tại',
     duration: '2 phút',
+    durationSeconds: 120,
+    stepDurations: [40, 40, 40],
     description: 'Dùng giác quan để neo mình lại với khoảnh khắc này.',
     steps: ['Nhìn quanh và gọi tên 5 thứ bạn thấy.', 'Chạm vào 4 thứ gần bạn, để ý cảm giác của chúng.', 'Lắng nghe 3 âm thanh và thả lỏng hàm, vai.'],
   },
   {
     id: 'stretch',
-    icon: '🙆',
     title: 'Thả lỏng vai gáy',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Một vài chuyển động nhỏ để cơ thể bớt căng cứng.',
     steps: ['Hạ vai xuống và xoay vai chậm 5 vòng.', 'Nghiêng đầu nhẹ sang mỗi bên, không kéo căng.', 'Duỗi hai tay lên cao rồi thả lỏng theo nhịp thở.'],
   },
   {
     id: 'kindness',
-    icon: '💚',
     title: 'Một lời tử tế với mình',
     duration: '30 giây',
+    durationSeconds: 30,
+    stepDurations: [10, 10, 10],
     description: 'Tạm dừng và nói với bản thân điều bạn cần nghe.',
     steps: ['Đặt tay lên ngực nếu thấy thoải mái.', 'Nghĩ về một điều nhỏ bạn đã cố gắng hôm nay.', 'Nhắc mình: “Mình đang làm tốt nhất có thể, từng chút một.”'],
   },
   {
     id: 'pause',
-    icon: '☁️',
     title: 'Nghỉ mắt một chút',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Rời màn hình và cho đôi mắt khoảng nghỉ ngắn.',
     steps: ['Nhìn ra xa khỏi màn hình.', 'Chớp mắt chậm vài lần và để ánh nhìn dịu lại.', 'Uống một ngụm nước, hít thở tự nhiên rồi quay lại khi sẵn sàng.'],
   },
@@ -77,12 +83,40 @@ export default function HomeFeed() {
   const [posts, setPosts] = useState([])
   const [content, setContent] = useState('')
   const [mood, setMood] = useState(MOODS[0])
+  const [imageUrl, setImageUrl] = useState('')
+  const [showImageInput, setShowImageInput] = useState(false)
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
   const [welcomeVisible, setWelcomeVisible] = useState(false)
   const [activeReel, setActiveReel] = useState(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [exerciseCompleted, setExerciseCompleted] = useState(false)
+  const exerciseTimerRef = useRef(null)
   const welcomeDismissedKey = `${WELCOME_DISMISSED_PREFIX}${user?.id ?? 'guest'}`
+
+  useEffect(() => {
+    if (!activeReel || exerciseCompleted) return undefined
+
+    exerciseTimerRef.current = window.setInterval(() => {
+      setElapsedSeconds((elapsed) => {
+        const nextElapsed = elapsed + 1
+        if (nextElapsed >= activeReel.durationSeconds) {
+          window.clearInterval(exerciseTimerRef.current)
+          return activeReel.durationSeconds
+        }
+        return nextElapsed
+      })
+    }, 1000)
+
+    return () => window.clearInterval(exerciseTimerRef.current)
+  }, [activeReel, exerciseCompleted])
+
+  useEffect(() => {
+    if (activeReel && elapsedSeconds >= activeReel.durationSeconds) {
+      setExerciseCompleted(true)
+    }
+  }, [activeReel, elapsedSeconds])
 
   useEffect(() => {
     if (
@@ -138,10 +172,13 @@ export default function HomeFeed() {
       const created = await postService.createPost({
         category: 'Tâm sự & Cảm xúc',
         content: trimmedContent,
+        image_url: imageUrl.trim() || null,
         mood,
       })
       setPosts((currentPosts) => [created, ...currentPosts])
       setContent('')
+      setImageUrl('')
+      setShowImageInput(false)
     } catch (postError) {
       console.error('Không thể đăng tâm sự:', postError)
       setError(postError.response?.data?.detail || 'Không thể đăng bài. Vui lòng thử lại.')
@@ -187,18 +224,55 @@ export default function HomeFeed() {
   const avatar = profile?.avatar_url || user?.avatar_url ||
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
+  const startReel = (reel) => {
+    if (activeReel?.id === reel.id) {
+      setActiveReel(null)
+      return
+    }
+
+    setElapsedSeconds(0)
+    setExerciseCompleted(false)
+    setActiveReel(reel)
+  }
+
+  const resetReel = () => {
+    setElapsedSeconds(0)
+    setExerciseCompleted(false)
+  }
+
+  const activeStep = activeReel
+    ? activeReel.stepDurations.findIndex((duration, index, durations) =>
+        elapsedSeconds < durations.slice(0, index + 1).reduce((total, seconds) => total + seconds, 0)
+      )
+    : 0
+  const currentStep = activeReel
+    ? activeStep < 0
+      ? activeReel.steps.length - 1
+      : activeStep
+    : 0
+  const stepElapsedSeconds = activeReel
+    ? elapsedSeconds -
+      activeReel.stepDurations
+        .slice(0, currentStep)
+        .reduce((total, seconds) => total + seconds, 0)
+    : 0
+  const stepRemainingSeconds = activeReel
+    ? activeReel.stepDurations[currentStep] - stepElapsedSeconds
+    : 0
+  const remainingSeconds = activeReel
+    ? Math.max(activeReel.durationSeconds - elapsedSeconds, 0)
+    : 0
+
+  const formatCountdown = (seconds) =>
+    `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
+
   return (
     <div className="home-feed-page">
       <Navbar />
       <main className="home-feed">
         <section className="reels-section" aria-labelledby="reels-title">
           <div className="reels-heading">
-            <div>
-              <span className="reels-eyebrow">Chăm sóc bản thân</span>
-              <h1 id="reels-title">Một phút dịu lại 🌿</h1>
-              <p>Bài tập nhỏ để thư giãn và giải tỏa căng thẳng — chọn một thẻ để bắt đầu.</p>
-            </div>
-            <span className="reels-swipe-hint">Lướt để khám phá →</span>
+            <h1 className="reels-eyebrow" id="reels-title">CHĂM SÓC BẢN THÂN</h1>
           </div>
           <div className="reels-carousel" aria-label="Các bài tập thư giãn">
             {RELAXATION_REELS.map((reel) => (
@@ -206,13 +280,12 @@ export default function HomeFeed() {
                 type="button"
                 key={reel.id}
                 className={`reel-card${activeReel?.id === reel.id ? ' is-active' : ''}`}
-                onClick={() => setActiveReel(activeReel?.id === reel.id ? null : reel)}
+                onClick={() => startReel(reel)}
                 aria-pressed={activeReel?.id === reel.id}
               >
-                <span className="reel-card-icon" aria-hidden="true">{reel.icon}</span>
                 <span className="reel-card-title">{reel.title}</span>
                 <span className="reel-card-description">{reel.description}</span>
-                <span className="reel-card-duration">{reel.duration} · Bắt đầu →</span>
+                <span className="reel-card-duration">{reel.duration} · Bắt đầu <ArrowRight size={12} aria-hidden="true" /></span>
               </button>
             ))}
           </div>
@@ -224,14 +297,72 @@ export default function HomeFeed() {
                 onClick={() => setActiveReel(null)}
                 aria-label="Đóng bài tập"
               >
-                ×
+                <X size={18} aria-hidden="true" />
               </button>
-              <span>{activeReel.icon} {activeReel.duration}</span>
+              <div className={`reel-exercise-status${exerciseCompleted ? ' is-finished' : ''}`} role="status">
+                {!exerciseCompleted && <span className="reel-exercise-status-dot" aria-hidden="true" />}
+                <span>
+                  {exerciseCompleted
+                    ? 'Hoàn thành bài tập'
+                    : remainingSeconds === 0
+                      ? 'Đã hết thời gian'
+                      : `Đang thực hiện · Bước ${currentStep + 1}/${activeReel.steps.length}`}
+                </span>
+              </div>
+              <div
+                className="reel-exercise-progress"
+                role="progressbar"
+                aria-label="Tiến trình bài tập"
+                aria-valuemin={0}
+                aria-valuemax={activeReel.durationSeconds}
+                aria-valuenow={elapsedSeconds}
+              >
+                <span
+                  style={{
+                    width: `${(elapsedSeconds / activeReel.durationSeconds) * 100}%`,
+                  }}
+                />
+              </div>
+              <div className="reel-exercise-timer" role="timer" aria-label={`Còn lại ${formatCountdown(remainingSeconds)}`}>
+                <span className="reel-exercise-timer-label">Thời gian còn lại</span>
+                <strong>{formatCountdown(remainingSeconds)}</strong>
+              </div>
               <h2>{activeReel.title}</h2>
-              <ol>
-                {activeReel.steps.map((step) => <li key={step}>{step}</li>)}
-              </ol>
-              <p>Hãy dừng lại nếu bạn thấy không thoải mái. Bạn có thể quay lại bất cứ lúc nào.</p>
+              <div className="reel-step-progress" aria-label={`Bước ${currentStep + 1} / ${activeReel.steps.length}`}>
+                {activeReel.steps.map((step, index) => (
+                  <span
+                    key={step}
+                    className={index <= currentStep ? 'is-complete' : ''}
+                    style={{
+                      opacity: index === currentStep && !exerciseCompleted
+                        ? 0.35 + (stepElapsedSeconds / activeReel.stepDurations[currentStep]) * 0.65
+                        : undefined,
+                    }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <div className="reel-current-step" aria-live="polite">
+                <span>
+                  Bước {currentStep + 1} / {activeReel.steps.length}
+                  {!exerciseCompleted && ` · ${formatCountdown(stepRemainingSeconds)}`}
+                </span>
+                <p>{activeReel.steps[currentStep]}</p>
+              </div>
+              {remainingSeconds === 0 && !exerciseCompleted && (
+                <p className="reel-exercise-time-up" role="status">
+                  Đã hết thời gian cho bài tập này.
+                </p>
+              )}
+              {exerciseCompleted ? (
+                <div className="reel-exercise-completed" role="status">
+                  <strong>Bạn đã hoàn thành bài tập này.</strong>
+                  <button type="button" onClick={resetReel}>Làm lại bài tập</button>
+                </div>
+              ) : (
+                <p className="reel-step-guidance">Các bước sẽ tự chuyển theo thời gian đã định.</p>
+              )}
+              <p className="reel-exercise-note">Hãy dừng lại nếu bạn thấy không thoải mái. Bạn có thể quay lại bất cứ lúc nào.</p>
             </article>
           )}
         </section>
@@ -240,11 +371,11 @@ export default function HomeFeed() {
           <section className="welcome-banner" aria-label="Lời chào">
             <div>
               <span className="welcome-eyebrow">Chào mừng bạn trở lại</span>
-              <h1>Rất vui được gặp lại, {displayName} ✨</h1>
-              <p>Hôm nay bạn muốn chia sẻ điều gì với cộng đồng?</p>
+              <h1>Rất vui được gặp lại, {displayName} <Sparkles size={18} aria-hidden="true" /></h1>
+              <p>Hôm nay bạn thế nào?</p>
             </div>
             <button type="button" className="welcome-dismiss" onClick={dismissWelcome} aria-label="Đóng lời chào">
-              ×
+              <X size={18} aria-hidden="true" />
             </button>
           </section>
         )}
@@ -266,13 +397,42 @@ export default function HomeFeed() {
               maxLength={5000}
               aria-label="Nội dung tâm sự"
             />
+            {showImageInput && (
+              <div className="home-composer-image">
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="Dán URL hình ảnh (https://...)"
+                  maxLength={500}
+                  aria-label="URL hình ảnh đính kèm"
+                />
+                {imageUrl.trim() && (
+                  <img src={imageUrl.trim()} alt="Xem trước ảnh đính kèm" />
+                )}
+              </div>
+            )}
             <div className="home-composer-actions">
-              <label className="mood-picker">
-                <span>Cảm xúc hôm nay</span>
-                <select value={mood} onChange={(event) => setMood(event.target.value)}>
-                  {MOODS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </label>
+              <div className="home-composer-options">
+                <label className="mood-picker">
+                  <span>Cảm xúc hôm nay</span>
+                  <select value={mood} onChange={(event) => setMood(event.target.value)}>
+                    {MOODS.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="home-add-image-button"
+                  onClick={() => {
+                    setShowImageInput((visible) => !visible)
+                    if (showImageInput) setImageUrl('')
+                  }}
+                  aria-pressed={showImageInput}
+                >
+                  {showImageInput ? <X size={15} aria-hidden="true" /> : <ImagePlus size={15} aria-hidden="true" />}
+                  {showImageInput ? 'Bỏ ảnh' : 'Thêm ảnh'}
+                </button>
+              </div>
               <button type="submit" className="home-post-button" disabled={posting || !content.trim()}>
                 {posting ? 'Đang chia sẻ...' : 'Chia sẻ tâm sự'}
               </button>
@@ -285,7 +445,7 @@ export default function HomeFeed() {
             <h2>Bảng tin cảm xúc</h2>
             <p>Những tâm sự và trạng thái mới từ cộng đồng</p>
           </div>
-          <Link to="/communities">Khám phá cộng đồng →</Link>
+          <Link to="/communities">Khám phá cộng đồng <ArrowRight size={14} aria-hidden="true" /></Link>
         </div>
 
         {error && <div className="home-feed-error" role="alert">{error}</div>}
@@ -294,7 +454,7 @@ export default function HomeFeed() {
           <div className="home-feed-empty">Đang tải tâm sự...</div>
         ) : posts.length === 0 ? (
           <div className="home-feed-empty">
-            <span aria-hidden="true">💬</span>
+            <MessageCircle size={32} aria-hidden="true" />
             <h3>Chưa có tâm sự nào</h3>
             <p>Hãy là người đầu tiên chia sẻ cảm xúc hôm nay.</p>
           </div>
@@ -324,7 +484,7 @@ export default function HomeFeed() {
                         aria-label="Xóa bài tâm sự"
                         title="Xóa bài tâm sự"
                       >
-                        ×
+                        <X size={16} aria-hidden="true" />
                       </button>
                     )}
                   </header>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { ArrowRight, Ban, Check, Flag, HeartHandshake, MessageCircle, MoreVertical, Sparkles, UserRoundMinus, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
@@ -106,7 +107,7 @@ export default function Connections() {
         { ...conn, status: 'accepted', updated_at: new Date().toISOString() },
         ...prev,
       ])
-      showToast(`Đã trở thành bạn bè với ${conn.user.display_name || conn.user.username}! 🎉`)
+      showToast(`Đã trở thành bạn bè với ${conn.user.display_name || conn.user.username}!`)
     } catch (err) {
       console.error('Lỗi khi chấp nhận kết nối:', err)
       alert(err.response?.data?.detail || 'Không thể chấp nhận lời mời. Vui lòng thử lại.')
@@ -185,7 +186,7 @@ export default function Connections() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, fontSize: '14px' }}>
-              <span>✓</span>
+              <Check size={16} aria-hidden="true" />
               <span>{toastMessage}</span>
             </div>
             <button
@@ -198,7 +199,7 @@ export default function Connections() {
                 fontSize: '16px',
               }}
             >
-              ✕
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -399,7 +400,7 @@ export default function Connections() {
                       boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                     }}
                   >
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤝</div>
+                    <HeartHandshake size={42} style={{ marginBottom: '16px' }} aria-hidden="true" />
                     <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
                       Chưa có bạn bè nào
                     </h3>
@@ -416,7 +417,7 @@ export default function Connections() {
                         textDecoration: 'none',
                       }}
                     >
-                      Khám phá ngay ✨
+                      Khám phá ngay <Sparkles size={14} aria-hidden="true" />
                     </Link>
                   </div>
                 ) : (
@@ -473,7 +474,7 @@ export default function Connections() {
                                     marginTop: '4px',
                                   }}
                                 >
-                                  ✓ Đã kết nối
+                                  <Check size={12} aria-hidden="true" /> Đã kết nối
                                 </span>
                               </div>
                             </div>
@@ -548,7 +549,7 @@ export default function Connections() {
                                 boxShadow: '0 2px 8px rgba(36, 87, 69, 0.25)',
                               }}
                             >
-                              <span>💬</span>
+                              <MessageCircle size={16} aria-hidden="true" />
                               <span>Nhắn tin</span>
                             </button>
 
@@ -572,7 +573,7 @@ export default function Connections() {
                               }}
                               title="Tùy chọn an toàn"
                             >
-                              ⋮
+                              <MoreVertical size={18} aria-hidden="true" />
                             </button>
 
                             {openMenuUserId === u.id && (
@@ -615,7 +616,7 @@ export default function Connections() {
                                   }}
                                   onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                                 >
-                                  <span>👋</span>
+                                  <UserRoundMinus size={16} aria-hidden="true" />
                                   <span>Gỡ bạn bè</span>
                                 </button>
                                 <button
@@ -641,7 +642,7 @@ export default function Connections() {
                                   onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
                                   onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                                 >
-                                  <span>🚩</span>
+                                  <Flag size={16} aria-hidden="true" />
                                   <span>Báo cáo</span>
                                 </button>
                                 <button
@@ -667,7 +668,7 @@ export default function Connections() {
                                   onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
                                   onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                                 >
-                                  <span>🚫</span>
+                                  <Ban size={16} aria-hidden="true" />
                                   <span>Chặn bạn này</span>
                                 </button>
                               </div>
@@ -957,7 +958,7 @@ export default function Connections() {
                 margin: '0 auto 16px',
               }}
             >
-              💬
+              <MessageCircle size={36} aria-hidden="true" />
             </div>
 
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>

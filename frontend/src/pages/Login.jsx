@@ -1,9 +1,19 @@
 import { useState } from 'react'
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  MessageCircleHeart,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+} from 'lucide-react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { forgetAccount, getRememberedAccount, rememberAccount } from '../services/rememberedAccount'
 import ThemeToggle from '../components/ThemeToggle'
+import { getSurvey } from '../services/surveyService'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -47,7 +57,13 @@ export default function Login() {
       } else {
         forgetAccount()
       }
-      navigate(from, { replace: true })
+      let destination = from
+      try {
+        if (!(await getSurvey())) destination = '/survey'
+      } catch (surveyError) {
+        console.error('Không thể kiểm tra trạng thái khảo sát sau đăng nhập:', surveyError)
+      }
+      navigate(destination, { replace: true })
     } catch (err) {
       if (err.response && err.response.data) {
         const detail = err.response.data.detail
@@ -72,16 +88,16 @@ export default function Login() {
         <ThemeToggle className="auth-theme-toggle" />
         <section className="auth-story">
           <div>
-            <span className="auth-story-badge">✦ Nơi mọi cảm xúc đều được lắng nghe</span>
+            <span className="auth-story-badge"><Sparkles size={14} aria-hidden="true" /> Nơi mọi cảm xúc đều được lắng nghe</span>
             <h1>Chào mừng bạn đến với <span>La Pulga</span></h1>
             <p>
               Không phán xét, không định kiến. Tìm thấy những tâm hồn đồng điệu và tự do sống thật
               với chính mình.
             </p>
             <div className="auth-benefits">
-              <span>Ẩn danh an toàn, bảo mật dữ liệu riêng tư</span>
-              <span>Kết nối bạn bè đồng điệu theo cảm xúc</span>
-              <span>Chia sẻ câu chuyện trong không gian an yên</span>
+              <span><ShieldCheck size={16} aria-hidden="true" /> Ẩn danh an toàn, bảo mật dữ liệu riêng tư</span>
+              <span><UsersRound size={16} aria-hidden="true" /> Kết nối bạn bè đồng điệu theo cảm xúc</span>
+              <span><MessageCircleHeart size={16} aria-hidden="true" /> Chia sẻ câu chuyện trong không gian an yên</span>
             </div>
           </div>
           <blockquote className="auth-quote">
@@ -112,7 +128,7 @@ export default function Login() {
           </p>
         </div>
 
-        {error && <div className="alert alert-error">⚠️ {error}</div>}
+        {error && <div className="alert alert-error"><AlertTriangle size={16} aria-hidden="true" /> {error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -149,7 +165,7 @@ export default function Login() {
                 tabIndex="-1"
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
-                {showPassword ? '👁️' : '🔒'}
+                {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
               </button>
             </div>
           </div>

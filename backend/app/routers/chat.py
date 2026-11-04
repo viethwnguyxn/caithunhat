@@ -407,6 +407,29 @@ async def websocket_chat(
                 }
                 await manager.broadcast_to_conversation(conversation_id, broadcast_payload)
 
+            elif msg_type == "read":
+                with SessionLocal() as db:
+                    current_user = db.query(User).filter(User.id == user_id).first()
+                    if not current_user:
+                        continue
+                    messages = chat_service.get_conversation_messages(
+                        db=db,
+                        conversation_id=conversation_id,
+                        current_user=current_user,
+                    )
+
+                for message in messages:
+                    if message.sender_id != user_id and message.read_at:
+                        await manager.broadcast_to_conversation(
+                            conversation_id,
+                            {
+                                "type": "read_receipt",
+                                "message_id": message.id,
+                                "read_at": message.read_at.isoformat(),
+                            },
+                            exclude_user_id=user_id,
+                        )
+
             elif msg_type.startswith("call:"):
                 await _handle_call_signaling(data, user_id, websocket)
 

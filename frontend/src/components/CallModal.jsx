@@ -1,4 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import {
+  Ban,
+  Camera,
+  CameraOff,
+  Mic,
+  MicOff,
+  Phone,
+  Video,
+  X,
+} from 'lucide-react'
 
 // Cấu hình Google STUN servers miễn phí cho WebRTC
 const RTC_CONFIG = {
@@ -760,7 +770,7 @@ export default function CallModal({
                 animation: 'pulse 1.2s infinite',
               }}
             >
-              {isVideoCall ? '📹' : '📞'}
+              {isVideoCall ? <Video size={22} /> : <Phone size={22} />}
             </span>
           </div>
 
@@ -795,7 +805,7 @@ export default function CallModal({
               onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
               onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              ✕
+              <X size={22} aria-hidden="true" />
             </button>
 
             <button
@@ -821,7 +831,7 @@ export default function CallModal({
               onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
               onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              📞
+              <Phone size={24} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -968,7 +978,7 @@ export default function CallModal({
                         fontSize: '12px',
                       }}
                     >
-                      📷 Camera tắt
+                      <CameraOff size={16} aria-hidden="true" /> Camera tắt
                     </div>
                   )}
                 </div>
@@ -1056,7 +1066,7 @@ export default function CallModal({
               }}
               title={isMuted ? 'Bật Mic' : 'Tắt Mic'}
             >
-              {isMuted ? '🔇' : '🎙️'}
+              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
 
             {/* Nút Bật/Tắt Camera (cho Video Call) */}
@@ -1081,7 +1091,7 @@ export default function CallModal({
                 }}
                 title={isCameraOff ? 'Bật Camera' : 'Tắt Camera'}
               >
-                {isCameraOff ? '🚫' : '📷'}
+                {isCameraOff ? <Ban size={20} /> : <Camera size={20} />}
               </button>
             )}
 
@@ -1108,7 +1118,7 @@ export default function CallModal({
               onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
               onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              📞
+              <Phone size={22} aria-hidden="true" />
             </button>
           </div>
         </div>

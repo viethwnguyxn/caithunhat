@@ -1,4 +1,5 @@
 import { useTheme } from '../contexts/ThemeContext'
+import { Moon, Sun } from 'lucide-react'
 
 export default function ThemeToggle({ className = '' }) {
   const { theme, toggleTheme } = useTheme()
@@ -9,12 +10,12 @@ export default function ThemeToggle({ className = '' }) {
       type="button"
       className={`theme-toggle ${className}`.trim()}
       onClick={toggleTheme}
-      aria-label={`Chuyển sang giao diện ${isDark ? 'trắng xanh' : 'đen xanh'}`}
+      aria-label={`Chuyển sang giao diện ${isDark ? 'sáng' : 'tối'}`}
       aria-pressed={isDark}
-      title={`Giao diện ${isDark ? 'đen xanh' : 'trắng xanh'}`}
+      title={`Giao diện ${isDark ? 'tối' : 'sáng'}`}
     >
-      <span aria-hidden="true">{isDark ? '☾' : '☀'}</span>
-      <span>{isDark ? 'Đen xanh' : 'Trắng xanh'}</span>
+      {isDark ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+      <span>{isDark ? 'Tối' : 'Sáng'}</span>
     </button>
   )
 }

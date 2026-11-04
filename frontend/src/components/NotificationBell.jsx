@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Bell,
+  BellOff,
+  Check,
+  Heart,
+  MessageCircle,
+  Pencil,
+  UserRoundPlus,
+  UsersRound,
+} from 'lucide-react'
+import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
@@ -27,21 +37,21 @@ function formatTimeAgo(dateString) {
 function getNotificationIcon(type) {
   switch (type) {
     case 'connection_request':
-      return '🤝'
+      return UserRoundPlus
     case 'connection_accepted':
-      return '🎉'
+      return Check
     case 'message':
-      return '💬'
+      return MessageCircle
     case 'group_join':
-      return '👥'
+      return UsersRound
     case 'group_post':
-      return '📝'
+      return Pencil
     case 'post_like':
-      return '❤️'
+      return Heart
     case 'post_comment':
-      return '💬'
+      return MessageCircle
     default:
-      return '🔔'
+      return Bell
   }
 }
 
@@ -188,7 +198,7 @@ export default function NotificationBell() {
         aria-label="Thông báo"
         title="Thông báo"
       >
-        <span>🔔</span>
+        <Bell size={18} aria-hidden="true" />
 
         {/* Badge số lượng chưa đọc */}
         {unreadCount > 0 && (
@@ -305,7 +315,7 @@ export default function NotificationBell() {
                   color: '#6b7280',
                 }}
               >
-                <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔕</div>
+                <BellOff size={32} style={{ marginBottom: '8px' }} aria-hidden="true" />
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
                   Không có thông báo mới
                 </div>
@@ -346,11 +356,13 @@ export default function NotificationBell() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '18px',
                       flexShrink: 0,
                     }}
                   >
-                    {getNotificationIcon(item.type)}
+                    {(() => {
+                      const NotificationIcon = getNotificationIcon(item.type)
+                      return <NotificationIcon size={18} color="#245745" aria-hidden="true" />
+                    })()}
                   </div>
 
                   {/* Nội dung */}

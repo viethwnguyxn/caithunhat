@@ -3,14 +3,29 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './NotificationBell'
 import ThemeToggle from './ThemeToggle'
+import {
+  Compass,
+  Home,
+  MessageSquare,
+  Search,
+  Settings,
+  Sparkles,
+  UserRound,
+  Users,
+  UsersRound,
+  X,
+  MessageCircleHeart,
+  HeartHandshake,
+  Leaf,
+} from 'lucide-react'
 
 const NAV_ITEMS = [
-  { path: '/home', label: 'Trang chủ', icon: '⌂' },
-  { path: '/discover', label: 'Khám phá', icon: '◉' },
-  { path: '/connections', label: 'Bạn bè', icon: '♧' },
-  { path: '/messages', label: 'Tin nhắn', icon: '▤' },
-  { path: '/communities', label: 'Nhóm cộng đồng', icon: '♧' },
-  { path: '/activity', label: 'Trang cá nhân', icon: '◯' },
+  { path: '/home', label: 'Trang chủ', icon: Home },
+  { path: '/discover', label: 'Khám phá', icon: Compass },
+  { path: '/connections', label: 'Bạn bè', icon: UsersRound },
+  { path: '/messages', label: 'Tin nhắn', icon: MessageSquare },
+  { path: '/communities', label: 'Nhóm cộng đồng', icon: Users },
+  { path: '/activity', label: 'Trang cá nhân', icon: UserRound },
 ]
 
 export default function Navbar() {
@@ -34,7 +49,7 @@ export default function Navbar() {
         </button>
 
         <label className="app-search">
-          <span aria-hidden="true">⌕</span>
+          <Search size={16} aria-hidden="true" />
           <input type="search" placeholder="Tìm kiếm nhóm & cộng đồng..." />
         </label>
 
@@ -42,7 +57,7 @@ export default function Navbar() {
           {[
             ...NAV_ITEMS,
             ...(user?.role === 'admin'
-              ? [{ path: '/admin', label: 'Quản trị', icon: '⚙' }]
+              ? [{ path: '/admin', label: 'Quản trị', icon: Settings }]
               : []),
           ].map((item) => (
             <Link
@@ -50,6 +65,7 @@ export default function Navbar() {
               to={item.path}
               className={location.pathname === item.path ? 'is-active' : ''}
             >
+              <item.icon size={16} aria-hidden="true" />
               {item.label}
             </Link>
           ))}
@@ -57,7 +73,7 @@ export default function Navbar() {
 
         <div className="app-top-actions">
           <Link className="survey-shortcut" to="/survey">
-            <span aria-hidden="true">✦</span>
+            <Sparkles size={14} aria-hidden="true" />
             Khảo sát tâm lý
           </Link>
           <NotificationBell />
@@ -78,7 +94,7 @@ export default function Navbar() {
               onClick={() => setIntroOpen(false)}
               aria-label="Đóng giới thiệu"
             >
-              ×
+              <X size={20} aria-hidden="true" />
             </button>
             <img className="intro-logo" src="/logo-lapulga.png" alt="" />
             <span className="intro-eyebrow">Tâm sự &amp; Chữa lành</span>
@@ -88,9 +104,9 @@ export default function Navbar() {
               những người đồng điệu. Không phán xét — chỉ có sự thấu hiểu và kết nối chân thành.
             </p>
             <div className="intro-highlights">
-              <span>💬 Chia sẻ và đồng cảm cùng cộng đồng</span>
-              <span>🌿 Bài tập thư giãn chăm sóc tinh thần</span>
-              <span>🤝 Kết nối với những người cùng tần số</span>
+              <span><MessageCircleHeart size={16} aria-hidden="true" /> Chia sẻ và đồng cảm cùng cộng đồng</span>
+              <span><Leaf size={16} aria-hidden="true" /> Bài tập thư giãn chăm sóc tinh thần</span>
+              <span><HeartHandshake size={16} aria-hidden="true" /> Kết nối với những người cùng tần số</span>
             </div>
             <button type="button" className="home-post-button" onClick={() => setIntroOpen(false)}>
               Tiếp tục sử dụng La Pulga
