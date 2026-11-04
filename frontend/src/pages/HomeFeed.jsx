@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, MessageCircle, Sparkles, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -279,7 +280,7 @@ export default function HomeFeed() {
               >
                 <span className="reel-card-title">{reel.title}</span>
                 <span className="reel-card-description">{reel.description}</span>
-                <span className="reel-card-duration">{reel.duration} · Bắt đầu →</span>
+                <span className="reel-card-duration">{reel.duration} · Bắt đầu <ArrowRight size={12} aria-hidden="true" /></span>
               </button>
             ))}
           </div>
@@ -291,7 +292,7 @@ export default function HomeFeed() {
                 onClick={() => setActiveReel(null)}
                 aria-label="Đóng bài tập"
               >
-                ×
+                <X size={18} aria-hidden="true" />
               </button>
               <div className={`reel-exercise-status${exerciseCompleted ? ' is-finished' : ''}`} role="status">
                 {!exerciseCompleted && <span className="reel-exercise-status-dot" aria-hidden="true" />}
@@ -365,11 +366,11 @@ export default function HomeFeed() {
           <section className="welcome-banner" aria-label="Lời chào">
             <div>
               <span className="welcome-eyebrow">Chào mừng bạn trở lại</span>
-              <h1>Rất vui được gặp lại, {displayName} ✨</h1>
+              <h1>Rất vui được gặp lại, {displayName} <Sparkles size={18} aria-hidden="true" /></h1>
               <p>Hôm nay bạn thế nào?</p>
             </div>
             <button type="button" className="welcome-dismiss" onClick={dismissWelcome} aria-label="Đóng lời chào">
-              ×
+              <X size={18} aria-hidden="true" />
             </button>
           </section>
         )}
@@ -410,7 +411,7 @@ export default function HomeFeed() {
             <h2>Bảng tin cảm xúc</h2>
             <p>Những tâm sự và trạng thái mới từ cộng đồng</p>
           </div>
-          <Link to="/communities">Khám phá cộng đồng →</Link>
+          <Link to="/communities">Khám phá cộng đồng <ArrowRight size={14} aria-hidden="true" /></Link>
         </div>
 
         {error && <div className="home-feed-error" role="alert">{error}</div>}
@@ -419,7 +420,7 @@ export default function HomeFeed() {
           <div className="home-feed-empty">Đang tải tâm sự...</div>
         ) : posts.length === 0 ? (
           <div className="home-feed-empty">
-            <span aria-hidden="true">💬</span>
+            <MessageCircle size={32} aria-hidden="true" />
             <h3>Chưa có tâm sự nào</h3>
             <p>Hãy là người đầu tiên chia sẻ cảm xúc hôm nay.</p>
           </div>
@@ -449,7 +450,7 @@ export default function HomeFeed() {
                         aria-label="Xóa bài tâm sự"
                         title="Xóa bài tâm sự"
                       >
-                        ×
+                        <X size={16} aria-hidden="true" />
                       </button>
                     )}
                   </header>

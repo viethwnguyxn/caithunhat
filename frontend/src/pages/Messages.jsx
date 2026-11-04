@@ -1,5 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Flag,
+  HeartHandshake,
+  Info,
+  LockKeyhole,
+  Mail,
+  MessageCircle,
+  MessageCircleHeart,
+  MoreVertical,
+  Phone,
+  ShieldBan,
+  UserRound,
+  UserRoundPlus,
+  Video,
+  X,
+} from 'lucide-react'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
@@ -570,7 +587,7 @@ export default function Messages() {
           <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
-                Đoạn chat 💬
+                Đoạn chat <MessageCircle size={18} aria-hidden="true" />
               </h2>
               <button
                 type="button"
@@ -586,7 +603,7 @@ export default function Messages() {
                   cursor: 'pointer',
                 }}
               >
-                + Bạn bè
+                <UserRoundPlus size={14} aria-hidden="true" /> Bạn bè
               </button>
             </div>
 
@@ -617,7 +634,7 @@ export default function Messages() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>✉️</div>
+                <Mail size={30} style={{ marginBottom: '8px' }} aria-hidden="true" />
                 <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Chưa có cuộc hội thoại nào.</p>
                 <button
                   type="button"
@@ -812,7 +829,7 @@ export default function Messages() {
                       }}
                       aria-label="Quay lại danh sách hội thoại"
                     >
-                      ←
+                      <ArrowLeft size={18} aria-hidden="true" />
                     </button>
                   )}
                   {/* Khung thông tin đối phương: hover hoặc nhấp để xem profile */}
@@ -895,7 +912,7 @@ export default function Messages() {
                             gap: '3px',
                           }}
                         >
-                          👤 Xem hồ sơ
+                          <UserRound size={12} aria-hidden="true" /> Xem hồ sơ
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
@@ -989,7 +1006,7 @@ export default function Messages() {
                         if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
                       }}
                     >
-                      📞
+                      <Phone size={16} aria-hidden="true" />
                     </button>
 
                     <button
@@ -1018,7 +1035,7 @@ export default function Messages() {
                         if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
                       }}
                     >
-                      📹
+                      <Video size={16} aria-hidden="true" />
                     </button>
                   </div>
 
@@ -1046,7 +1063,7 @@ export default function Messages() {
                       }}
                       title="Tùy chọn cuộc hội thoại"
                     >
-                      ⋮
+                      <MoreVertical size={18} aria-hidden="true" />
                     </button>
 
                     {showChatMenu && (
@@ -1089,7 +1106,7 @@ export default function Messages() {
                           onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
                           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
-                          <span>👤</span>
+                          <UserRound size={16} aria-hidden="true" />
                           <span>Xem hồ sơ</span>
                         </button>
 
@@ -1116,7 +1133,7 @@ export default function Messages() {
                           onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
                           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
-                          <span>🚩</span>
+                          <Flag size={16} aria-hidden="true" />
                           <span>Báo cáo vi phạm</span>
                         </button>
 
@@ -1145,7 +1162,7 @@ export default function Messages() {
                             onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#ecfdf5')}
                             onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                           >
-                            <span>🔓</span>
+                            <LockKeyhole size={16} aria-hidden="true" />
                             <span>{unblocking ? 'Đang bỏ chặn...' : 'Bỏ chặn'}</span>
                           </button>
                         ) : !activeConversation.is_blocked ? (
@@ -1172,7 +1189,7 @@ export default function Messages() {
                             onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
                             onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                           >
-                            <span>🚫</span>
+                            <ShieldBan size={16} aria-hidden="true" />
                             <span>Chặn người dùng</span>
                           </button>
                         ) : null}
@@ -1201,7 +1218,7 @@ export default function Messages() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div style={{ textAlign: 'center', margin: 'auto', color: '#6b7280' }}>
-                    <div style={{ fontSize: '44px', marginBottom: '12px' }}>👋</div>
+                    <MessageCircleHeart size={40} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px 0' }}>
                       Bắt đầu cuộc trò chuyện!
                     </h4>
@@ -1213,6 +1230,7 @@ export default function Messages() {
                   messages.map((m, idx) => {
                     const isCallLog = m.content && (m.content.startsWith('📞') || m.content.startsWith('📹'))
                     if (isCallLog) {
+                      const CallLogIcon = m.content.startsWith('📹') ? Video : Phone
                       return (
                         <div
                           key={m.id || idx}
@@ -1237,7 +1255,10 @@ export default function Messages() {
                               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                             }}
                           >
-                            <span>{m.content}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <CallLogIcon size={14} aria-hidden="true" />
+                              {m.content.replace(/^[📞📹]\s*/, '')}
+                            </span>
                             <span style={{ fontSize: '10px', color: '#94a3b8' }}>
                               • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -1347,7 +1368,7 @@ export default function Messages() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#991b1b', fontSize: '13px' }}>
-                    <span style={{ fontSize: '18px' }}>🔒</span>
+                    <LockKeyhole size={18} aria-hidden="true" />
                     <span>
                       {activeConversation.blocked_by_me
                         ? 'Bạn đã chặn người dùng này. Cuộc trò chuyện đã bị vô hiệu hóa.'
@@ -1455,11 +1476,10 @@ export default function Messages() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '36px',
                   marginBottom: '16px',
                 }}
               >
-                💬
+                <MessageCircle size={36} aria-hidden="true" />
               </div>
               <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
                 Hộp thư tin nhắn La Pulga
@@ -1473,7 +1493,7 @@ export default function Messages() {
                 className="btn-primary"
                 style={{ fontSize: '14px', padding: '10px 20px' }}
               >
-                Xem danh sách bạn bè 🤝
+                <HeartHandshake size={16} aria-hidden="true" /> Xem danh sách bạn bè
               </button>
             </div>
           )}
@@ -1500,7 +1520,7 @@ export default function Messages() {
             gap: '8px',
           }}
         >
-          <span>ℹ️</span>
+          <Info size={16} aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1579,7 +1599,7 @@ export default function Messages() {
               onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               title="Đóng (Esc)"
             >
-              ✕
+              <X size={20} aria-hidden="true" />
             </button>
 
             {/* Header: Avatar & Tên */}
@@ -1792,7 +1812,7 @@ export default function Messages() {
                       gap: '4px',
                     }}
                   >
-                    📞 Gọi thoại
+                    <Phone size={16} aria-hidden="true" /> Gọi thoại
                   </button>
 
                   <button
@@ -1816,7 +1836,7 @@ export default function Messages() {
                       boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
                     }}
                   >
-                    📹 Gọi video
+                    <Video size={16} aria-hidden="true" /> Gọi video
                   </button>
                 </>
               )}

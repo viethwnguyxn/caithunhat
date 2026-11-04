@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Ban, X } from 'lucide-react'
 import { reportService } from '../services/reportService'
 
 export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
@@ -69,12 +70,11 @@ export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
             right: '18px',
             background: 'none',
             border: 'none',
-            fontSize: '20px',
             color: '#9ca3af',
             cursor: 'pointer',
           }}
         >
-          ✕
+          <X size={20} aria-hidden="true" />
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -88,11 +88,10 @@ export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
               margin: '0 auto 12px auto',
             }}
           >
-            🚫
+            <Ban size={24} aria-hidden="true" />
           </div>
           <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 6px 0', color: '#1a1a2e' }}>
             Xác nhận chặn người dùng?
@@ -171,4 +170,3 @@ export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
     </div>
   )
 }
-

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Activity, Ban, Check, CheckCircle2, Clock, Flag, Info, LockKeyhole, Settings, UsersRound } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { adminService } from '../services/adminService'
@@ -186,7 +187,7 @@ export default function AdminDashboard() {
         <Navbar />
         <div style={{ maxWidth: '520px', margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
           <div className="card" style={{ padding: '40px 24px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
+            <Ban size={44} style={{ marginBottom: '16px' }} aria-hidden="true" />
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
               Truy cập bị từ chối
             </h2>
@@ -216,7 +217,7 @@ export default function AdminDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '22px' }}>⚙️</span>
+              <Settings size={22} aria-hidden="true" />
               <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
                 Hệ thống Quản trị viên (Admin)
               </h1>
@@ -255,7 +256,7 @@ export default function AdminDashboard() {
         >
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#e1efe8', color: '#245745', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              👥
+              <UsersRound size={22} aria-hidden="true" />
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -269,7 +270,7 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🟢
+              <Activity size={22} aria-hidden="true" />
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -283,7 +284,7 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🔒
+              <LockKeyhole size={22} aria-hidden="true" />
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -297,7 +298,7 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🚩
+              <Flag size={22} aria-hidden="true" />
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -343,7 +344,7 @@ export default function AdminDashboard() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>👥 Quản lý Người dùng</span>
+            <span><UsersRound size={16} aria-hidden="true" /> Quản lý Người dùng</span>
             <span
               style={{
                 backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
@@ -377,7 +378,7 @@ export default function AdminDashboard() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>🚩 Báo cáo Vi phạm</span>
+            <span><Flag size={16} aria-hidden="true" /> Báo cáo Vi phạm</span>
             {(stats?.pending_reports ?? 0) > 0 && (
               <span
                 style={{
@@ -545,7 +546,7 @@ export default function AdminDashboard() {
                                   fontWeight: 600,
                                 }}
                               >
-                                ✓ Hoạt động
+                                <Check size={12} aria-hidden="true" /> Hoạt động
                               </span>
                             ) : (
                               <span
@@ -558,7 +559,7 @@ export default function AdminDashboard() {
                                   fontWeight: 600,
                                 }}
                               >
-                                🔒 Bị khóa
+                                <LockKeyhole size={12} aria-hidden="true" /> Bị khóa
                               </span>
                             )}
                           </td>
@@ -613,9 +614,9 @@ export default function AdminDashboard() {
             {/* Lọc theo trạng thái báo cáo */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {[
-                { key: 'pending', label: '⏳ Chờ xử lý' },
-                { key: 'resolved', label: '✓ Đã xử lý vi phạm' },
-                { key: 'dismissed', label: '✕ Đã bác bỏ' },
+                { key: 'pending', label: 'Chờ xử lý', icon: Clock },
+                { key: 'resolved', label: 'Đã xử lý vi phạm', icon: Check },
+                { key: 'dismissed', label: 'Đã bác bỏ', icon: Ban },
                 { key: 'all', label: 'Tất cả đơn' },
               ].map((tab) => (
                 <button
@@ -634,7 +635,7 @@ export default function AdminDashboard() {
                     cursor: 'pointer',
                   }}
                 >
-                  {tab.label}
+                  {tab.icon && <tab.icon size={14} aria-hidden="true" />} {tab.label}
                 </button>
               ))}
             </div>
@@ -645,7 +646,7 @@ export default function AdminDashboard() {
               </div>
             ) : reports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
+                <CheckCircle2 size={30} style={{ marginBottom: '8px' }} aria-hidden="true" />
                 <p style={{ margin: 0 }}>Không có đơn báo cáo vi phạm nào trong danh mục này.</p>
               </div>
             ) : (
@@ -680,7 +681,7 @@ export default function AdminDashboard() {
                               fontWeight: 700,
                             }}
                           >
-                            🚩 {r.reason}
+                            <Flag size={14} aria-hidden="true" /> {r.reason}
                           </span>
                           <span style={{ fontSize: '12px', color: '#9ca3af' }}>
                             Đơn #{r.id} • {new Date(r.created_at).toLocaleString('vi-VN')}
@@ -690,17 +691,17 @@ export default function AdminDashboard() {
                         <div>
                           {isPending && (
                             <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600 }}>
-                              ⏳ Chờ xử lý
+                              <Clock size={12} aria-hidden="true" /> Chờ xử lý
                             </span>
                           )}
                           {isResolved && (
                             <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600 }}>
-                              ✓ Đã xử lý vi phạm
+                              <Check size={12} aria-hidden="true" /> Đã xử lý vi phạm
                             </span>
                           )}
                           {isDismissed && (
                             <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600 }}>
-                              ✕ Đã bác bỏ
+                              <Ban size={12} aria-hidden="true" /> Đã bác bỏ
                             </span>
                           )}
                         </div>
@@ -896,11 +897,10 @@ export default function AdminDashboard() {
             gap: '8px',
           }}
         >
-          <span>ℹ️</span>
+          <Info size={16} aria-hidden="true" />
           <span>{toastMsg}</span>
         </div>
       )}
     </div>
   )
 }
-

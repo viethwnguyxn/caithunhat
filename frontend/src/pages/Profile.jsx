@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle, ArrowRight, Check, FileText, Pencil } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile, updateProfile } from '../services/profileService'
@@ -55,7 +56,7 @@ export default function Profile() {
 
     try {
       await updateProfile(form)
-      showToast('success', 'Cập nhật thông tin Profile thành công! 🎉')
+      showToast('success', 'Cập nhật thông tin Profile thành công!')
     } catch (err) {
       console.error('Lỗi khi cập nhật profile:', err)
       showToast(
@@ -101,14 +102,16 @@ export default function Profile() {
                 backgroundColor: '#e1efe8',
               }}
             >
-              Khám phá →
+              Khám phá <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </div>
 
           {/* Feedback message */}
           {message.text && (
             <div className={`alert ${message.type === 'success' ? 'alert-success' : 'alert-error'}`}>
-              <span>{message.type === 'success' ? '✓' : '⚠️'}</span>
+              {message.type === 'success'
+                ? <Check size={16} aria-hidden="true" />
+                : <AlertTriangle size={16} aria-hidden="true" />}
               <span>{message.text}</span>
             </div>
           )}
@@ -264,7 +267,7 @@ export default function Profile() {
           >
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#5b21b6', marginBottom: '4px' }}>
-                📝 Khảo sát kết nối & Câu chuyện cá nhân
+                <FileText size={16} aria-hidden="true" /> Khảo sát kết nối & Câu chuyện cá nhân
               </h3>
               <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
                 Cập nhật hoàn cảnh sống, gu kết nối, cảm xúc và câu chuyện của bạn để tìm người đồng điệu hơn.
@@ -287,7 +290,7 @@ export default function Profile() {
                 transition: 'all 0.2s ease',
               }}
             >
-              ✏️ Cập nhật Khảo sát
+              <Pencil size={14} aria-hidden="true" /> Cập nhật Khảo sát
             </Link>
           </div>
 

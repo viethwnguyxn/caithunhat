@@ -673,6 +673,10 @@ button:disabled {
 }
 
 .app-topnav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 10px 14px;
   border-radius: 999px;
   color: #4f5c55;
@@ -1900,10 +1904,19 @@ html[data-theme='dark'] [style*="color: rgb(73, 103, 90)"] {
   font-size: 12px;
 }
 
-.auth-benefits span::before {
-  content: '✦';
-  margin-right: 10px;
+.auth-benefits span {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.auth-benefits svg {
+  flex: 0 0 auto;
   color: #8be0b6;
+}
+
+.auth-benefits span::before {
+  content: none;
 }
 
 .auth-quote {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AlertTriangle, Ban, FileText, Flag, MessageCircle, Search, UserRoundPlus, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
@@ -179,7 +180,7 @@ function Discover() {
         ...prev,
         [targetUser.id]: 'pending_sent',
       }))
-      setConnectToast(`Đã gửi lời mời kết nối tới ${targetUser.display_name || targetUser.username}! 🎉`)
+      setConnectToast(`Đã gửi lời mời kết nối tới ${targetUser.display_name || targetUser.username}!`)
       setTimeout(() => setConnectToast(''), 4000)
     } catch (err) {
       console.error('Lỗi khi gửi kết nối:', err)
@@ -204,7 +205,7 @@ function Discover() {
         ...prev,
         [targetUser.id]: 'accepted',
       }))
-      setConnectToast(`Đã đồng ý kết bạn với ${targetUser.display_name || targetUser.username}! 🎉 Giờ hai bạn đã có thể nhắn tin.`)
+      setConnectToast(`Đã đồng ý kết bạn với ${targetUser.display_name || targetUser.username}! Giờ hai bạn đã có thể nhắn tin.`)
       setTimeout(() => setConnectToast(''), 4500)
     } catch (err) {
       console.error('Lỗi khi chấp nhận kết nối:', err)
@@ -376,7 +377,7 @@ function Discover() {
         {/* 2. TRẠNG THÁI: ERROR */}
         {!loading && error && (
           <div className="card" style={{ maxWidth: '500px', margin: '40px auto', textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>⚠️</div>
+            <AlertTriangle size={32} style={{ marginBottom: '12px' }} aria-hidden="true" />
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Không thể tải danh sách</h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>{error}</p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
@@ -412,7 +413,7 @@ function Discover() {
               boxShadow: '0 8px 30px rgba(36, 87, 69, 0.08)',
             }}
           >
-            <div style={{ fontSize: '52px', marginBottom: '16px' }}>📝</div>
+            <FileText size={44} style={{ marginBottom: '16px' }} aria-hidden="true" />
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', marginBottom: '10px' }}>
               Bạn chưa làm khảo sát Onboarding
             </h2>
@@ -432,7 +433,7 @@ function Discover() {
                   borderRadius: '12px',
                 }}
               >
-                Làm khảo sát ngay 🚀
+                Làm khảo sát ngay
               </button>
             </Link>
           </div>
@@ -441,7 +442,7 @@ function Discover() {
         {/* 3b. TRẠNG THÁI: EMPTY (ĐÃ LÀM KHẢO SÁT NHƯNG CHƯA CÓ AI KHỚP) */}
         {!loading && !error && hasSurvey && filteredMatches.length === 0 && (
           <div className="card" style={{ maxWidth: '540px', margin: '40px auto', textAlign: 'center' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
+            <Search size={36} style={{ marginBottom: '12px' }} aria-hidden="true" />
             <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
               Không tìm thấy người phù hợp
             </h2>
@@ -690,7 +691,7 @@ function Discover() {
                           gap: '4px',
                         }}
                       >
-                        💬 Nhắn tin
+                        <MessageCircle size={16} aria-hidden="true" /> Nhắn tin
                       </Link>
                     ) : connectionStatuses[u.id] === 'pending_sent' ? (
                       <button
@@ -733,7 +734,7 @@ function Discover() {
                             boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
                           }}
                         >
-                          {actionLoadingId === u.id ? 'Đang nhận...' : '🤝 Đồng ý'}
+                          {actionLoadingId === u.id ? 'Đang nhận...' : <><UserRoundPlus size={16} /> Đồng ý</>}
                         </button>
                         <Link
                           to="/connections?tab=received"
@@ -819,7 +820,7 @@ function Discover() {
                 cursor: 'pointer',
               }}
             >
-              ✕
+              <X size={20} aria-hidden="true" />
             </button>
 
             {/* Avatar & Tên trong Modal */}
@@ -979,7 +980,7 @@ function Discover() {
                     gap: '6px',
                   }}
                 >
-                  💬 Nhắn tin
+                  <MessageCircle size={16} aria-hidden="true" /> Nhắn tin
                 </Link>
               ) : connectionStatuses[selectedUserForProfile.user.id] === 'pending_sent' ? (
                 <button
@@ -1020,7 +1021,7 @@ function Discover() {
                       boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
                     }}
                   >
-                    {actionLoadingId === selectedUserForProfile.user.id ? 'Đang nhận...' : '🤝 Đồng ý kết nối'}
+                    {actionLoadingId === selectedUserForProfile.user.id ? 'Đang nhận...' : <><UserRoundPlus size={16} /> Đồng ý kết nối</>}
                   </button>
                   <Link
                     to="/connections?tab=received"
@@ -1082,7 +1083,7 @@ function Discover() {
                   gap: '4px',
                 }}
               >
-                <span>🚩</span>
+                <Flag size={14} aria-hidden="true" />
                 <span>Báo cáo vi phạm</span>
               </button>
               <span style={{ color: '#d1d5db' }}>•</span>
@@ -1101,7 +1102,7 @@ function Discover() {
                   gap: '4px',
                 }}
               >
-                <span>🚫</span>
+                <Ban size={14} aria-hidden="true" />
                 <span>Chặn người này</span>
               </button>
             </div>

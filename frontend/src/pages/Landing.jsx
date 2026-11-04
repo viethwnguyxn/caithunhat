@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ArrowRight, BrainCircuit, ClipboardList, MessageCircle, Sparkles } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Landing() {
@@ -76,7 +77,7 @@ export default function Landing() {
               marginBottom: '24px',
             }}
           >
-            <span>✨ Nền tảng kết nối cộng đồng thấu hiểu</span>
+            <span><Sparkles size={14} aria-hidden="true" /> Nền tảng kết nối cộng đồng thấu hiểu</span>
           </div>
 
           {/* Headline */}
@@ -118,7 +119,7 @@ export default function Landing() {
                 borderRadius: '12px',
               }}
             >
-              Bắt đầu miễn phí →
+              Bắt đầu miễn phí <ArrowRight size={16} aria-hidden="true" />
             </Link>
             <Link
               to="/login"
@@ -153,7 +154,7 @@ export default function Landing() {
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
-              <div style={{ fontSize: '28px', marginBottom: '10px' }}>📋</div>
+              <ClipboardList size={28} style={{ marginBottom: '10px' }} aria-hidden="true" />
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', marginBottom: '6px' }}>
                 Khảo sát chân thực
               </h3>
@@ -171,7 +172,7 @@ export default function Landing() {
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
-              <div style={{ fontSize: '28px', marginBottom: '10px' }}>🧠</div>
+              <BrainCircuit size={28} style={{ marginBottom: '10px' }} aria-hidden="true" />
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', marginBottom: '6px' }}>
                 Đề xuất đồng điệu
               </h3>
@@ -189,7 +190,7 @@ export default function Landing() {
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               }}
             >
-              <div style={{ fontSize: '28px', marginBottom: '10px' }}>💬</div>
+              <MessageCircle size={26} style={{ marginBottom: '10px' }} aria-hidden="true" />
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', marginBottom: '6px' }}>
                 Trò chuyện Realtime
               </h3>

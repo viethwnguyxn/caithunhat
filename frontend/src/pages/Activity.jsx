@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Heart, MessageCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -198,10 +199,12 @@ export default function Activity() {
           onClick={() => handleLike(post)}
           aria-pressed={Boolean(post.is_liked_by_me)}
         >
-          {post.is_liked_by_me ? '♥' : '♡'} Đồng cảm · {post.likes_count || 0}
+          <Heart size={15} aria-hidden="true" fill={post.is_liked_by_me ? 'currentColor' : 'none'} />
+          Đồng cảm · {post.likes_count || 0}
         </button>
         <button type="button" className="activity-comments-toggle" onClick={() => toggleComments(post.id)}>
-          💬 {commentsOpen[post.id] ? 'Ẩn bình luận' : `Bình luận · ${post.comments_count || 0}`}
+          <MessageCircle size={15} aria-hidden="true" />
+          {commentsOpen[post.id] ? 'Ẩn bình luận' : `Bình luận · ${post.comments_count || 0}`}
         </button>
       </div>
       {commentsOpen[post.id] && (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Flag, X } from 'lucide-react'
 import { reportService } from '../services/reportService'
 
 const REPORT_REASONS = [
@@ -84,16 +85,15 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
             right: '18px',
             background: 'none',
             border: 'none',
-            fontSize: '20px',
             color: '#9ca3af',
             cursor: 'pointer',
           }}
         >
-          ✕
+          <X size={20} aria-hidden="true" />
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <span style={{ fontSize: '24px' }}>🚩</span>
+          <Flag size={22} color="#ef4444" aria-hidden="true" />
           <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#1a1a2e' }}>
             Báo cáo vi phạm
           </h3>
@@ -215,4 +215,3 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
     </div>
   )
 }
-

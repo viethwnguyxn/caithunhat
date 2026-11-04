@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, Check, HeartHandshake, Leaf, MessageCircle, Sparkles, Zap } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile } from '../services/profileService'
@@ -83,7 +84,7 @@ export default function Home() {
             </div>
 
             <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.5px' }}>
-              Chào mừng trở lại, {displayName}! ✨
+              Chào mừng trở lại, {displayName}! <Sparkles size={16} aria-hidden="true" />
             </h1>
 
             <p style={{ fontSize: '15px', opacity: 0.92, margin: '0 0 20px 0', lineHeight: '1.6' }}>
@@ -106,7 +107,7 @@ export default function Home() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   }}
                 >
-                  Khám phá người đồng điệu →
+                  Khám phá người đồng điệu <ArrowRight size={14} aria-hidden="true" />
                 </button>
               </Link>
               {!survey && (
@@ -184,7 +185,7 @@ export default function Home() {
                 Khảo sát Onboarding
               </span>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: survey ? '#059669' : '#b45309', margin: '4px 0 0 0' }}>
-                {survey ? '✓ Đã hoàn thành' : '⚡ Chưa làm'}
+                {survey ? <><Check size={14} /> Đã hoàn thành</> : <><Zap size={14} /> Chưa làm</>}
               </h3>
             </div>
             <Link
@@ -270,7 +271,7 @@ export default function Home() {
                 fontWeight: 600,
               }}
             >
-              Mở chat 💬
+              <MessageCircle size={16} aria-hidden="true" /> Mở chat
             </Link>
           </div>
         </div>
@@ -279,7 +280,7 @@ export default function Home() {
         {/* 4 FEATURE HUB CARDS                                       */}
         {/* ========================================================= */}
         <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '16px' }}>
-          Khám phá không gian cộng đồng 🌿
+          <Leaf size={16} aria-hidden="true" /> Khám phá không gian cộng đồng
         </h2>
 
         <div
@@ -319,7 +320,7 @@ export default function Home() {
                   marginBottom: '16px',
                 }}
               >
-                ✨
+                <Sparkles size={24} aria-hidden="true" />
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
                 Khám phá người đồng điệu
@@ -329,7 +330,7 @@ export default function Home() {
               </p>
             </div>
             <span style={{ marginTop: '20px', color: '#245745', fontWeight: 700, fontSize: '13px' }}>
-              Khám phá ngay →
+              Khám phá ngay <ArrowRight size={14} aria-hidden="true" />
             </span>
           </Link>
 
@@ -372,7 +373,7 @@ export default function Home() {
               </p>
             </div>
             <span style={{ marginTop: '20px', color: '#d97706', fontWeight: 700, fontSize: '13px' }}>
-              Xem các nhóm →
+              Xem các nhóm <ArrowRight size={14} aria-hidden="true" />
             </span>
           </Link>
 
@@ -405,7 +406,7 @@ export default function Home() {
                   marginBottom: '16px',
                 }}
               >
-                🤝
+                <HeartHandshake size={24} aria-hidden="true" />
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
                 Mạng lưới bạn bè
@@ -415,7 +416,7 @@ export default function Home() {
               </p>
             </div>
             <span style={{ marginTop: '20px', color: '#059669', fontWeight: 700, fontSize: '13px' }}>
-              Xem bạn bè ({friendsCount}) →
+              Xem bạn bè ({friendsCount}) <ArrowRight size={14} aria-hidden="true" />
             </span>
           </Link>
 
@@ -448,7 +449,7 @@ export default function Home() {
                   marginBottom: '16px',
                 }}
               >
-                💬
+                <MessageCircle size={24} aria-hidden="true" />
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
                 Trò chuyện Realtime
@@ -458,7 +459,7 @@ export default function Home() {
               </p>
             </div>
             <span style={{ marginTop: '20px', color: '#2563eb', fontWeight: 700, fontSize: '13px' }}>
-              Mở hộp thư →
+              Mở hộp thư <ArrowRight size={14} aria-hidden="true" />
             </span>
           </Link>
         </div>
