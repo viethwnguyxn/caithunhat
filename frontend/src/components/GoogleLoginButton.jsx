@@ -30,7 +30,7 @@ export default function GoogleLoginButton({ onError }) {
             theme: 'outline',
             size: 'large',
             width: '100%',
-            text: 'continue_with',
+            text: 'signin_with',
             shape: 'rectangular',
             logo_alignment: 'left',
           })
