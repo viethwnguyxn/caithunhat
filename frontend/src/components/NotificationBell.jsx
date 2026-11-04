@@ -132,8 +132,10 @@ export default function NotificationBell() {
 
     switch (notif.type) {
       case 'connection_request':
+        navigate('/connections?tab=received')
+        break
       case 'connection_accepted':
-        navigate('/connections')
+        navigate('/connections?tab=connections')
         break
       case 'message':
         if (notif.related_id) {
