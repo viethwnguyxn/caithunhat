@@ -101,6 +101,41 @@ def migrate_notification_schema():
 migrate_notification_schema()
 
 
+def migrate_conversation_member_schema():
+    if not inspect(engine).has_table("conversation_members"):
+        return
+
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("conversation_members")
+    }
+    if "joined_at" in columns:
+        return
+
+    with engine.begin() as conn:
+        if engine.dialect.name == "sqlite":
+            conn.execute(
+                text("ALTER TABLE conversation_members ADD COLUMN joined_at DATETIME")
+            )
+            conn.execute(
+                text(
+                    "UPDATE conversation_members "
+                    "SET joined_at = CURRENT_TIMESTAMP WHERE joined_at IS NULL"
+                )
+            )
+        else:
+            conn.execute(
+                text(
+                    "ALTER TABLE conversation_members "
+                    "ADD COLUMN joined_at TIMESTAMP WITH TIME ZONE "
+                    "NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                )
+            )
+
+
+migrate_conversation_member_schema()
+
+
 def ensure_admin_user():
     """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại (đọc từ biến môi trường)."""
     with SessionLocal() as db:
