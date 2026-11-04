@@ -31,6 +31,18 @@ function formatTimeAgo(dateString) {
   return date.toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' })
 }
 
+function mergeMessages(current, incoming, conversationId) {
+  const messagesById = new Map()
+  for (const message of [...current, ...incoming]) {
+    if (String(message.conversation_id) === String(conversationId)) {
+      messagesById.set(String(message.id), message)
+    }
+  }
+  return [...messagesById.values()].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id - b.id
+  )
+}
+
 export default function Messages() {
   const { user } = useAuth()
   const location = useLocation()
@@ -110,11 +122,7 @@ export default function Messages() {
       )
 
       if (activeConversation?.id === newMsg.conversation_id) {
-        setMessages((prev) =>
-          prev.some((message) => message.id === newMsg.id)
-            ? prev
-            : [...prev, newMsg]
-        )
+        setMessages((prev) => mergeMessages(prev, [newMsg], newMsg.conversation_id))
         setActiveConversation((prev) =>
           prev?.id === newMsg.conversation_id
             ? { ...prev, last_message: newMsg }
@@ -201,31 +209,61 @@ export default function Messages() {
     if (!activeConversation) return
 
     let isMounted = true
+    let isSyncing = false
+    const token = localStorage.getItem('access_token')
     setLoadingMessages(true)
+    setMessages([])
 
-    getMessages(activeConversation.id)
-      .then((history) => {
-        if (isMounted) {
-          setMessages(history || [])
-          setTimeout(() => scrollToBottom(false), 50)
-          markConversationNotificationsAsRead(activeConversation.id)
-            .then(() => window.dispatchEvent(new CustomEvent('notifications-updated')))
-            .catch(() => {})
+    if (!token) {
+      setLoadingMessages(false)
+      return
+    }
+
+    const syncMessages = async () => {
+      if (isSyncing || document.hidden) return
+      isSyncing = true
+      try {
+        const history = await getMessages(activeConversation.id)
+        if (!isMounted) return
+        const conversationMessages = history || []
+        setMessages((prev) =>
+          mergeMessages(prev, conversationMessages, activeConversation.id)
+        )
+        const lastMessage = conversationMessages[conversationMessages.length - 1]
+        if (lastMessage) {
+          setConversations((prev) =>
+            prev.map((conversation) =>
+              conversation.id === activeConversation.id
+                ? { ...conversation, last_message: lastMessage }
+                : conversation
+            )
+          )
+          setActiveConversation((prev) =>
+            prev?.id === activeConversation.id
+              ? { ...prev, last_message: lastMessage }
+              : prev
+          )
         }
-      })
-      .catch((err) => console.error('Lỗi tải tin nhắn:', err))
-      .finally(() => {
+        window.dispatchEvent(new CustomEvent('notifications-updated'))
+      } catch (err) {
+        console.error('Lỗi đồng bộ tin nhắn:', err)
+      } finally {
+        isSyncing = false
         if (isMounted) setLoadingMessages(false)
-      })
+      }
+    }
+
+    syncMessages()
+    const syncInterval = setInterval(syncMessages, 5000)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) syncMessages()
+    }
+    window.addEventListener('focus', syncMessages)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
-    }
-
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      return
     }
 
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -239,10 +277,9 @@ export default function Messages() {
         const data = JSON.parse(event.data)
         if (data.type === 'message' && data.message) {
           const newMsg = data.message
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev
-            return [...prev, newMsg]
-          })
+          setMessages((prev) =>
+            mergeMessages(prev, [newMsg], activeConversation.id)
+          )
           setConversations((prev) =>
             prev.map((c) => (c.id === activeConversation.id ? { ...c, last_message: newMsg } : c))
           )
@@ -278,6 +315,9 @@ export default function Messages() {
 
     return () => {
       isMounted = false
+      clearInterval(syncInterval)
+      window.removeEventListener('focus', syncMessages)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close()
       }
@@ -303,7 +343,9 @@ export default function Messages() {
         setInputText('')
       } else {
         const sentMsg = await sendMessage(activeConversation.id, content)
-        setMessages((prev) => [...prev, sentMsg])
+        setMessages((prev) =>
+          mergeMessages(prev, [sentMsg], activeConversation.id)
+        )
         setConversations((prev) =>
           prev.map((conversation) =>
             conversation.id === activeConversation.id
