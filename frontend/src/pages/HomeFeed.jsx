@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, MessageCircle, Sparkles, X } from 'lucide-react'
+import { ArrowRight, ImagePlus, MessageCircle, Sparkles, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
@@ -83,6 +83,8 @@ export default function HomeFeed() {
   const [posts, setPosts] = useState([])
   const [content, setContent] = useState('')
   const [mood, setMood] = useState(MOODS[0])
+  const [imageUrl, setImageUrl] = useState('')
+  const [showImageInput, setShowImageInput] = useState(false)
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
@@ -170,10 +172,13 @@ export default function HomeFeed() {
       const created = await postService.createPost({
         category: 'Tâm sự & Cảm xúc',
         content: trimmedContent,
+        image_url: imageUrl.trim() || null,
         mood,
       })
       setPosts((currentPosts) => [created, ...currentPosts])
       setContent('')
+      setImageUrl('')
+      setShowImageInput(false)
     } catch (postError) {
       console.error('Không thể đăng tâm sự:', postError)
       setError(postError.response?.data?.detail || 'Không thể đăng bài. Vui lòng thử lại.')
@@ -392,13 +397,42 @@ export default function HomeFeed() {
               maxLength={5000}
               aria-label="Nội dung tâm sự"
             />
+            {showImageInput && (
+              <div className="home-composer-image">
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="Dán URL hình ảnh (https://...)"
+                  maxLength={500}
+                  aria-label="URL hình ảnh đính kèm"
+                />
+                {imageUrl.trim() && (
+                  <img src={imageUrl.trim()} alt="Xem trước ảnh đính kèm" />
+                )}
+              </div>
+            )}
             <div className="home-composer-actions">
-              <label className="mood-picker">
-                <span>Cảm xúc hôm nay</span>
-                <select value={mood} onChange={(event) => setMood(event.target.value)}>
-                  {MOODS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </label>
+              <div className="home-composer-options">
+                <label className="mood-picker">
+                  <span>Cảm xúc hôm nay</span>
+                  <select value={mood} onChange={(event) => setMood(event.target.value)}>
+                    {MOODS.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="home-add-image-button"
+                  onClick={() => {
+                    setShowImageInput((visible) => !visible)
+                    if (showImageInput) setImageUrl('')
+                  }}
+                  aria-pressed={showImageInput}
+                >
+                  {showImageInput ? <X size={15} aria-hidden="true" /> : <ImagePlus size={15} aria-hidden="true" />}
+                  {showImageInput ? 'Bỏ ảnh' : 'Thêm ảnh'}
+                </button>
+              </div>
               <button type="submit" className="home-post-button" disabled={posting || !content.trim()}>
                 {posting ? 'Đang chia sẻ...' : 'Chia sẻ tâm sự'}
               </button>
