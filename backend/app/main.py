@@ -1,7 +1,7 @@
 import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from .core.security import hash_password
@@ -56,6 +56,44 @@ if str(engine.url).startswith("sqlite"):
             conn.commit()
         except Exception:
             pass
+
+
+def migrate_notification_titles():
+    if not inspect(engine).has_table("notifications"):
+        return
+
+    columns = {column["name"] for column in inspect(engine).get_columns("notifications")}
+    if "title" in columns:
+        return
+
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE notifications "
+                "ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT ''"
+            )
+        )
+        conn.execute(
+            text(
+                """
+                UPDATE notifications
+                SET title = CASE type
+                    WHEN 'connection_request' THEN 'Lời mời kết nối'
+                    WHEN 'connection_accepted' THEN 'Kết nối mới'
+                    WHEN 'message' THEN 'Tin nhắn mới'
+                    WHEN 'group_join' THEN 'Thành viên mới'
+                    WHEN 'group_post' THEN 'Bài viết mới'
+                    WHEN 'post_like' THEN 'Lượt thích mới'
+                    WHEN 'post_comment' THEN 'Bình luận mới'
+                    ELSE 'Thông báo'
+                END
+                WHERE title = ''
+                """
+            )
+        )
+
+
+migrate_notification_titles()
 
 
 def ensure_admin_user():
