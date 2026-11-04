@@ -4,33 +4,58 @@ import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile } from '../services/profileService'
 import { getSurvey } from '../services/surveyService'
-import { getMyConnections } from '../services/connectionService'
+import { getMyConnections, getConnectionRequests, sendConnectionRequest } from '../services/connectionService'
 import { getConversations } from '../services/chatService'
+import { getMatches } from '../services/matchingService'
+import postService from '../services/postService'
 
 export default function Home() {
   const { user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [survey, setSurvey] = useState(null)
   const [friendsCount, setFriendsCount] = useState(0)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+
+  // Recommended connections & Community feed preview
+  const [recommendedUsers, setRecommendedUsers] = useState([])
+  const [feedPreview, setFeedPreview] = useState([])
+  const [connectedIds, setConnectedIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [profileData, surveyData, conns, convs] = await Promise.all([
-          getProfile().catch(() => null),
-          getSurvey().catch(() => null),
-          getMyConnections().catch(() => []),
-          getConversations().catch(() => []),
-        ])
-        setProfile(profileData)
-        setSurvey(surveyData)
-        setFriendsCount(conns?.length || 0)
+        const [profileData, surveyData, conns, reqs, convs, matchData, posts] =
+          await Promise.allSettled([
+            getProfile(),
+            getSurvey(),
+            getMyConnections(),
+            getConnectionRequests(),
+            getConversations(),
+            getMatches(3),
+            postService.getFeed({ limit: 2 }),
+          ])
 
-        // Tính tổng tin nhắn chưa đọc
-        const unreadTotal = (convs || []).reduce((acc, c) => acc + (c.unread_count || 0), 0)
-        setUnreadMsgCount(unreadTotal)
+        if (profileData.status === 'fulfilled') setProfile(profileData.value)
+        if (surveyData.status === 'fulfilled') setSurvey(surveyData.value)
+        if (conns.status === 'fulfilled' && Array.isArray(conns.value)) {
+          setFriendsCount(conns.value.length)
+          setConnectedIds(new Set(conns.value.map((c) => c.user?.id)))
+        }
+        if (reqs.status === 'fulfilled' && reqs.value) {
+          setPendingRequestsCount(reqs.value.incoming?.length || 0)
+        }
+        if (convs.status === 'fulfilled' && Array.isArray(convs.value)) {
+          const unreadTotal = convs.value.reduce((acc, c) => acc + (c.unread_count || 0), 0)
+          setUnreadMsgCount(unreadTotal)
+        }
+        if (matchData.status === 'fulfilled' && matchData.value?.matches) {
+          setRecommendedUsers(matchData.value.matches.slice(0, 3))
+        }
+        if (posts.status === 'fulfilled' && Array.isArray(posts.value)) {
+          setFeedPreview(posts.value.slice(0, 2))
+        }
       } catch (err) {
         console.error('Lỗi khi tải thông tin Dashboard:', err)
       } finally {
@@ -40,469 +65,323 @@ export default function Home() {
     loadData()
   }, [])
 
+  const handleConnect = async (userId) => {
+    try {
+      await sendConnectionRequest(userId)
+      setConnectedIds((prev) => new Set([...prev, userId]))
+    } catch (err) {
+      console.error('Lỗi khi gửi kết nối:', err)
+    }
+  }
+
   const displayName = profile?.display_name || user?.username || 'Bạn'
+  const avatarUrl =
+    profile?.avatar_url ||
+    user?.avatar_url ||
+    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div className="min-h-screen bg-[#F8F7FA] text-[#292631] font-sans antialiased selection:bg-[#E9E1F3] selection:text-[#7C5CBF] pb-20 md:pb-12">
       <Navbar />
 
-      <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '32px 16px 64px' }}>
-        {/* ========================================================= */}
-        {/* HERO WELCOME BANNER                                       */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #7c5cbf 0%, #9b7fe8 100%)',
-            borderRadius: '24px',
-            padding: '36px 32px',
-            color: '#ffffff',
-            marginBottom: '32px',
-            boxShadow: '0 8px 24px rgba(124, 92, 191, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '24px',
-          }}
-        >
-          <div style={{ maxWidth: '620px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                fontSize: '12px',
-                fontWeight: 600,
-                marginBottom: '14px',
-              }}
-            >
+      <main className="max-w-[1140px] mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* ================= 1. HERO WELCOME BANNER ================= */}
+        <div className="relative rounded-3xl bg-gradient-to-r from-[#7C5CBF] to-[#906CD9] p-8 md:p-10 text-white shadow-[0_12px_36px_rgba(124,92,191,0.22)] overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="relative z-10 max-w-xl text-center md:text-left space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-semibold backdrop-blur-sm border border-white/20">
               <span>◎ Kindred Community</span>
             </div>
 
-            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.5px' }}>
-              Chào mừng trở lại, {displayName}! ✨
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Chào mừng bạn trở lại, {displayName}! ✨
             </h1>
 
-            <p style={{ fontSize: '15px', opacity: 0.92, margin: '0 0 20px 0', lineHeight: '1.6' }}>
-              <em>"Find people who understand you."</em> — Nơi bạn tìm thấy những người bạn có cùng hoàn cảnh, mục tiêu và chia sẻ những câu chuyện chân thực nhất.
+            <p className="text-sm text-white/90 leading-relaxed">
+              <em>"Find people who understand you."</em> — Nơi bạn tìm thấy những người bạn có cùng
+              hoàn cảnh, mục tiêu và chia sẻ những câu chuyện chân thực nhất.
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <Link to="/discover">
-                <button
-                  type="button"
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    backgroundColor: '#ffffff',
-                    color: '#7c5cbf',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  Khám phá người đồng điệu →
-                </button>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+              <Link
+                to="/discover"
+                className="px-5 py-2.5 rounded-xl bg-white text-[#7C5CBF] font-bold text-xs shadow-md hover:bg-[#F5F0FA] transition-all flex items-center gap-1.5"
+              >
+                <span>Khám phá người đồng điệu</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
+
               {!survey && (
-                <Link to="/survey">
-                  <button
-                    type="button"
-                    style={{
-                      padding: '10px 20px',
-                      borderRadius: '10px',
-                      border: '1.5px solid rgba(255,255,255,0.8)',
-                      backgroundColor: 'transparent',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Hoàn thành Khảo sát
-                  </button>
+                <Link
+                  to="/survey"
+                  className="px-5 py-2.5 rounded-xl border border-white/80 bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-all flex items-center gap-1.5"
+                >
+                  <span>Hoàn thành Khảo sát</span>
+                  <span className="material-symbols-outlined text-[16px]">quiz</span>
                 </Link>
               )}
             </div>
           </div>
 
-          {/* User Avatar Circle */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <img
-              src={
-                profile?.avatar_url ||
-                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
-              }
-              alt={displayName}
-              style={{
-                width: '90px',
-                height: '90px',
-                borderRadius: '50%',
-                border: '3px solid rgba(255, 255, 255, 0.8)',
-                objectFit: 'cover',
-                backgroundColor: '#f5f0ff',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-              }}
-            />
-            <span style={{ marginTop: '10px', fontSize: '13px', fontWeight: 600, opacity: 0.9 }}>
+          <div className="relative z-10 flex flex-col items-center shrink-0">
+            <div className="relative">
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-24 h-24 rounded-full object-cover border-4 border-white/80 bg-[#F5F0FA] shadow-lg"
+              />
+              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#10B981] border-2 border-white"></span>
+            </div>
+            <span className="mt-2 text-xs font-mono font-medium text-white/90">
               @{user?.username}
             </span>
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/* STATS QUICK SUMMARY ROW                                   */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '16px',
-            marginBottom: '32px',
-          }}
-        >
-          {/* Survey Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Khảo sát Onboarding
+        {/* ================= 2. CONNECTION OVERVIEW STATS ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-white border border-[#E9E1F3] shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-[#77717F] uppercase tracking-wider">
+                Mạng lưới bạn bè
               </span>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: survey ? '#059669' : '#b45309', margin: '4px 0 0 0' }}>
-                {survey ? '✓ Đã hoàn thành' : '⚡ Chưa làm'}
-              </h3>
-            </div>
-            <Link
-              to="/survey"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              {survey ? 'Xem lại' : 'Làm ngay'}
-            </Link>
-          </div>
-
-          {/* Friends Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Bạn bè kết nối
-              </span>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', margin: '4px 0 0 0' }}>
-                {friendsCount} người
-              </h3>
+              <p className="text-2xl font-bold text-[#292631]">{friendsCount} người</p>
             </div>
             <Link
               to="/connections"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
+              className="p-2.5 rounded-xl bg-[#F5F0FA] text-[#7C5CBF] hover:bg-[#E9E1F3] transition-colors"
+              title="Quản lý kết nối"
             >
-              Quản lý
+              <span className="material-symbols-outlined text-[20px]">diversity_3</span>
             </Link>
           </div>
 
-          {/* Messages Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Tin nhắn mới
+          <div className="p-5 rounded-2xl bg-white border border-[#E9E1F3] shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-[#77717F] uppercase tracking-wider">
+                Lời mời đang chờ
               </span>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: unreadMsgCount > 0 ? '#ef4444' : '#1a1a2e', margin: '4px 0 0 0' }}>
-                {unreadMsgCount > 0 ? `${unreadMsgCount} chưa đọc` : '0 tin mới'}
-              </h3>
+              <p className="text-2xl font-bold text-[#292631]">
+                {pendingRequestsCount > 0 ? (
+                  <span className="text-[#7C5CBF]">{pendingRequestsCount} lời mời</span>
+                ) : (
+                  '0 lời mời'
+                )}
+              </p>
+            </div>
+            <Link
+              to="/connections?tab=received"
+              className="p-2.5 rounded-xl bg-[#F5F0FA] text-[#7C5CBF] hover:bg-[#E9E1F3] transition-colors"
+              title="Xem lời mời"
+            >
+              <span className="material-symbols-outlined text-[20px]">mark_email_unread</span>
+            </Link>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-[#E9E1F3] shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-[#77717F] uppercase tracking-wider">
+                Tin nhắn chưa đọc
+              </span>
+              <p className="text-2xl font-bold text-[#292631]">
+                {unreadMsgCount > 0 ? (
+                  <span className="text-red-600">{unreadMsgCount} tin mới</span>
+                ) : (
+                  'Hộp thư đã đọc'
+                )}
+              </p>
             </div>
             <Link
               to="/messages"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
-                color: '#7c5cbf',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
+              className="p-2.5 rounded-xl bg-[#F5F0FA] text-[#7C5CBF] hover:bg-[#E9E1F3] transition-colors"
+              title="Mở tin nhắn"
             >
-              Mở chat 💬
+              <span className="material-symbols-outlined text-[20px]">chat</span>
             </Link>
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/* 4 FEATURE HUB CARDS                                       */}
-        {/* ========================================================= */}
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '16px' }}>
-          Khám phá không gian cộng đồng 🌿
-        </h2>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '20px',
-            marginBottom: '36px',
-          }}
-        >
-          {/* Card 1: Khám phá */}
-          <Link
-            to="/discover"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
+        {/* ================= 3. RECOMMENDED CONNECTIONS SECTION ================= */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#f5f0ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                ✨
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Khám phá người đồng điệu
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Xem danh sách những người có điểm số tương đồng cao nhất dựa trên khảo sát và hồ sơ cá nhân của bạn.
-              </p>
+              <h2 className="text-lg font-bold text-[#292631] flex items-center gap-2">
+                <span>Gợi ý kết nối đồng điệu</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#F5F0FA] text-[#7C5CBF] text-[11px] font-bold">
+                  AI Match
+                </span>
+              </h2>
+              <p className="text-xs text-[#77717F]">Dựa trên sự tương đồng về hoàn cảnh và sở thích</p>
             </div>
-            <span style={{ marginTop: '20px', color: '#7c5cbf', fontWeight: 700, fontSize: '13px' }}>
-              Khám phá ngay →
-            </span>
-          </Link>
-
-          {/* Card 2: Cộng đồng */}
-          <Link
-            to="/communities"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#fef3c7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                🌟
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Cộng đồng theo chủ đề
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Gia nhập các nhóm sở thích: Lập trình viên, Sách & Phát triển bản thân, Nghệ thuật, Thể thao, Freelancer...
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#d97706', fontWeight: 700, fontSize: '13px' }}>
-              Xem các nhóm →
-            </span>
-          </Link>
-
-          {/* Card 3: Kết nối */}
-          <Link
-            to="/connections"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#ecfdf5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                🤝
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Mạng lưới bạn bè
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Quản lý các kết nối đã đồng ý, duyệt các lời mời kết nối nhận được và theo dõi lời mời đã gửi đi.
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#059669', fontWeight: 700, fontSize: '13px' }}>
-              Xem bạn bè ({friendsCount}) →
-            </span>
-          </Link>
-
-          {/* Card 4: Nhắn tin */}
-          <Link
-            to="/messages"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #ede9fe',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#eff6ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                💬
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Trò chuyện Realtime
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Nhắn tin 1-1 trực tiếp qua WebSocket tốc độ cao, hiển thị tức thời, bảo mật và lưu trữ an toàn.
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#2563eb', fontWeight: 700, fontSize: '13px' }}>
-              Mở hộp thư →
-            </span>
-          </Link>
-        </div>
-
-        {/* ========================================================= */}
-        {/* WARM TIPS & GUIDELINES                                    */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
-            padding: '28px',
-            border: '1px solid #ede9fe',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '50%',
-              backgroundColor: '#f5f0ff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '28px',
-              flexShrink: 0,
-            }}
-          >
-            💡
+            <Link
+              to="/discover"
+              className="text-xs font-bold text-[#7C5CBF] hover:underline flex items-center gap-1"
+            >
+              <span>Xem tất cả</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </Link>
           </div>
-          <div style={{ flex: 1, minWidth: '240px' }}>
-            <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px 0' }}>
-              Lời khuyên kết nối từ Kindred
-            </h4>
-            <p style={{ fontSize: '13.5px', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
-              Một lời chào chân thành và nhắc đến điểm tương đồng mà hai bạn cùng chia sẻ trong khảo sát sẽ là khởi đầu tuyệt vời cho một tình bạn lâu dài!
-            </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {recommendedUsers.length > 0 ? (
+              recommendedUsers.map((item) => {
+                const u = item.user || {}
+                const isConnected = connectedIds.has(u.id)
+                const avatar =
+                  u.avatar_url ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                    u.username || 'user'
+                  )}`
+
+                return (
+                  <div
+                    key={u.id}
+                    className="p-5 rounded-2xl bg-white border border-[#E9E1F3] shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={avatar}
+                            alt=""
+                            className="w-12 h-12 rounded-xl object-cover bg-[#F5F0FA] border border-[#E9E1F3]"
+                          />
+                          <div>
+                            <h4 className="font-bold text-sm text-[#292631] truncate">
+                              {u.display_name || u.username}
+                            </h4>
+                            <p className="text-[11px] text-[#77717F]">
+                              {u.age_group ? `${u.age_group} • ` : ''}
+                              {u.current_status || 'Thành viên'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#10B981] font-bold text-xs border border-[#A7F3D0] shrink-0">
+                          {Math.round(item.match_score * 100)}%
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-[#77717F] mt-3 line-clamp-2 italic bg-[#F8F7FA] p-2.5 rounded-xl border border-[#E9E1F3]">
+                        “{u.bio || 'Chào bạn! Mình mong muốn tìm kiếm những người bạn đồng điệu.'}”
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#F2EFF5] flex items-center gap-2">
+                      <Link
+                        to="/discover"
+                        className="flex-1 py-2 rounded-xl bg-[#F5F0FA] text-[#7C5CBF] hover:bg-[#E9E1F3] font-semibold text-xs text-center transition-colors"
+                      >
+                        Xem chi tiết
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleConnect(u.id)}
+                        disabled={isConnected}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isConnected
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#7C5CBF] hover:bg-[#6949A8] text-white shadow-sm cursor-pointer'
+                        }`}
+                      >
+                        {isConnected ? 'Đã gửi' : 'Kết nối'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="col-span-3 py-8 text-center rounded-2xl bg-white border border-[#E9E1F3] text-xs text-[#77717F]">
+                Hãy hoàn thành bài khảo sát để xem các gợi ý ghép đôi phù hợp nhất!
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        </section>
+
+        {/* ================= 4. COMMUNITY FEED PREVIEW ================= */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#292631]">Bảng tin cộng đồng gần đây</h2>
+              <p className="text-xs text-[#77717F]">Những chia sẻ chân thực từ các thành viên</p>
+            </div>
+            <Link
+              to="/communities"
+              className="text-xs font-bold text-[#7C5CBF] hover:underline flex items-center gap-1"
+            >
+              <span>Xem bảng tin</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {feedPreview.length > 0 ? (
+              feedPreview.map((post) => (
+                <div
+                  key={post.id}
+                  className="p-5 rounded-2xl bg-white border border-[#E9E1F3] shadow-sm space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={
+                          post.author?.avatar_url ||
+                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                            post.author?.username || 'user'
+                          )}`
+                        }
+                        alt=""
+                        className="w-9 h-9 rounded-xl object-cover bg-[#F5F0FA]"
+                      />
+                      <div>
+                        <h4 className="text-xs font-bold text-[#292631]">
+                          {post.author?.display_name || post.author?.username}
+                        </h4>
+                        <span className="text-[10px] text-[#A19AA8]">{post.category}</span>
+                      </div>
+                    </div>
+                    {post.mood && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#F5F0FA] text-[#7C5CBF] text-[11px] font-semibold">
+                        {post.mood}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-[#292631] line-clamp-3 leading-relaxed">
+                    {post.content}
+                  </p>
+
+                  <div className="pt-2 border-t border-[#F2EFF5] flex items-center justify-between text-xs text-[#77717F]">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-[#EC4899]">
+                          favorite
+                        </span>
+                        <span>{post.likes_count || 0}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                        <span>{post.comments_count || 0}</span>
+                      </span>
+                    </div>
+
+                    <Link to="/communities" className="text-[#7C5CBF] font-bold text-[11px] hover:underline">
+                      Tham gia thảo luận →
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 py-8 text-center rounded-2xl bg-white border border-[#E9E1F3] text-xs text-[#77717F]">
+                Chưa có bài viết mới. Hãy là người đầu tiên chia sẻ góc nhìn!
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSurvey, submitSurvey } from '../services/surveyService'
+import Navbar from '../components/Navbar'
 
 const AGE_GROUPS = [
   'Under 18',
@@ -85,7 +86,7 @@ const DISCOVERY_OPTIONS = [
   'Mở rộng kết nối để học hỏi góc nhìn mới',
 ]
 
-function Survey() {
+export default function Survey() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const totalSteps = 6
@@ -191,11 +192,11 @@ function Survey() {
     }
     setError('')
     setStep((prev) => Math.min(prev + 1, totalSteps))
-    // Chống bấm đúp chuột từ bước trước ăn vào nút submit của bước sau
     setStepTransitioning(true)
     setTimeout(() => {
       setStepTransitioning(false)
-    }, 600)
+    }, 400)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
@@ -204,15 +205,13 @@ function Survey() {
     setStepTransitioning(true)
     setTimeout(() => {
       setStepTransitioning(false)
-    }, 400)
+    }, 300)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
-    // Nếu vừa mới chuyển sang bước cuối dưới 600ms thì chặn để tránh click đúp ngoài ý muốn
-    if (stepTransitioning || loading) {
-      return
-    }
+    if (stepTransitioning || loading) return
 
     const errMsg = validateCurrentStep()
     if (errMsg) {
@@ -224,7 +223,7 @@ function Survey() {
     setError('')
     try {
       await submitSurvey(form)
-      navigate('/home')
+      navigate('/discover')
     } catch (err) {
       console.error('Lỗi nộp survey:', err)
       setError(err.response?.data?.detail || 'Không thể lưu kết quả khảo sát. Vui lòng thử lại.')
@@ -233,436 +232,471 @@ function Survey() {
     }
   }
 
-  // Component Thẻ Chọn (Select Card) - Không còn ô vuông/tròn thô kệch
+  // Thẻ chọn SelectCard thiết kế tinh gọn, có highlight tím khi active
   const SelectCard = ({ label, isSelected, onClick, isMulti = false }) => {
     return (
       <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
-        style={{
-          padding: '14px 18px',
-          borderRadius: '12px',
-          border: isSelected ? '2px solid #7c5cbf' : '1.5px solid #e5e7eb',
-          backgroundColor: isSelected ? '#f5f0ff' : '#ffffff',
-          color: isSelected ? '#5b3a99' : '#374151',
-          fontWeight: isSelected ? 600 : 400,
-          fontSize: '15px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          transition: 'all 0.15s ease',
-          boxShadow: isSelected ? '0 2px 8px rgba(124, 92, 191, 0.15)' : 'none',
-          userSelect: 'none',
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
         }}
+        className={`w-full p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between text-left select-none ${
+          isSelected
+            ? 'border-kindred-purple bg-kindred-lavender/60 text-kindred-text shadow-sm'
+            : 'border-kindred-border bg-white text-kindred-text hover:border-purple-200 hover:bg-gray-50/70'
+        }`}
       >
-        <span>{label}</span>
-        {isSelected && (
-          <span
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: isMulti ? '6px' : '50%',
-              backgroundColor: '#7c5cbf',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            ✓
-          </span>
-        )}
+        <span className={`text-sm ${isSelected ? 'font-bold text-kindred-purple' : 'font-medium'}`}>
+          {label}
+        </span>
+        <div
+          className={`w-5 h-5 rounded-${isMulti ? 'md' : 'full'} flex items-center justify-center shrink-0 transition-all ${
+            isSelected
+              ? 'bg-kindred-purple text-white shadow-xs'
+              : 'border border-kindred-border bg-white'
+          }`}
+        >
+          {isSelected && (
+            <span className="material-symbols-outlined text-xs">check</span>
+          )}
+        </div>
       </div>
     )
   }
 
   if (initialLoading) {
     return (
-      <div className="page">
-        <p style={{ color: '#6b7280' }}>Đang tải khảo sát...</p>
+      <div className="min-h-screen bg-kindred-bg">
+        <Navbar />
+        <div className="max-w-xl mx-auto px-4 py-20 text-center">
+          <div className="w-12 h-12 rounded-full border-3 border-kindred-purple/30 border-t-kindred-purple animate-spin mx-auto mb-4" />
+          <p className="text-sm font-medium text-kindred-muted">Đang chuẩn bị khảo sát Kindred...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="page" style={{ padding: '32px 16px' }}>
-      <div className="card" style={{ maxWidth: '620px', padding: '36px' }}>
-        {/* Progress Bar */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#7c5cbf', textTransform: 'uppercase' }}>
-              Bước {step} / {totalSteps}
-            </span>
-            <span style={{ fontSize: '13px', color: '#9ca3af' }}>
-              {Math.round((step / totalSteps) * 100)}% hoàn thành
-            </span>
+    <div className="min-h-screen bg-kindred-bg flex flex-col">
+      <Navbar />
+
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-8">
+        <div className="bg-white rounded-3xl border border-kindred-border shadow-soft p-6 sm:p-10 relative overflow-hidden">
+          {/* Decorative subtle backdrop pattern */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-kindred-lavender/50 to-transparent rounded-bl-full pointer-events-none" />
+
+          {/* Stepper Header */}
+          <div className="mb-8 relative z-10">
+            <div className="flex items-center justify-between text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+              <span className="inline-flex items-center gap-1.5 text-kindred-purple">
+                <span className="material-symbols-outlined text-sm">psychology</span>
+                BƯỚC {step} / {totalSteps}
+              </span>
+              <span>{Math.round((step / totalSteps) * 100)}% HOÀN THÀNH</span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-kindred-purple to-purple-400 transition-all duration-300 rounded-full"
+                style={{ width: `${(step / totalSteps) * 100}%` }}
+              />
+            </div>
           </div>
-          <div style={{ height: '6px', width: '100%', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${(step / totalSteps) * 100}%`,
-                background: 'linear-gradient(90deg, #7c5cbf, #9b7fe8)',
-                transition: 'width 0.3s ease',
-              }}
-            ></div>
-          </div>
-        </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
-
-        <form onSubmit={step === totalSteps ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }}>
-          {/* BƯỚC 1: ABOUT YOU */}
-          {step === 1 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Về bạn</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Giúp chúng tôi hiểu độ tuổi và tình trạng hiện tại của bạn.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Độ tuổi của bạn</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-                  {AGE_GROUPS.map((age) => (
-                    <SelectCard
-                      key={age}
-                      label={age}
-                      isSelected={form.age_group === age}
-                      onClick={() => handleSelectRadio('age_group', age)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Tình trạng hiện tại</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectCard
-                      key={status}
-                      label={status}
-                      isSelected={form.current_status === status}
-                      onClick={() => handleSelectRadio('current_status', status)}
-                    />
-                  ))}
-                </div>
-              </div>
+          {/* Error message */}
+          {error && (
+            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2.5 animate-fadeIn">
+              <span className="material-symbols-outlined text-rose-500">warning</span>
+              <span>{error}</span>
             </div>
           )}
 
-          {/* BƯỚC 2: LIFE SITUATION & FEELINGS */}
-          {step === 2 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Hoàn cảnh & Cảm xúc</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Những gì bạn đang trải qua sẽ giúp kết nối với người thực sự thấu hiểu.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hoàn cảnh hiện tại của bạn</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {SITUATION_OPTIONS.map((item) => (
-                    <SelectCard
-                      key={item}
-                      label={item}
-                      isSelected={form.life_situation === item}
-                      onClick={() => handleSelectRadio('life_situation', item)}
-                    />
-                  ))}
+          {/* Survey Wizard Content */}
+          <form
+            onSubmit={
+              step === totalSteps
+                ? handleSubmit
+                : (e) => {
+                    e.preventDefault()
+                    handleNext()
+                  }
+            }
+          >
+            {/* BƯỚC 1: ABOUT YOU */}
+            {step === 1 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Về bạn
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Giúp Kindred hiểu độ tuổi và tình trạng cuộc sống hiện tại của bạn.
+                  </p>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Cảm xúc gần đây (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {FEELING_OPTIONS.map((feeling) => (
-                    <SelectCard
-                      key={feeling}
-                      label={feeling}
-                      isMulti={true}
-                      isSelected={form.recent_feelings.includes(feeling)}
-                      onClick={() => handleToggleCheckbox('recent_feelings', feeling)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 3: GOALS & EXPECTATIONS */}
-          {step === 3 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Mục tiêu & Kỳ vọng</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Bạn tìm kiếm điều gì khi tham gia cộng đồng này?
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Mục tiêu của bạn (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {GOAL_OPTIONS.map((goal) => (
-                    <SelectCard
-                      key={goal}
-                      label={goal}
-                      isMulti={true}
-                      isSelected={form.goals.includes(goal)}
-                      onClick={() => handleToggleCheckbox('goals', goal)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Kỳ vọng từ cộng đồng (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {EXPECTATION_OPTIONS.map((exp) => (
-                    <SelectCard
-                      key={exp}
-                      label={exp}
-                      isMulti={true}
-                      isSelected={form.community_expectations.includes(exp)}
-                      onClick={() => handleToggleCheckbox('community_expectations', exp)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 4: INTERESTS & ACTIVITIES */}
-          {step === 4 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Sở thích & Thói quen</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Những chủ đề và sở thích giúp gắn kết bạn với những người chung tần số.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Chủ đề bạn quan tâm (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  {TOPIC_OPTIONS.map((topic) => {
-                    const isChecked = form.topics.includes(topic)
-                    return (
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Độ tuổi của bạn
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {AGE_GROUPS.map((age) => (
                       <button
                         type="button"
-                        key={topic}
-                        onClick={() => handleToggleCheckbox('topics', topic)}
-                        style={{
-                          padding: '10px 16px',
-                          borderRadius: '24px',
-                          border: isChecked ? '2px solid #7c5cbf' : '1.5px solid #e5e7eb',
-                          backgroundColor: isChecked ? '#7c5cbf' : '#ffffff',
-                          color: isChecked ? '#ffffff' : '#374151',
-                          fontSize: '14px',
-                          fontWeight: isChecked ? 600 : 400,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isChecked ? '0 2px 8px rgba(124, 92, 191, 0.25)' : 'none',
-                        }}
+                        key={age}
+                        onClick={() => handleSelectRadio('age_group', age)}
+                        className={`p-3 rounded-2xl border text-sm font-semibold text-center transition-all ${
+                          form.age_group === age
+                            ? 'border-kindred-purple bg-kindred-lavender text-kindred-purple shadow-xs'
+                            : 'border-kindred-border bg-white text-kindred-text hover:border-purple-200 hover:bg-gray-50'
+                        }`}
                       >
-                        {isChecked ? `✓ ${topic}` : topic}
+                        {age}
                       </button>
-                    )
-                  })}
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Tình trạng hiện tại
+                  </label>
+                  <div className="space-y-2">
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectCard
+                        key={status}
+                        label={status}
+                        isSelected={form.current_status === status}
+                        onClick={() => handleSelectRadio('current_status', status)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hoạt động khi rảnh rỗi (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {ACTIVITY_OPTIONS.map((act) => (
-                    <SelectCard
-                      key={act}
-                      label={act}
-                      isMulti={true}
-                      isSelected={form.free_time_activities.includes(act)}
-                      onClick={() => handleToggleCheckbox('free_time_activities', act)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 5: CONNECTION PREFERENCES */}
-          {step === 5 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Gu kết nối của bạn</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Bạn muốn kết nối và trò chuyện theo cách nào?
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hình thức kết nối mong muốn (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {CONNECTION_TYPE_OPTIONS.map((type) => (
-                    <SelectCard
-                      key={type}
-                      label={type}
-                      isMulti={true}
-                      isSelected={form.desired_connection_types.includes(type)}
-                      onClick={() => handleToggleCheckbox('desired_connection_types', type)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Nhịp điệu trò chuyện ưu tiên</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {MODE_OPTIONS.map((mode) => (
-                    <SelectCard
-                      key={mode}
-                      label={mode}
-                      isSelected={form.preferred_mode === mode}
-                      onClick={() => handleSelectRadio('preferred_mode', mode)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Sở thích khám phá</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {DISCOVERY_OPTIONS.map((disc) => (
-                    <SelectCard
-                      key={disc}
-                      label={disc}
-                      isSelected={form.discovery_preference === disc}
-                      onClick={() => handleSelectRadio('discovery_preference', disc)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 6: STORY (OPTIONAL) */}
-          {step === 6 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Câu chuyện của bạn (Tùy chọn)</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Một vài dòng chia sẻ chân thành sẽ giúp người khác hiểu và đồng cảm với bạn hơn.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '8px' }}>
-                  Một câu chuyện ngắn hoặc điều bạn đang trải qua
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Ví dụ: Mình là người hướng nội mới chuyển đến thành phố mới, đôi lúc thấy lạc lõng và muốn tìm người bạn để tâm sự..."
-                  value={form.story}
-                  onChange={(e) => setForm({ ...form, story: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '1.5px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                    resize: 'vertical',
-                  }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '8px' }}>
-                  Điều bạn muốn người khác hiểu về mình nhất
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Ví dụ: Mình phản hồi tin nhắn hơi chậm nhưng luôn lắng nghe chân thành..."
-                  value={form.what_you_want_others_to_understand}
-                  onChange={(e) =>
-                    setForm({ ...form, what_you_want_others_to_understand: e.target.value })
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '1.5px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                    resize: 'vertical',
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  marginTop: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  color: '#6b7280',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <span>💡</span>
-                <span>
-                  Phần câu chuyện là <strong>tùy chọn</strong>. Bạn có thể chia sẻ ngay bây giờ hoặc cập nhật lại bất kỳ lúc nào trong trang <strong>Hồ sơ cá nhân</strong>.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Buttons Navigation */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn-secondary"
-                style={{ flex: 1, padding: '14px' }}
-                disabled={loading || stepTransitioning}
-              >
-                Quay lại
-              </button>
             )}
 
-            {step < totalSteps ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn-primary"
-                style={{ flex: 2, padding: '14px' }}
-                disabled={stepTransitioning}
-              >
-                Tiếp tục
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{
-                  flex: 2,
-                  padding: '14px',
-                  opacity: stepTransitioning ? 0.7 : 1,
-                  transition: 'opacity 0.2s ease',
-                }}
-                disabled={loading || stepTransitioning}
-              >
-                {loading
-                  ? 'Đang lưu kết quả...'
-                  : form.story?.trim() || form.what_you_want_others_to_understand?.trim()
-                  ? 'Lưu câu chuyện & Hoàn thành'
-                  : 'Bỏ qua & Hoàn thành'}
-              </button>
+            {/* BƯỚC 2: LIFE SITUATION & FEELINGS */}
+            {step === 2 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Hoàn cảnh & Cảm xúc
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Những gì bạn đang trải qua sẽ giúp kết nối với người thực sự thấu hiểu.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Hoàn cảnh hiện tại của bạn
+                  </label>
+                  <div className="space-y-2">
+                    {SITUATION_OPTIONS.map((item) => (
+                      <SelectCard
+                        key={item}
+                        label={item}
+                        isSelected={form.life_situation === item}
+                        onClick={() => handleSelectRadio('life_situation', item)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Cảm xúc gần đây (chọn nhiều)
+                  </label>
+                  <div className="space-y-2">
+                    {FEELING_OPTIONS.map((feeling) => (
+                      <SelectCard
+                        key={feeling}
+                        label={feeling}
+                        isMulti={true}
+                        isSelected={form.recent_feelings.includes(feeling)}
+                        onClick={() => handleToggleCheckbox('recent_feelings', feeling)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
-        </form>
-      </div>
+
+            {/* BƯỚC 3: GOALS & EXPECTATIONS */}
+            {step === 3 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Mục tiêu & Kỳ vọng
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Bạn tìm kiếm điều gì khi tham gia cộng đồng này?
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Mục tiêu của bạn (chọn nhiều)
+                  </label>
+                  <div className="space-y-2">
+                    {GOAL_OPTIONS.map((goal) => (
+                      <SelectCard
+                        key={goal}
+                        label={goal}
+                        isMulti={true}
+                        isSelected={form.goals.includes(goal)}
+                        onClick={() => handleToggleCheckbox('goals', goal)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Kỳ vọng từ cộng đồng (chọn nhiều)
+                  </label>
+                  <div className="space-y-2">
+                    {EXPECTATION_OPTIONS.map((exp) => (
+                      <SelectCard
+                        key={exp}
+                        label={exp}
+                        isMulti={true}
+                        isSelected={form.community_expectations.includes(exp)}
+                        onClick={() => handleToggleCheckbox('community_expectations', exp)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BƯỚC 4: INTERESTS & TOPICS */}
+            {step === 4 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Sở thích & Thói quen
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Những chủ đề và sở thích giúp gắn kết bạn với những người chung tần số.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Chủ đề bạn quan tâm (chọn nhiều)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {TOPIC_OPTIONS.map((topic) => {
+                      const isChecked = form.topics.includes(topic)
+                      return (
+                        <button
+                          type="button"
+                          key={topic}
+                          onClick={() => handleToggleCheckbox('topics', topic)}
+                          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                            isChecked
+                              ? 'bg-kindred-purple text-white shadow-xs scale-102'
+                              : 'bg-kindred-cardSecondary text-kindred-text border border-kindred-border hover:border-purple-200'
+                          }`}
+                        >
+                          {isChecked && <span className="material-symbols-outlined text-xs">check</span>}
+                          {topic}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Hoạt động khi rảnh rỗi (chọn nhiều)
+                  </label>
+                  <div className="space-y-2">
+                    {ACTIVITY_OPTIONS.map((act) => (
+                      <SelectCard
+                        key={act}
+                        label={act}
+                        isMulti={true}
+                        isSelected={form.free_time_activities.includes(act)}
+                        onClick={() => handleToggleCheckbox('free_time_activities', act)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BƯỚC 5: CONNECTION PREFERENCES */}
+            {step === 5 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Gu kết nối của bạn
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Bạn muốn kết nối và trò chuyện theo cách nào?
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Hình thức kết nối mong muốn (chọn nhiều)
+                  </label>
+                  <div className="space-y-2">
+                    {CONNECTION_TYPE_OPTIONS.map((type) => (
+                      <SelectCard
+                        key={type}
+                        label={type}
+                        isMulti={true}
+                        isSelected={form.desired_connection_types.includes(type)}
+                        onClick={() => handleToggleCheckbox('desired_connection_types', type)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Nhịp điệu trò chuyện ưu tiên
+                  </label>
+                  <div className="space-y-2">
+                    {MODE_OPTIONS.map((mode) => (
+                      <SelectCard
+                        key={mode}
+                        label={mode}
+                        isSelected={form.preferred_mode === mode}
+                        onClick={() => handleSelectRadio('preferred_mode', mode)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-2.5">
+                    Sở thích khám phá
+                  </label>
+                  <div className="space-y-2">
+                    {DISCOVERY_OPTIONS.map((disc) => (
+                      <SelectCard
+                        key={disc}
+                        label={disc}
+                        isSelected={form.discovery_preference === disc}
+                        onClick={() => handleSelectRadio('discovery_preference', disc)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BƯỚC 6: STORY (OPTIONAL) */}
+            {step === 6 && (
+              <div className="space-y-6 animate-fadeIn">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-kindred-text tracking-tight">
+                    Câu chuyện của bạn (Tùy chọn)
+                  </h1>
+                  <p className="text-xs sm:text-sm text-kindred-muted mt-1">
+                    Một vài dòng chia sẻ chân thành sẽ giúp người khác hiểu và đồng cảm với bạn hơn.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-1.5">
+                    Một câu chuyện ngắn hoặc điều bạn đang trải qua
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Ví dụ: Mình là người hướng nội mới chuyển đến thành phố mới, đôi lúc thấy lạc lõng và muốn tìm người bạn để cùng trò chuyện..."
+                    value={form.story}
+                    onChange={(e) => setForm({ ...form, story: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl border border-kindred-border text-sm text-kindred-text focus:outline-none focus:border-kindred-purple focus:ring-2 focus:ring-kindred-purple/20 transition-all resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-kindred-muted uppercase tracking-wider mb-1.5">
+                    Điều bạn muốn người khác hiểu về mình nhất
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Ví dụ: Mình phản hồi tin nhắn hơi chậm nhưng luôn lắng nghe chân thành..."
+                    value={form.what_you_want_others_to_understand}
+                    onChange={(e) =>
+                      setForm({ ...form, what_you_want_others_to_understand: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-2xl border border-kindred-border text-sm text-kindred-text focus:outline-none focus:border-kindred-purple focus:ring-2 focus:ring-kindred-purple/20 transition-all resize-none"
+                  />
+                </div>
+
+                <div className="p-4 rounded-2xl bg-kindred-cardSecondary border border-kindred-border flex items-start gap-3">
+                  <span className="material-symbols-outlined text-kindred-purple text-lg mt-0.5">
+                    lock
+                  </span>
+                  <p className="text-xs text-kindred-muted leading-relaxed">
+                    Phần câu chuyện là <strong>tùy chọn</strong>. Bạn có thể chia sẻ ngay hoặc bổ sung bất cứ lúc nào trong trang <strong>Hồ sơ cá nhân</strong>. Dữ liệu chỉ dùng để ghép nối tần số với người đồng điệu.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Wizard Navigation Footer */}
+            <div className="flex items-center gap-3 pt-8 mt-6 border-t border-kindred-border">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={loading || stepTransitioning}
+                  className="px-6 py-3 rounded-2xl text-sm font-semibold text-kindred-text bg-kindred-cardSecondary hover:bg-gray-100 transition-colors"
+                >
+                  Quay lại
+                </button>
+              )}
+
+              {step < totalSteps ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={stepTransitioning}
+                  className="flex-1 py-3 px-6 rounded-2xl text-sm font-bold bg-kindred-purple text-white hover:bg-kindred-hover shadow-sm transition-all inline-flex items-center justify-center gap-1.5"
+                >
+                  Tiếp tục
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading || stepTransitioning}
+                  className="flex-1 py-3 px-6 rounded-2xl text-sm font-bold bg-kindred-purple text-white hover:bg-kindred-hover shadow-md transition-all inline-flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Đang phân tích & ghép nối...
+                    </>
+                  ) : form.story?.trim() || form.what_you_want_others_to_understand?.trim() ? (
+                    <>
+                      <span className="material-symbols-outlined text-lg">check_circle</span>
+                      Lưu hồ sơ & Khám phá kết nối
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-lg">explore</span>
+                      Bỏ qua câu chuyện & Khám phá kết nối
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   )
 }
-
-export default Survey

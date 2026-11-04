@@ -6,7 +6,6 @@ import {
   markAllNotificationsAsRead,
 } from '../services/notificationService'
 
-// Format thời gian tương đối thân thiện
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -23,25 +22,20 @@ function formatTimeAgo(dateString) {
   return date.toLocaleDateString('vi-VN')
 }
 
-// Icon tương ứng với từng loại thông báo
 function getNotificationIcon(type) {
   switch (type) {
     case 'connection_request':
-      return '🤝'
+      return { icon: 'person_add', color: 'text-[#7C5CBF] bg-[#F5F0FA]' }
     case 'connection_accepted':
-      return '🎉'
+      return { icon: 'verified', color: 'text-[#10B981] bg-[#ECFDF5]' }
     case 'message':
-      return '💬'
-    case 'group_join':
-      return '👥'
-    case 'group_post':
-      return '📝'
+      return { icon: 'chat', color: 'text-[#3B82F6] bg-[#EFF6FF]' }
     case 'post_like':
-      return '❤️'
+      return { icon: 'favorite', color: 'text-[#EC4899] bg-[#FDF2F8]' }
     case 'post_comment':
-      return '💬'
+      return { icon: 'comment', color: 'text-[#F59E0B] bg-[#FFFBEB]' }
     default:
-      return '🔔'
+      return { icon: 'notifications', color: 'text-[#7C5CBF] bg-[#F5F0FA]' }
   }
 }
 
@@ -49,11 +43,9 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(false)
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
 
-  // Tải danh sách thông báo
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications()
@@ -64,7 +56,6 @@ export default function NotificationBell() {
     }
   }
 
-  // Tải lần đầu, lặp polling mỗi 15 giây và lắng nghe sự kiện cập nhật thông báo
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 15000)
@@ -80,7 +71,6 @@ export default function NotificationBell() {
     }
   }, [])
 
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -90,175 +80,73 @@ export default function NotificationBell() {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  // Xử lý click mở/đóng dropdown
-  const handleToggle = () => {
-    if (!isOpen) {
-      fetchNotifications()
-    }
-    setIsOpen(!isOpen)
-  }
-
-  // Đánh dấu tất cả đã đọc
-  const handleMarkAllRead = async (e) => {
-    e.stopPropagation()
-    try {
-      setLoading(true)
-      await markAllNotificationsAsRead()
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
-      setUnreadCount(0)
-    } catch (err) {
-      console.error('Lỗi đánh dấu tất cả đã đọc:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Click vào 1 thông báo: Đánh dấu đã đọc và điều hướng
-  const handleItemClick = async (notif) => {
+  const handleNotificationClick = async (notif) => {
     if (!notif.is_read) {
       try {
         await markNotificationAsRead(notif.id)
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+          prev.map((item) => (item.id === notif.id ? { ...item, is_read: true } : item))
         )
         setUnreadCount((prev) => Math.max(0, prev - 1))
       } catch (err) {
-        console.error('Lỗi đánh dấu đã đọc:', err)
+        console.error('Lỗi khi đánh dấu đã đọc:', err)
       }
     }
 
     setIsOpen(false)
+    if (notif.type === 'connection_request') {
+      navigate('/connections?tab=received')
+    } else if (notif.type === 'connection_accepted') {
+      navigate('/connections?tab=connections')
+    } else if (notif.type === 'message') {
+      if (notif.data && notif.data.conversation_id) {
+        navigate('/messages', { state: { conversationId: notif.data.conversation_id } })
+      } else {
+        navigate('/messages')
+      }
+    } else if (notif.type === 'post_like' || notif.type === 'post_comment') {
+      navigate('/communities')
+    }
+  }
 
-    // Điều hướng tương ứng
-    switch (notif.type) {
-      case 'connection_request':
-      case 'connection_accepted':
-        navigate('/connections')
-        break
-      case 'message':
-        if (notif.related_id) {
-          navigate('/messages', { state: { conversationId: notif.related_id } })
-        } else {
-          navigate('/messages')
-        }
-        break
-      case 'group_join':
-      case 'group_post':
-      case 'post_like':
-      case 'post_comment':
-        if (notif.related_id) {
-          navigate('/communities', { state: { postId: notif.related_id } })
-        } else {
-          navigate('/communities')
-        }
-        break
-      default:
-        break
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsAsRead()
+      setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })))
+      setUnreadCount(0)
+    } catch (err) {
+      console.error('Lỗi khi đánh dấu tất cả đã đọc:', err)
     }
   }
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
-      {/* Nút Chuông */}
+    <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={handleToggle}
-        style={{
-          position: 'relative',
-          width: '38px',
-          height: '38px',
-          borderRadius: '10px',
-          border: isOpen ? '1.5px solid #7c5cbf' : '1px solid #ede9fe',
-          backgroundColor: isOpen ? '#f5f0ff' : '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          fontSize: '17px',
-          color: '#4b5563',
-          transition: 'all 0.15s ease',
-        }}
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative w-10 h-10 rounded-full border border-[#E9E1F3] hover:border-[#7C5CBF]/40 bg-white hover:bg-[#F5F0FA] text-[#77717F] hover:text-[#7C5CBF] flex items-center justify-center transition-all cursor-pointer shadow-sm"
         aria-label="Thông báo"
-        title="Thông báo"
       >
-        <span>🔔</span>
-
-        {/* Badge số lượng chưa đọc */}
+        <span className="material-symbols-outlined text-[20px]">notifications</span>
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#ef4444',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 700,
-              minWidth: '18px',
-              height: '18px',
-              borderRadius: '9999px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 4px',
-              boxShadow: '0 2px 5px rgba(239, 68, 68, 0.4)',
-              border: '2px solid #ffffff',
-            }}
-          >
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-[18px] h-[18px] rounded-full bg-[#7C5CBF] text-white text-[10px] font-bold flex items-center justify-center shadow-md animate-scaleUp">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown danh sách thông báo */}
+      {/* Notification Dropdown Drawer */}
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: '360px',
-            maxWidth: '90vw',
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(124, 92, 191, 0.08)',
-            border: '1px solid #ede9fe',
-            zIndex: 1000,
-            overflow: 'hidden',
-            animation: 'fadeIn 0.15s ease-out',
-          }}
-        >
-          {/* Header Dropdown */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 18px',
-              borderBottom: '1px solid #f3f4f6',
-              backgroundColor: '#faf8ff',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '15px', color: '#1f2937' }}>
-                Thông báo
-              </span>
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-[#E9E1F3] shadow-[0_12px_36px_rgba(124,92,191,0.14)] overflow-hidden z-50 animate-fadeIn">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-[#F2EFF5] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#292631]">Thông báo</h3>
               {unreadCount > 0 && (
-                <span
-                  style={{
-                    backgroundColor: '#ede9fe',
-                    color: '#7c5cbf',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                  }}
-                >
+                <span className="px-2 py-0.5 rounded-full bg-[#F5F0FA] text-[#7C5CBF] text-[11px] font-bold">
                   {unreadCount} mới
                 </span>
               )}
@@ -268,152 +156,51 @@ export default function NotificationBell() {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                disabled={loading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#7c5cbf',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '4px 6px',
-                  borderRadius: '6px',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#ede9fe')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                className="text-[11px] font-semibold text-[#7C5CBF] hover:underline cursor-pointer"
               >
-                Đọc tất cả
+                Đánh dấu tất cả đã đọc
               </button>
             )}
           </div>
 
-          {/* List items */}
-          <div
-            style={{
-              maxHeight: '380px',
-              overflowY: 'auto',
-            }}
-          >
-            {notifications.length === 0 ? (
-              <div
-                style={{
-                  padding: '40px 20px',
-                  textAlign: 'center',
-                  color: '#6b7280',
-                }}
-              >
-                <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔕</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
-                  Không có thông báo mới
-                </div>
-                <div style={{ fontSize: '12px', marginTop: '4px', color: '#9ca3af' }}>
-                  Bạn sẽ nhận được thông báo khi có người kết nối hoặc nhắn tin.
-                </div>
-              </div>
-            ) : (
-              notifications.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleItemClick(item)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderBottom: '1px solid #f9fafb',
-                    backgroundColor: item.is_read ? '#ffffff' : '#f8f5ff',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.15s ease',
-                    position: 'relative',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = item.is_read ? '#f9fafb' : '#f0ebff'
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = item.is_read ? '#ffffff' : '#f8f5ff'
-                  }}
-                >
-                  {/* Icon */}
+          {/* List */}
+          <div className="max-h-80 overflow-y-auto divide-y divide-[#F2EFF5]">
+            {notifications.length > 0 ? (
+              notifications.map((notif) => {
+                const { icon, color } = getNotificationIcon(notif.type)
+                return (
                   <div
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: item.is_read ? '#f3f4f6' : '#ede9fe',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px',
-                      flexShrink: 0,
-                    }}
+                    key={notif.id}
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
+                      notif.is_read ? 'hover:bg-[#F8F7FA]' : 'bg-[#F5F0FA]/50 hover:bg-[#F5F0FA]'
+                    }`}
                   >
-                    {getNotificationIcon(item.type)}
-                  </div>
-
-                  {/* Nội dung */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '6px',
-                        marginBottom: '2px',
-                      }}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}
                     >
-                      <span
-                        style={{
-                          fontSize: '13.5px',
-                          fontWeight: item.is_read ? 600 : 700,
-                          color: item.is_read ? '#374151' : '#1f2937',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {item.title}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          color: '#9ca3af',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {formatTimeAgo(item.created_at)}
+                      <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs ${notif.is_read ? 'text-[#292631]' : 'text-[#292631] font-semibold'} line-clamp-2`}>
+                        {notif.content}
+                      </p>
+                      <span className="text-[10px] text-[#A19AA8] mt-1 block font-medium">
+                        {formatTimeAgo(notif.created_at)}
                       </span>
                     </div>
 
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '12.5px',
-                        color: item.is_read ? '#6b7280' : '#4b5563',
-                        lineHeight: 1.4,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {item.content}
-                    </p>
+                    {!notif.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-[#7C5CBF] shrink-0 mt-1.5"></span>
+                    )}
                   </div>
-
-                  {/* Chấm tròn chưa đọc */}
-                  {!item.is_read && (
-                    <div
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: '#7c5cbf',
-                        flexShrink: 0,
-                        marginTop: '6px',
-                      }}
-                      title="Chưa đọc"
-                    />
-                  )}
-                </div>
-              ))
+                )
+              })
+            ) : (
+              <div className="py-10 text-center text-xs text-[#77717F]">
+                Bạn chưa có thông báo nào.
+              </div>
             )}
           </div>
         </div>
@@ -421,4 +208,3 @@ export default function NotificationBell() {
     </div>
   )
 }
-
