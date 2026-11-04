@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import GoogleLoginButton from '../components/GoogleLoginButton'
+import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -63,9 +64,9 @@ export default function Register() {
   }
 
   return (
-    <main className="lp-auth-page">
-      <section className="lp-auth-showcase">
-        <Link to="/" className="lp-auth-brand"><span className="lp-auth-mark">✳</span><span>La Pulga</span></Link>
+    <main className="lp-auth-page lp-register-page">
+      <section className="lp-auth-showcase lp-register-showcase">
+        <Link to="/" className="lp-auth-brand"><img src={brandMark} alt="" className="lp-auth-mark" /><span>La Pulga</span></Link>
         <div className="lp-auth-story">
           <span className="lp-auth-kicker">MỘT CỘNG ĐỒNG ĐANG CHỜ BẠN</span>
           <h1>Câu chuyện của bạn<br /><em>xứng đáng được lắng nghe.</em></h1>
@@ -76,8 +77,8 @@ export default function Register() {
       </section>
       <section className="lp-auth-panel">
         <div className="lp-auth-form-wrap lp-auth-register-wrap">
-          <Link to="/" className="lp-auth-mobile-brand"><span className="lp-auth-mark">✳</span> La Pulga</Link>
-          <span className="lp-auth-kicker">BẮT ĐẦU HÀNH TRÌNH</span>
+          <Link to="/" className="lp-auth-mobile-brand"><img src={brandMark} alt="" className="lp-auth-mark" /> La Pulga</Link>
+          <span className="lp-auth-kicker lp-auth-register-kicker">BẮT ĐẦU HÀNH TRÌNH</span>
           <h2>Tạo tài khoản</h2>
           <p className="lp-auth-intro">Gia nhập La Pulga và tìm thấy những kết nối đồng điệu.</p>
           {error && <div className="alert alert-error">⚠️ {error}</div>}

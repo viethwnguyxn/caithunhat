@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SurveyCreate(BaseModel):
     # Step 1: About You
-    age_group: str = Field(..., description="Nhóm độ tuổi: Under 18, 18-20, 21-24, 25-29, 30-39, 40-49, 50+")
+    age_group: str = Field(..., description="Nhóm độ tuổi: Dưới 18, 18-22, 23-26, 27-35, 36-50, Trên 50")
     current_status: str = Field(..., description="Tình trạng hiện tại: Sinh viên, Đi làm, Freelancer, Đang tìm việc...")
 
     # Step 2: Life Situation

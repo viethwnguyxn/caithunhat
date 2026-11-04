@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile, updateProfile } from '../services/profileService'
 import { getSurvey } from '../services/surveyService'
 import { getMyConnections } from '../services/connectionService'
+import postService from '../services/postService'
 import Navbar from '../components/Navbar'
 
 const PRESET_AVATARS = [
@@ -16,19 +17,19 @@ const PRESET_AVATARS = [
 ]
 
 export default function Profile() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const fileInputRef = useRef(null)
 
   const [profileData, setProfileData] = useState({
     display_name: '',
     avatar_url: '',
     bio: '',
-    age_group: '21-25',
+    age_group: '18-22',
     current_status: 'seeking',
   })
   const [surveyData, setSurveyData] = useState(null)
   const [connectionsCount, setConnectionsCount] = useState(0)
+  const [myPosts, setMyPosts] = useState([])
 
   // Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -36,7 +37,7 @@ export default function Profile() {
     display_name: '',
     avatar_url: '',
     bio: '',
-    age_group: '21-25',
+    age_group: '18-22',
     current_status: 'seeking',
   })
   const [showAvatarPresets, setShowAvatarPresets] = useState(false)
@@ -55,10 +56,11 @@ export default function Profile() {
     async function loadData() {
       setLoading(true)
       try {
-        const [prof, surv, conns] = await Promise.allSettled([
+        const [prof, surv, conns, feed] = await Promise.allSettled([
           getProfile(),
           getSurvey(),
           getMyConnections(),
+          postService.getFeed({ limit: 100 }),
         ])
 
         if (prof.status === 'fulfilled' && prof.value) {
@@ -71,7 +73,7 @@ export default function Profile() {
             bio:
               p.bio ||
               'Đam mê tìm kiếm những kết nối sâu sắc, cùng chia sẻ tri thức về công nghệ, sách và tư duy đa chiều.',
-            age_group: p.age_group || '21-25',
+            age_group: p.age_group || '18-22',
             current_status: p.current_status || 'seeking',
           }
           setProfileData(initialProf)
@@ -84,6 +86,11 @@ export default function Profile() {
 
         if (conns.status === 'fulfilled' && Array.isArray(conns.value)) {
           setConnectionsCount(conns.value.length)
+        }
+        if (feed.status === 'fulfilled' && Array.isArray(feed.value)) {
+          setMyPosts(feed.value.filter((post) => String(post.author?.id) === String(user?.id)))
+        } else if (feed.status === 'rejected') {
+          console.error('Không thể tải bài viết cá nhân:', feed.reason)
         }
       } catch (err) {
         console.error('Lỗi khi tải dữ liệu profile:', err)
@@ -172,19 +179,12 @@ export default function Profile() {
     }
   }
 
-  const handleLogout = () => {
-    if (window.confirm('Xác nhận đăng xuất khỏi phiên làm việc an toàn hiện tại?')) {
-      logout()
-      navigate('/login')
-    }
-  }
-
   const currentAvatar =
     profileData.avatar_url ||
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
 
       <main className="w-full pt-20 min-h-[calc(100vh-80px)] pb-16">
@@ -358,7 +358,47 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* ================= SURVEY RESULTS SECTION ================= */}
+              {/* ================= PERSONAL POSTS SECTION ================= */}
+              <section className="rounded-2xl bg-[#11151c] border border-[#1a232e] p-6 md:p-7 shadow-lg space-y-4">
+                <div className="flex items-center justify-between gap-3 border-b border-[#1a232e] pb-3">
+                  <div>
+                    <h2 className="text-lg md:text-xl text-[#f1ffef] font-bold">Bài viết của tôi</h2>
+                    <p className="text-xs text-[#b9cbb9] mt-1">Các bài viết bạn đã chia sẻ trong cộng đồng.</p>
+                  </div>
+                  <Link to="/communities?tab=feed" className="text-xs font-semibold text-[#00ff88] hover:underline">
+                    Đến bảng tin
+                  </Link>
+                </div>
+                {myPosts.length ? (
+                  myPosts.map((post) => (
+                    <article key={post.id} className="rounded-xl bg-[#08090a] border border-[#1a232e] p-4">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#849585]">
+                        <span>{post.category}</span>
+                        {post.mood && <span>· {post.mood}</span>}
+                        <span>· {post.created_at ? new Date(post.created_at).toLocaleString('vi-VN') : ''}</span>
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[#e3e2e3]">{post.content}</p>
+                      {post.image_url && (
+                        <img
+                          src={post.image_url}
+                          alt="Ảnh trong bài viết của bạn"
+                          className="mt-3 max-h-96 w-full rounded-xl object-cover"
+                        />
+                      )}
+                      <div className="mt-3 flex gap-4 border-t border-[#1a232e] pt-3 text-xs text-[#849585]">
+                        <span>{post.likes_count} lượt thích</span>
+                        <span>{post.comments_count} bình luận</span>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="rounded-xl bg-[#08090a] p-5 text-center text-sm text-[#849585]">
+                    Bạn chưa có bài viết nào.
+                  </p>
+                )}
+              </section>
+
+              {/* ================= SURVEY RESULTS SECTION ================= */}
           <div className="rounded-2xl bg-[#11151c] border border-[#1a232e] p-6 md:p-7 shadow-lg space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#1a232e] gap-2">
               <div>
@@ -369,7 +409,8 @@ export default function Profile() {
                   </h2>
                 </div>
                 <p className="text-xs text-[#b9cbb9] mt-0.5">
-                  Dữ liệu hiệu chuẩn thuật toán ghép đôi lapulga AI
+                  <span className="material-symbols-outlined mr-1 align-middle text-[14px]">lock</span>
+                  Chỉ bạn mới có thể xem câu trả lời khảo sát này.
                 </p>
               </div>
 
@@ -463,6 +504,35 @@ export default function Profile() {
                     ”
                   </p>
                 </div>
+
+                <div className="rounded-xl bg-[#181d26]/80 border border-[#1a232e] p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#00ff88] text-[19px]">assignment</span>
+                    <span className="text-[11px] font-mono text-[#b9cbb9] uppercase tracking-wider font-semibold">
+                      Thông tin khảo sát khác
+                    </span>
+                  </div>
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div><dt className="text-xs text-[#849585]">Nhóm tuổi</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.age_group}</dd></div>
+                    <div><dt className="text-xs text-[#849585]">Tình trạng hiện tại</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.current_status}</dd></div>
+                    <div><dt className="text-xs text-[#849585]">Mong muốn từ cộng đồng</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.community_expectations?.join(', ') || 'Chưa trả lời'}</dd></div>
+                    <div><dt className="text-xs text-[#849585]">Kiểu kết nối mong muốn</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.desired_connection_types?.join(', ') || 'Chưa trả lời'}</dd></div>
+                    <div><dt className="text-xs text-[#849585]">Cách tương tác ưu tiên</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.preferred_mode}</dd></div>
+                    <div><dt className="text-xs text-[#849585]">Ưu tiên khám phá</dt><dd className="mt-1 text-[#e3e2e3]">{surveyData.discovery_preference}</dd></div>
+                  </dl>
+                  {surveyData.story && (
+                    <div className="mt-4 border-t border-[#1a232e] pt-3">
+                      <p className="text-xs text-[#849585]">Câu chuyện của bạn</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-[#e3e2e3]">{surveyData.story}</p>
+                    </div>
+                  )}
+                  {surveyData.what_you_want_others_to_understand && (
+                    <div className="mt-3">
+                      <p className="text-xs text-[#849585]">Điều bạn muốn người khác hiểu</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-[#e3e2e3]">{surveyData.what_you_want_others_to_understand}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="p-6 rounded-xl bg-[#08090a] border border-[#1a232e] text-center space-y-3">
@@ -495,34 +565,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* ================= SECURITY & SESSION FOOTER ================= */}
-          <div className="rounded-xl bg-[#0d0e0f] border border-[#1a232e] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#181d26] flex items-center justify-center text-[#b9cbb9] flex-shrink-0">
-                <span className="material-symbols-outlined text-[20px]">lock</span>
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse"></span>
-                  <span className="text-xs text-[#f1ffef] font-medium font-mono">
-                    Phiên đăng nhập WebRTC E2EE
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#849585] font-mono">
-                  Mã tài khoản: LPG-USR-#{user?.id || '01'} • Giao thức: TLS 1.3 + Noise Protocol
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              type="button"
-              className="px-4 py-2 rounded-lg bg-[#181d26] hover:bg-red-500/20 hover:text-red-400 text-[#b9cbb9] text-xs font-semibold transition-colors flex items-center gap-1.5 self-end sm:self-center cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">logout</span>
-              <span>Đăng xuất</span>
-            </button>
-          </div>
         </div>
       </main>
 
@@ -706,11 +748,12 @@ export default function Profile() {
                       onChange={handleModalChange}
                       className="w-full h-11 px-3.5 rounded-xl bg-[#08090a] text-[#f1ffef] text-sm focus:outline-none focus:ring-1 focus:ring-[#00ff88] border border-[#1a232e] appearance-none transition-all cursor-pointer"
                     >
-                      <option value="Under 18">Dưới 18 tuổi</option>
-                      <option value="18-20">18 - 20 tuổi</option>
-                      <option value="21-25">21 - 25 tuổi</option>
-                      <option value="26-30">26 - 30 tuổi</option>
-                      <option value="31+">31 tuổi trở lên</option>
+                      <option value="Dưới 18">Dưới 18 tuổi</option>
+                      <option value="18-22">18 - 22 tuổi</option>
+                      <option value="23-26">23 - 26 tuổi</option>
+                      <option value="27-35">27 - 35 tuổi</option>
+                      <option value="36-50">36 - 50 tuổi</option>
+                      <option value="Trên 50">Trên 50 tuổi</option>
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#b9cbb9] pointer-events-none text-[20px]">
                       expand_more

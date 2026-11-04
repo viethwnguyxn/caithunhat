@@ -8,8 +8,8 @@ export default function Settings() {
   const navigate = useNavigate()
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [activeTab, setActiveTab] = useState('account')
-  const signOut = () => { logout(); navigate('/login') }
-  return <div className="lp-settings-page"><Navbar /><main className="lp-settings-wrap">
+  const signOut = () => { logout(); navigate('/', { replace: true }) }
+  return <div className="lp-settings-page app-green-theme"><Navbar /><main className="lp-settings-wrap">
     <div className="lp-settings-heading"><span className="lp-eyebrow">LA PULGA / ACCOUNT</span><h1>Cài đặt</h1><p>Quản lý tài khoản và quyền riêng tư của bạn.</p></div>
     <div className="lp-settings-layout"><aside className="lp-settings-menu">
       <button className={activeTab === 'account' ? 'active' : ''} onClick={() => setActiveTab('account')}>Tài khoản</button>

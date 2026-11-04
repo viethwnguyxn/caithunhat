@@ -30,9 +30,14 @@ export function AuthProvider({ children }) {
 
   const login = async (account, password) => {
     const res = await api.post('/api/auth/login', { account, password })
-    const { access_token } = res.data
+    const { access_token, user: authenticatedUser } = res.data
     localStorage.setItem('access_token', access_token)
     setToken(access_token)
+
+    if (authenticatedUser) {
+      setUser(authenticatedUser)
+      return authenticatedUser
+    }
 
     // Lấy thông tin user ngay sau khi login
     const userRes = await api.get('/api/users/me', {
@@ -44,9 +49,14 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = async (idToken) => {
     const res = await api.post('/api/auth/google', { id_token: idToken })
-    const { access_token } = res.data
+    const { access_token, user: authenticatedUser } = res.data
     localStorage.setItem('access_token', access_token)
     setToken(access_token)
+
+    if (authenticatedUser) {
+      setUser(authenticatedUser)
+      return authenticatedUser
+    }
 
     // Lấy thông tin user
     const userRes = await api.get('/api/users/me', {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getSurvey, submitSurvey } from '../services/surveyService'
 
-const AGE_GROUPS = ['Dưới 18', '18–22', '23–25', '26–35', '35–50', '50+']
+const AGE_GROUPS = ['Dưới 18', '18-22', '23-26', '27-35', '36-50', 'Trên 50']
 
 const STATUS_OPTIONS = [
   { label: 'Sinh viên', desc: 'Đang theo học đại học hoặc cao đẳng', icon: '🎓' },
@@ -224,14 +224,14 @@ export default function Survey() {
 
   if (initialLoading) {
     return (
-      <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] flex items-center justify-center font-mono">
+      <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] flex items-center justify-center font-mono">
         Đang khởi tạo buồng khảo sát...
       </div>
     )
   }
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] relative">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] relative">
       <Navbar />
 
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.06),transparent_60%)]"></div>

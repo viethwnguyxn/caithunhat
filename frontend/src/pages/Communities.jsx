@@ -1,87 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
-
-const COMMUNITIES_DATA = [
-  {
-    id: 1,
-    name: 'Lập trình viên & Tech Creators',
-    category: 'Công nghệ',
-    icon: '💻',
-    membersCount: 1240,
-    description:
-      'Dành cho những bạn đam mê coding, xây dựng sản phẩm AI, công nghệ, chia sẻ kinh nghiệm học thuật và dự án nguồn mở.',
-    tags: ['Python', 'React', 'AI / ML', 'WebRTC', 'CyberUI'],
-    activeTopic: 'Chia sẻ các dự án cá nhân tâm đắc nhất bạn từng làm',
-  },
-  {
-    id: 2,
-    name: 'Sách & Phát triển bản thân',
-    category: 'Sách & Tư duy',
-    icon: '📚',
-    membersCount: 980,
-    description:
-      'Nơi cùng nhau chia sẻ những cuốn sách hay, đúc kết tư duy tích cực, xây dựng kỷ luật và thói quen tốt mỗi ngày.',
-    tags: ['Đọc sách', 'Tư duy', 'Thói quen', 'Tâm lý học', 'DeepWork'],
-    activeTopic: 'Cuốn sách nào đã thay đổi góc nhìn cuộc sống của bạn?',
-  },
-  {
-    id: 3,
-    name: 'Nghệ thuật & Sáng tạo',
-    category: 'Nghệ thuật & Sáng tạo',
-    icon: '🎨',
-    membersCount: 750,
-    description:
-      'Không gian ấm cúng dành cho những tâm hồn yêu vẽ, nhiếp ảnh, âm nhạc, thiết kế đồ họa và sáng tác nội dung.',
-    tags: ['Hội họa', 'Nhiếp ảnh', 'Thiết kế', 'Âm nhạc', '3D / Shader'],
-    activeTopic: 'Tác phẩm sáng tạo gần đây khiến bạn tự hào nhất',
-  },
-  {
-    id: 4,
-    name: 'Sức khỏe, Thể thao & Running',
-    category: 'Thể thao & Sức khỏe',
-    icon: '🏃',
-    membersCount: 860,
-    description:
-      'Cùng nhau rèn luyện thể lực, chia sẻ lộ trình chạy bộ, tập gym, yoga và xây dựng lối sống lành mạnh, giàu năng lượng.',
-    tags: ['Chạy bộ', 'Gym & Fitness', 'Yoga', 'Dinh dưỡng', 'Marathon'],
-    activeTopic: 'Mục tiêu chạy bộ / thể thao của bạn trong tháng này',
-  },
-  {
-    id: 5,
-    name: 'Freelance & Khởi nghiệp',
-    category: 'Freelance & Khởi nghiệp',
-    icon: '☕',
-    membersCount: 690,
-    description:
-      'Mạng lưới gắn kết cho những người làm việc tự do hoặc khởi nghiệp, tìm bạn đồng hành tại quán cafe và chia sẻ dự án.',
-    tags: ['Freelance', 'Remote Work', 'Co-working', 'Khởi nghiệp', 'Cà phê'],
-    activeTopic: 'Địa điểm làm việc cafe yêu thích nhất của bạn',
-  },
-  {
-    id: 6,
-    name: 'Game & Esports Gaming',
-    category: 'Game & Esports',
-    icon: '🎮',
-    membersCount: 1120,
-    description:
-      'Không gian thảo luận chiến thuật, tìm đồng đội leo rank và chia sẻ đam mê game đa nền tảng.',
-    tags: ['Esports', 'Steam', 'Indie Games', 'Co-op', 'Discord'],
-    activeTopic: 'Tựa game nào khiến bạn đắm chìm nhiều giờ nhất?',
-  },
-]
-
-const CATEGORIES = [
-  'Tất cả',
-  'Công nghệ & Lập trình',
-  'Sách & Tư duy',
-  'Nghệ thuật & Sáng tạo',
-  'Thể thao & Sức khỏe',
-  'Freelance & Khởi nghiệp',
-  'Game & Esports',
-]
+import { COMMUNITY_CATEGORIES, COMMUNITY_DIRECTORY } from '../data/communities'
 
 const MOODS = ['😊 Vui vẻ', '☕ Thư giãn', '🌧️ Cần chia sẻ', '🚀 Quyết tâm', '✨ Truyền cảm hứng']
 
@@ -102,11 +24,11 @@ function formatTimeAgo(dateString) {
 }
 
 export default function Communities() {
-  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
 
-  const [activeTab, setActiveTab] = useState('feed') // 'feed' | 'groups'
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'groups' ? 'groups' : 'feed')
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tất cả')
   const [joinedCommunities, setJoinedCommunities] = useState([1, 2])
   const [toastMessage, setToastMessage] = useState('')
 
@@ -275,7 +197,7 @@ export default function Communities() {
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
 
       <main className="w-full pt-20 min-h-[calc(100vh-80px)] pb-16">
@@ -339,14 +261,14 @@ export default function Communities() {
                   }`}
                 >
                   <span className="material-symbols-outlined text-[18px]">group_work</span>
-                  <span>👥 Nhóm chủ đề ({COMMUNITIES_DATA.length})</span>
+                  <span>👥 Nhóm chủ đề ({COMMUNITY_DIRECTORY.length})</span>
                 </button>
               </div>
             </div>
 
             {/* Horizontal Scrollable Category Pills */}
             <div className="w-full flex items-center justify-start md:justify-center overflow-x-auto pb-2 gap-2 no-scrollbar">
-              {CATEGORIES.map((cat) => (
+              {COMMUNITY_CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   type="button"
@@ -440,7 +362,7 @@ export default function Communities() {
                         onChange={(e) => setNewCategory(e.target.value)}
                         className="h-9 px-3 rounded-xl bg-[#181d26] text-[#00ff88] text-xs font-mono border border-[#1a232e] focus:outline-none cursor-pointer"
                       >
-                        {CATEGORIES.filter((c) => c !== 'Tất cả').map((c) => (
+                        {COMMUNITY_CATEGORIES.filter((c) => c !== 'Tất cả').map((c) => (
                           <option key={c} value={c} className="bg-[#11151c] text-[#f1ffef]">
                             {c}
                           </option>
@@ -689,7 +611,7 @@ export default function Communities() {
             ) : (
               /* Groups View */
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {COMMUNITIES_DATA.map((group) => {
+                {COMMUNITY_DIRECTORY.map((group) => {
                   const isJoined = joinedCommunities.includes(group.id)
                   return (
                     <div

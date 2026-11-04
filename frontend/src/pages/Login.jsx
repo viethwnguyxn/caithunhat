@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
+import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -42,27 +43,12 @@ export default function Login() {
   return (
     <main className="lp-login-screen">
       <div className="lp-login-shell">
-        <section className="lp-login-visual">
-          <header className="lp-login-topline">
-            <Link to="/" className="lp-login-brand"><span className="lp-login-logo">✦</span><span>La Pulga</span></Link>
-            <span className="lp-login-online"><i /> Hơn 42.000+ thành viên trực tuyến</span>
-          </header>
-
-          <div className="lp-login-message">
-            <span className="lp-login-eyebrow">‹ &nbsp; A LITTLE CLOSER, EVERY DAY</span>
-            <h1>Kết nối thật.<br /><em>Khoảnh khắc thật.</em></h1>
-            <p>La Pulga là nơi bạn tìm thấy những người cùng tần số, chia sẻ sở thích chân thành và tạo nên những mối quan hệ mang giá trị lâu dài.</p>
-          </div>
-
-          <div className="lp-login-benefits">
-            <div><strong>♧ &nbsp;Chân thật</strong><span>100% hồ sơ xác thực danh tính cá nhân.</span></div>
-            <div><strong>✿ &nbsp;Đa dạng</strong><span>Hơn 400+ nhóm sở thích chuyên biệt.</span></div>
-            <div><strong>♢ &nbsp;An toàn</strong><span>Môi trường tôn trọng, bảo vệ quyền riêng tư.</span></div>
-          </div>
-        </section>
-
         <section className="lp-login-form-panel">
           <div className="lp-login-form-inner">
+            <Link to="/" className="lp-login-brand">
+              <img src={brandMark} alt="" className="lp-login-logo" />
+              <span>La Pulga</span>
+            </Link>
             <span className="lp-login-welcome">Chào mừng bạn trở lại</span>
             <p className="lp-login-subtitle">Đăng nhập để tiếp tục kết nối với cộng đồng của bạn.</p>
 

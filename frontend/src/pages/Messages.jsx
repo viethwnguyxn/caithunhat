@@ -47,8 +47,6 @@ export default function Messages() {
   const [inputText, setInputText] = useState('')
   const [isSending, setIsSending] = useState(false)
 
-  // WebSocket status: 'connecting' | 'connected' | 'disconnected' | 'error'
-  const [wsStatus, setWsStatus] = useState('disconnected')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false)
 
@@ -156,7 +154,6 @@ export default function Messages() {
 
     let isMounted = true
     setLoadingMessages(true)
-    setWsStatus('connecting')
 
     getMessages(activeConversation.id)
       .then((history) => {
@@ -180,7 +177,6 @@ export default function Messages() {
 
     const token = localStorage.getItem('access_token')
     if (!token) {
-      setWsStatus('error')
       return
     }
 
@@ -189,10 +185,6 @@ export default function Messages() {
     const wsUrl = `${wsBaseUrl}/api/ws/chat/${activeConversation.id}?token=${encodeURIComponent(token)}`
     const ws = new WebSocket(wsUrl)
     socketRef.current = ws
-
-    ws.onopen = () => {
-      if (isMounted) setWsStatus('connected')
-    }
 
     ws.onmessage = (event) => {
       try {
@@ -234,12 +226,7 @@ export default function Messages() {
       }
     }
 
-    ws.onclose = () => {
-      if (isMounted) setWsStatus('disconnected')
-    }
-    ws.onerror = () => {
-      if (isMounted) setWsStatus('error')
-    }
+    ws.onerror = () => console.error('Kết nối WebSocket tin nhắn gặp lỗi.')
 
     return () => {
       isMounted = false
@@ -334,7 +321,7 @@ export default function Messages() {
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] flex flex-col justify-between">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] flex flex-col justify-between">
       <Navbar />
 
       <main className="w-full pt-20 flex-1 flex flex-col">
@@ -351,24 +338,6 @@ export default function Messages() {
         <div className="max-w-[1440px] w-full mx-auto px-2 sm:px-6 py-4 flex-1 flex flex-col">
           {/* Main Messages & WebRTC Workspace Canvas */}
           <div className="relative w-full h-[calc(100vh-7.5rem)] flex flex-col overflow-hidden rounded-2xl bg-[#0d0e0f] border border-[#1a232e] shadow-2xl">
-            {/* Tactical Subheader Strip */}
-            <div className="h-10 px-4 bg-[#11151c] border-b border-[#1a232e] flex items-center justify-between shrink-0 select-none text-xs font-mono">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#181d26] text-[#00ff88] border border-[#00ff88]/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_8px_#00ff88]"></span>
-                  <span>E2EE PROTOCOL ACTIVE</span>
-                </span>
-                <span className="text-[#849585] hidden sm:inline">NODES: SG-04 • STATUS: {wsStatus}</span>
-              </div>
-              <div className="flex items-center gap-4 text-[#849585]">
-                <span className="flex items-center gap-1 text-[#00ff88]">
-                  <span className="material-symbols-outlined text-[14px]">lock</span>
-                  WebRTC AES-256
-                </span>
-                <span className="hidden md:inline text-[#4edea3]">PEER_SYNC_OK</span>
-              </div>
-            </div>
-
             {/* Main Workspace Split Pane */}
             <div className="flex-1 flex overflow-hidden relative">
               {/* LEFT SIDEBAR: Conversations List (~360px) */}
@@ -380,12 +349,7 @@ export default function Messages() {
                 {/* Header */}
                 <div className="p-4 pb-3 flex flex-col gap-3 border-b border-[#1a232e]">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-[#f1ffef]">Tin nhắn</h2>
-                      <span className="px-2 py-0.5 rounded-full bg-[#181d26] text-[11px] font-mono text-[#00ff88]">
-                        {conversations.length}
-                      </span>
-                    </div>
+                  <h2 className="text-lg font-bold text-[#f1ffef]">Tin nhắn</h2>
 
                     {isMobileListOpen && (
                       <button
@@ -617,15 +581,9 @@ export default function Messages() {
 
                   {/* Messages Stream */}
                   <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                    {/* E2EE Info banner */}
-                    <div className="max-w-md mx-auto py-2 px-4 rounded-xl bg-[#11151c]/70 border border-[#1a232e] text-center text-[11px] font-mono text-[#849585]">
-                      🔒 Mọi tin nhắn và cuộc gọi đều được mã hóa đầu cuối với giao thức E2EE của
-                      lapulga.
-                    </div>
-
                     {loadingMessages ? (
-                      <div className="py-20 text-center text-[#849585] text-xs font-mono">
-                        Đang đồng bộ tin nhắn bảo mật...
+                      <div className="py-20 text-center text-[#849585] text-xs">
+                        Đang tải tin nhắn...
                       </div>
                     ) : messages.length > 0 ? (
                       messages.map((msg) => {
@@ -701,7 +659,7 @@ export default function Messages() {
                             type="text"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            placeholder="Nhập tin nhắn bảo mật... (nhấn Enter để gửi)"
+                            placeholder="Nhập tin nhắn... (nhấn Enter để gửi)"
                             className="flex-1 bg-transparent px-3 py-2 text-[#f1ffef] placeholder:text-[#849585] text-xs md:text-sm outline-none min-w-0"
                           />
 
@@ -713,9 +671,8 @@ export default function Messages() {
                             <span className="material-symbols-outlined text-[19px]">send</span>
                           </button>
                         </div>
-                        <div className="flex items-center justify-between px-2 text-[10px] font-mono text-[#849585]">
-                          <span>E2EE Active</span>
-                          <span>Enter để gửi • WebRTC AES-256</span>
+                        <div className="flex items-center justify-end px-2 text-[10px] text-[#849585]">
+                          <span>Nhấn Enter để gửi</span>
                         </div>
                       </form>
                     )}

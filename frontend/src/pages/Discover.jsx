@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import { getMatches } from '../services/matchingService'
+import { COMMUNITY_DIRECTORY } from '../data/communities'
 import {
   sendConnectionRequest,
   getMyConnections,
@@ -13,13 +14,12 @@ import {
 
 const AGE_FILTER_OPTIONS = [
   'Tất cả độ tuổi',
-  'Under 18',
-  '18–20',
-  '21–24',
-  '25–29',
-  '30–39',
-  '40–49',
-  '50+',
+  'Dưới 18',
+  '18-22',
+  '23-26',
+  '27-35',
+  '36-50',
+  'Trên 50',
 ]
 
 const STATUS_FILTER_OPTIONS = [
@@ -39,6 +39,7 @@ const CONNECTION_TYPE_OPTIONS = [
 
 export default function Discover() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [matches, setMatches] = useState([])
   const [hasSurvey, setHasSurvey] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -55,6 +56,11 @@ export default function Discover() {
   const [selectedStatus, setSelectedStatus] = useState('Tất cả tình trạng')
   const [selectedConnType, setSelectedConnType] = useState('Tất cả mục tiêu')
   const [searchKeyword, setSearchKeyword] = useState('')
+  const [discoveryTab, setDiscoveryTab] = useState(
+    searchParams.get('tab') === 'groups' ? 'groups' : 'people'
+  )
+  const [groupSearch, setGroupSearch] = useState('')
+  const [selectedGroupId, setSelectedGroupId] = useState(null)
 
   // Modal xem chi tiết profile
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
@@ -135,6 +141,7 @@ export default function Discover() {
   const filteredMatches = useMemo(() => {
     return matches.filter((item) => {
       const u = item.user
+      if (connectionStatuses[u.id] === 'accepted') return false
       if (selectedAge !== 'Tất cả độ tuổi' && u.age_group !== selectedAge) return false
       if (selectedStatus !== 'Tất cả tình trạng' && u.current_status !== selectedStatus)
         return false
@@ -155,7 +162,20 @@ export default function Discover() {
       }
       return true
     })
-  }, [matches, selectedAge, selectedStatus, selectedConnType, searchKeyword])
+  }, [matches, connectionStatuses, selectedAge, selectedStatus, selectedConnType, searchKeyword])
+
+  const filteredGroups = useMemo(() => {
+    const keyword = groupSearch.trim().toLocaleLowerCase()
+    if (!keyword) return COMMUNITY_DIRECTORY
+    return COMMUNITY_DIRECTORY.filter((group) =>
+      [group.name, group.category, group.description, ...group.tags]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(keyword)
+    )
+  }, [groupSearch])
+
+  const selectedGroup = COMMUNITY_DIRECTORY.find((group) => group.id === selectedGroupId)
 
   const handleResetFilters = () => {
     setSelectedAge('Tất cả độ tuổi')
@@ -197,7 +217,7 @@ export default function Discover() {
   }
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-[#00ff88]">
+    <div className="discover-page app-green-theme min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-[#00ff88]">
       <Navbar />
 
       {/* Main Container */}
@@ -218,12 +238,6 @@ export default function Discover() {
         <div className="flex flex-col gap-6 mt-4 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#11151c] border border-[#00ff88]/30 text-[#00ff88] mb-3 shadow-[0_0_14px_rgba(0,255,136,0.18)]">
-                <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_8px_#00ff88]" />
-                <span className="text-[11px] font-mono tracking-wider font-semibold uppercase text-[#00ff88]">
-                  TF-IDF & Cosine Similarity Engine
-                </span>
-              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f8fafc] tracking-tight">
                 Discover & Match
               </h1>
@@ -233,32 +247,116 @@ export default function Discover() {
               </p>
             </div>
 
-            {/* Quick Stats Strip */}
-            <div className="flex items-center gap-3 bg-[#11151c]/90 backdrop-blur-md p-2 rounded-2xl border border-[#1a232e] shrink-0">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d1117] border border-[#1a232e]">
-                <span className="material-symbols-outlined text-[#00ff88] text-[20px]">
-                  sensors
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-[#64748b]">Cộng đồng</span>
-                  <span className="text-sm font-bold text-[#f8fafc]">
-                    {matches.length} Gợi ý
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d1117] border border-[#00ff88]/25 shadow-[0_0_12px_rgba(0,255,136,0.12)]">
-                <span className="material-symbols-outlined text-[#00ff88] text-[20px]">bolt</span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-[#64748b]">Độ hợp cao</span>
-                  <span className="text-sm font-bold text-[#00ff88] drop-shadow-[0_0_6px_rgba(0,255,136,0.4)]">
-                    {matches.filter((m) => m.match_score >= 60).length} Người
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
 
+          <div className="flex items-center gap-2 border-b border-[#1a232e]">
+            {[
+              { id: 'people', label: 'Mọi người', icon: 'person_search' },
+              { id: 'groups', label: 'Cộng đồng', icon: 'groups' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setDiscoveryTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-semibold transition-colors ${
+                  discoveryTab === tab.id
+                    ? 'border-[#00ff88] text-[#00ff88]'
+                    : 'border-transparent text-[#94a3b8] hover:text-[#f8fafc]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {discoveryTab === 'groups' ? (
+            <section className="space-y-5">
+              <label className="relative block">
+                <span className="material-symbols-outlined absolute left-3.5 top-3 text-[#64748b] text-[20px] pointer-events-none">
+                  search
+                </span>
+                <input
+                  type="search"
+                  value={groupSearch}
+                  onChange={(event) => setGroupSearch(event.target.value)}
+                  placeholder="Tìm tên nhóm, chủ đề, sở thích..."
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#11151c] border border-[#1a232e] text-[#f8fafc] placeholder:text-[#64748b] text-sm focus:outline-none focus:border-[#00ff88]"
+                />
+              </label>
+
+              {selectedGroup && (
+                <article className="rounded-2xl bg-[#11151c] border border-[#00ff88]/40 p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">{selectedGroup.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-[#f8fafc]">{selectedGroup.name}</h3>
+                      <p className="text-xs text-[#00ff88]">{selectedGroup.category}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGroupId(null)}
+                      className="text-sm text-[#94a3b8] hover:text-white"
+                      aria-label="Đóng thông tin nhóm"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                  <p className="text-sm leading-relaxed text-[#cbd5e1]">{selectedGroup.description}</p>
+                  <p className="text-xs text-[#94a3b8]">
+                    Chủ đề đang thảo luận: {selectedGroup.activeTopic}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedGroup.tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-[#08090a] px-2.5 py-1 text-xs text-[#94a3b8]">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <Link
+                    to={`/communities?tab=feed&category=${encodeURIComponent(selectedGroup.feedCategory)}`}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#00ff88] px-4 py-2 text-xs font-bold text-[#08090a]"
+                  >
+                    Xem bài viết trong cộng đồng
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </Link>
+                </article>
+              )}
+
+              {filteredGroups.length ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredGroups.map((group) => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setSelectedGroupId(group.id)}
+                      className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                        selectedGroupId === group.id
+                          ? 'border-[#00ff88]/50 bg-[#00ff88]/5'
+                          : 'border-[#1a232e] bg-[#11151c] hover:border-[#00ff88]/30'
+                      }`}
+                    >
+                      <span className="text-2xl">{group.icon}</span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-[#f8fafc]">{group.name}</span>
+                        <span className="mt-1 block text-xs text-[#00ff88]">{group.category}</span>
+                        <span className="mt-2 block text-xs leading-relaxed text-[#94a3b8]">
+                          {group.description}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#1a232e] bg-[#11151c] p-8 text-center text-sm text-[#94a3b8]">
+                  Không tìm thấy nhóm phù hợp.
+                </div>
+              )}
+            </section>
+          ) : (
+          <>
+          <div className="space-y-4">
           {/* Banner nhắc làm khảo sát nếu chưa hoàn thành */}
           {!hasSurvey && (
             <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11151c] to-[#0d1117] border border-[#00ff88]/40 shadow-[0_0_25px_rgba(0,255,136,0.15)] flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -378,7 +476,7 @@ export default function Discover() {
               </button>
             )}
           </div>
-        </div>
+          </div>
 
         {/* 3. Loading & Error States */}
         {loading && (
@@ -593,10 +691,12 @@ export default function Discover() {
               </div>
             )}
           </>
+          )}
+          </>
         )}
 
         {/* 5. Detail Profile Modal (Frosted Cyber Emerald Glass) */}
-        {selectedUserForProfile && (
+        {discoveryTab === 'people' && selectedUserForProfile && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
             <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#11151c] border border-[#1a232e] shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-6 text-left">
               {/* Close Button */}
@@ -766,7 +866,7 @@ export default function Discover() {
         )}
 
         {/* Modal Báo Cáo & Chặn */}
-        {reportTargetUser && (
+        {discoveryTab === 'people' && reportTargetUser && (
           <ReportModal
             user={reportTargetUser}
             onClose={() => setReportTargetUser(null)}
@@ -774,7 +874,7 @@ export default function Discover() {
           />
         )}
 
-        {blockTargetUser && (
+        {discoveryTab === 'people' && blockTargetUser && (
           <BlockConfirmModal
             user={blockTargetUser}
             onClose={() => setBlockTargetUser(null)}

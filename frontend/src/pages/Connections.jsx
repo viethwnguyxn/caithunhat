@@ -140,7 +140,7 @@ export default function Connections() {
   })
 
   return (
-    <div className="bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
 
       <main className="w-full pt-20 min-h-[calc(100vh-80px)] pb-16">
@@ -161,38 +161,13 @@ export default function Connections() {
 
           {/* 1. HEADER SECTION */}
           <div className="flex flex-col gap-4 mb-8">
-            {/* Status Protocol Badge */}
-            <div className="flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#11151c] border border-[#1a232e] shadow-[0_0_12px_rgba(0,255,136,0.12)]">
-              <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] animate-pulse"></span>
-              <span className="text-[11px] font-mono text-[#44fb8a] tracking-widest uppercase">
-                PROTOCOL SYNC • CONNECTIONS HUB V2.4
-              </span>
-            </div>
-
-            {/* Title & Narrative */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-[#f1ffef] tracking-tight">
-                  Mạng lưới & Bạn bè
-                </h1>
-                <p className="text-sm md:text-base text-[#b9cbb9] max-w-2xl">
-                  Quản lý danh sách những người bạn đồng điệu và lời mời kết nối trong không gian số
-                  bảo mật lượng tử.
-                </p>
-              </div>
-
-              {/* Metric Counter */}
-              <div className="flex items-center gap-3 bg-[#11151c] border border-[#1a232e] px-4 py-2.5 rounded-xl">
-                <div className="flex items-center gap-1.5 text-xs md:text-sm font-mono text-[#f1ffef]">
-                  <span className="material-symbols-outlined text-[#00ff88] text-[18px]">hub</span>
-                  <span>{connections.length} Bạn bè</span>
-                </div>
-                <span className="text-[#849585] text-xs">•</span>
-                <div className="flex items-center gap-1.5 text-xs md:text-sm font-mono text-[#44fb8a]">
-                  <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_6px_#00ff88]"></span>
-                  <span>{Math.max(1, Math.round(connections.length * 0.6))} Trực tuyến</span>
-                </div>
-              </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-[#f1ffef] tracking-tight">
+                Mạng lưới & Bạn bè
+              </h1>
+              <p className="text-sm md:text-base text-[#b9cbb9] max-w-2xl">
+                Quản lý bạn bè và lời mời kết nối của bạn.
+              </p>
             </div>
 
             {/* Search & Filters Toolbar */}

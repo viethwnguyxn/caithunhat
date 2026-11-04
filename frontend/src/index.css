@@ -47,7 +47,7 @@
 }
 
 body {
-  font-family: 'Times New Roman', Times, serif;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
   background-color: var(--bg-page);
   color: var(--text-main);
   line-height: 1.5;
@@ -399,8 +399,217 @@ button:disabled {
 .lp-settings-page{min-height:100vh;background:#10120f;color:#f3f5ef;padding-top:64px}.lp-settings-wrap{max-width:1240px;margin:0 auto;padding:54px 32px 90px}.lp-settings-heading{margin-bottom:30px}.lp-eyebrow{font-size:11px;letter-spacing:.18em;color:#c5ee72;font-weight:800}.lp-settings-heading h1{font-size:38px;letter-spacing:-.04em;margin:10px 0 6px;font-weight:800}.lp-settings-heading p,.lp-settings-muted{color:#9ca398;font-size:14px}.lp-settings-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:24px;align-items:start}.lp-settings-menu,.lp-settings-card{background:#191c17;border:1px solid #2b3026;border-radius:18px;padding:18px}.lp-settings-menu{display:grid;gap:7px}.lp-settings-menu button{text-align:left;border:0;background:transparent;color:#aeb4a6;padding:13px 14px;border-radius:11px;font-weight:650;cursor:pointer}.lp-settings-menu button.active,.lp-settings-menu button:hover{background:#c5ee7218;color:#c5ee72}.lp-settings-card{min-height:330px;padding:30px}.lp-settings-card h2{font-size:22px;margin-bottom:7px}.lp-settings-row{display:flex;justify-content:space-between;gap:20px;padding:19px 0;border-bottom:1px solid #2b3026;font-size:14px}.lp-settings-row span{color:#9ca398}.lp-settings-row strong{color:#f3f5ef}.lp-settings-action{margin-top:24px;border:1px solid #c5ee72;color:#c5ee72;background:#c5ee7210;border-radius:10px;padding:11px 15px;font-weight:700;cursor:pointer}.lp-settings-privacy{display:flex;gap:15px;background:#22271d;border:1px solid #343d28;border-radius:13px;padding:18px;margin-top:22px}.lp-settings-privacy p,.lp-logout-panel p{color:#9ca398;font-size:13px;margin-top:5px;line-height:1.6}.lp-lock{font-size:24px;color:#c5ee72}.lp-logout-panel{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px;margin-top:24px;border:1px solid #49302d;background:#261c19;border-radius:13px}.lp-logout-panel button,.lp-confirm-box .danger{background:#d45c50;color:white;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer}.lp-confirm-backdrop{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:100}.lp-confirm-box{width:min(420px,calc(100vw - 32px));background:#1b1e19;border:1px solid #383d32;border-radius:16px;padding:25px;box-shadow:0 20px 60px #0009}.lp-confirm-box p{color:#aeb4a6;margin:10px 0 22px}.lp-confirm-box>div{display:flex;justify-content:flex-end;gap:10px}.lp-confirm-box button{border:1px solid #454b3e;color:#e8ecdf;background:transparent;border-radius:9px;padding:9px 14px;cursor:pointer}@media(max-width:700px){.lp-settings-wrap{padding:32px 16px 60px}.lp-settings-layout{grid-template-columns:1fr}.lp-settings-menu{display:flex;overflow:auto}.lp-settings-menu button{white-space:nowrap}.lp-settings-card{padding:20px}.lp-settings-row{align-items:flex-start;flex-direction:column;gap:5px}.lp-logout-panel{align-items:flex-start;flex-direction:column}}
 
 
-/* La Pulga typography: Times New Roman across the entire application */
-html, body, body * { font-family: 'Times New Roman', Times, serif !important; }
+/* Keep icon ligatures mapped to the Material Symbols font. */
+.navbar-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.navbar-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.discover-page {
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(78, 222, 163, 0.2), transparent 38%),
+    linear-gradient(135deg, #18251d 0%, #111713 48%, #17231b 100%);
+}
+
+.discover-page [class*="bg-[#11151c]"] {
+  background-color: #1a211d !important;
+}
+
+.discover-page [class*="bg-[#0d1117]"] {
+  background-color: #172019 !important;
+}
+
+.discover-page [class*="bg-[#08090a]"] {
+  background-color: #121a15 !important;
+}
+
+.discover-page [class*="border-[#1a232e]"] {
+  border-color: #303d34 !important;
+}
+
+.app-green-theme {
+  --lp-green: #c5f36a;
+  --lp-green2: #d7ed8a;
+  --lp-bg: #15151b;
+  --lp-surface: #202027;
+  --lp-surface2: #292831;
+  --lp-line: #393640;
+  --lp-text: #f3f0f3;
+  --lp-muted: #b6aeb9;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(147, 109, 145, 0.24), transparent 38%),
+    radial-gradient(ellipse at 92% 78%, rgba(108, 93, 133, 0.18), transparent 40%),
+    linear-gradient(145deg, #1d1b25 0%, #13141b 52%, #1a1720 100%);
+}
+
+.app-green-theme [class*="bg-[#08090a]"],
+.app-green-theme [class*="bg-[#0d0e0f]"] {
+  background-color: #17171e !important;
+}
+
+.app-green-theme [class*="bg-[#0d1117]"],
+.app-green-theme [class*="bg-[#11151c]"],
+.app-green-theme [class*="bg-[#181d26]"],
+.app-green-theme [class*="bg-[#161c26]"] {
+  background-color: #222129 !important;
+}
+
+.app-green-theme [class*="bg-[#1a211d]"],
+.app-green-theme [class*="bg-[#202a24]"],
+.app-green-theme [class*="bg-[#26352b]"] {
+  background-color: #2b2932 !important;
+}
+
+.app-green-theme [class~="bg-[#00ff88]"] {
+  background-color: #c5f36a !important;
+}
+
+.app-green-theme [class*="bg-[#00ff88]/"] {
+  background-color: rgba(197, 243, 106, 0.14) !important;
+}
+
+.app-green-theme [class*="bg-[#10b981]"],
+.app-green-theme [class*="bg-[#44fb8a]"],
+.app-green-theme [class*="bg-[#4edea3]"] {
+  background-color: #c5f36a !important;
+}
+
+.app-green-theme [class*="text-[#00ff88]"],
+.app-green-theme [class*="text-[#10b981]"],
+.app-green-theme [class*="text-[#44fb8a]"],
+.app-green-theme [class*="text-[#4edea3]"],
+.app-green-theme [class*="text-[#98da27]"] {
+  color: #c5f36a !important;
+}
+
+.app-green-theme [class*="border-[#1a232e]"],
+.app-green-theme [class*="border-[#303d34]"],
+.app-green-theme [class*="border-[#35443a]"] {
+  border-color: #393640 !important;
+}
+
+.app-green-theme [class*="border-[#00ff88]"],
+.app-green-theme [class*="border-[#10b981]"],
+.app-green-theme [class*="border-[#44fb8a]"] {
+  border-color: rgba(197, 243, 106, 0.55) !important;
+}
+
+.app-green-theme [class*="from-[#10b981]"] {
+  --tw-gradient-from: #c5f36a var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(197 243 106 / 0%) var(--tw-gradient-to-position) !important;
+}
+
+.app-green-theme [class*="to-[#00ff88]"] {
+  --tw-gradient-to: #e2f5a8 var(--tw-gradient-to-position) !important;
+}
+
+.app-green-theme header[class*="bg-[#08090a]"] {
+  background-color: rgba(20, 19, 26, 0.93) !important;
+  border-color: #393640 !important;
+}
+
+.app-green-theme.lp-home {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(147, 109, 145, 0.24), transparent 36%),
+    linear-gradient(145deg, #1d1b25 0%, #13141b 58%, #1a1720 100%);
+}
+
+.app-green-theme.lp-home .lp-panel,
+.app-green-theme.lp-home .lp-feed-card {
+  background: #222129;
+  border-color: #393640;
+}
+
+.app-green-theme.lp-home .lp-hero {
+  background:
+    linear-gradient(110deg, rgba(220, 147, 164, 0.84), rgba(129, 99, 132, 0.86) 55%, rgba(64, 65, 92, 0.96)),
+    linear-gradient(180deg, #d59ba9, #45445e);
+  border-color: rgba(238, 186, 185, 0.45);
+}
+
+.app-green-theme.lp-home .lp-hero h1,
+.app-green-theme.lp-home .lp-hero p,
+.app-green-theme.lp-home .lp-hero small {
+  color: #fff8f1;
+}
+
+.app-green-theme.lp-home .lp-filter.active,
+.app-green-theme.lp-home .lp-filter:hover,
+.app-green-theme.lp-home .lp-chip {
+  background: rgba(197, 243, 106, 0.14);
+  color: #c5f36a;
+}
+
+.app-green-theme.lp-home .lp-feed-actions {
+  border-color: #393640;
+}
+
+.app-green-theme.lp-settings-page {
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(147, 109, 145, 0.22), transparent 38%),
+    linear-gradient(145deg, #1d1b25, #13141b 58%, #1a1720);
+}
+
+.app-green-theme.lp-settings-page .lp-settings-menu,
+.app-green-theme.lp-settings-page .lp-settings-card,
+.app-green-theme.lp-settings-page .lp-settings-privacy,
+.app-green-theme.lp-settings-page .lp-confirm-box {
+  background: #222129;
+  border-color: #393640;
+}
+
+.app-green-theme.lp-settings-page .lp-eyebrow,
+.app-green-theme.lp-settings-page .lp-settings-menu button.active,
+.app-green-theme.lp-settings-page .lp-settings-menu button:hover,
+.app-green-theme.lp-settings-page .lp-lock {
+  color: #c5f36a;
+}
+
+.app-green-theme.lp-settings-page .lp-settings-menu button.active,
+.app-green-theme.lp-settings-page .lp-settings-menu button:hover {
+  background: rgba(197, 243, 106, 0.13) !important;
+  color: #d7f58a !important;
+}
+
+.app-green-theme.lp-settings-page .lp-settings-action {
+  background: rgba(197, 243, 106, 0.1) !important;
+  border-color: #c5f36a !important;
+  color: #d7f58a !important;
+}
+
+.lp-brand-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(197, 243, 106, 0.16);
+}
+
+.lp-art-center-image {
+  width: 150px;
+  height: 150px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 38px;
+  box-shadow: 0 15px 65px rgba(197, 243, 106, 0.14);
+  transform: rotate(-9deg);
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+  font-style: normal;
+  font-weight: normal;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: normal;
+  text-transform: none;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
 
 /* Desktop-first La Pulga authentication screens */
 .lp-auth-page{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(480px,.92fr);background:#101713;color:#eef5ee}
@@ -484,4 +693,501 @@ html, body, body * { font-family: 'Times New Roman', Times, serif !important; }
 .lp-auth-form-wrap > h2,
 .lp-auth-form-wrap > .lp-auth-intro {
   font-family: Inter, "Segoe UI", Arial, sans-serif !important;
+}
+
+.lp-landing {
+  --lp-green: #c5f36a;
+  --lp-green2: #d7ed8a;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #10121d;
+}
+
+.lp-landing::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(ellipse at 58% 40%, transparent 36%, rgba(9, 10, 17, 0.12) 65%, rgba(5, 6, 12, 0.76) 100%),
+    linear-gradient(90deg, rgba(14, 16, 27, 0.76) 0%, rgba(17, 18, 30, 0.38) 36%, rgba(20, 22, 34, 0.04) 76%),
+    linear-gradient(0deg, rgba(8, 9, 15, 0.48), transparent 44%),
+    url('./assets/landing-dreamy-starry-sky.png') center / cover no-repeat;
+  pointer-events: none;
+}
+
+.lp-login-screen {
+  background: radial-gradient(ellipse at 50% -10%, #514354 0%, #211e28 48%, #13141b 82%);
+}
+
+.lp-login-visual,
+.lp-auth-showcase {
+  background:
+    radial-gradient(ellipse at 78% 46%, rgba(190, 132, 164, 0.25), transparent 42%),
+    linear-gradient(145deg, #292430, #1a1922 70%, #171821) !important;
+}
+
+.lp-login-shell,
+.lp-login-form-panel,
+.lp-auth-panel {
+  background: #202027 !important;
+}
+
+.lp-login-input-wrap {
+  background: #2a2932;
+  border-color: #413d49;
+}
+
+.lp-login-logo,
+.lp-auth-mark {
+  display: block;
+  object-fit: cover;
+  background: transparent;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(197, 243, 106, 0.16);
+}
+
+.lp-auth-kicker,
+.lp-auth-story h1 em,
+.lp-auth-orbit,
+.lp-auth-feature-strip article span,
+.lp-auth-footer a,
+.lp-auth-back:hover {
+  color: #c5f36a;
+}
+
+.lp-auth-mark {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.lp-auth-orbit {
+  border-color: rgba(197, 243, 106, 0.35);
+}
+
+.lp-auth-orbit:before,
+.lp-auth-orbit:after {
+  border-color: rgba(194, 151, 185, 0.3);
+}
+
+.lp-auth-form .form-group input {
+  background: #2a2932;
+  border-color: #413d49;
+}
+
+.lp-auth-form .form-group input:focus {
+  border-color: #c5f36a;
+  box-shadow: 0 0 0 3px rgba(197, 243, 106, 0.13);
+}
+
+.lp-auth-submit {
+  background: #c5f36a;
+  color: #252719;
+}
+
+.lp-auth-submit:hover:not(:disabled) {
+  background: #d8f58f;
+}
+
+.lp-landing-main {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: min(760px, calc(100vh - 82px));
+  padding: clamp(72px, 10vh, 132px) max(7%, calc((100vw - 1320px) / 2));
+  background: transparent;
+  border-bottom: 1px solid rgba(226, 208, 155, 0.12);
+}
+
+.lp-landing-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 610px;
+  padding: 18px 0 42px;
+}
+
+.lp-landing .lp-landing-copy h1 em {
+  color: #d6ef8b;
+}
+
+.lp-landing .lp-landing-copy > p {
+  color: #ded8e1;
+  text-shadow: 0 2px 12px rgba(13, 14, 23, 0.7);
+}
+
+.lp-landing .lp-eyebrow {
+  color: #e2eea0;
+  background: rgba(31, 31, 42, 0.68);
+  border-color: rgba(211, 227, 140, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.lp-landing .lp-button {
+  background: #c5f36a;
+  color: #242719;
+  box-shadow: 0 8px 26px rgba(197, 243, 106, 0.2);
+}
+
+.lp-landing .lp-button:hover {
+  background: #d8f58f;
+}
+
+.lp-landing .lp-outline-button {
+  border-color: rgba(233, 223, 199, 0.4);
+  background: rgba(29, 28, 39, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.lp-landing .lp-trust {
+  color: #d4ced9;
+}
+
+.lp-landing .lp-feature-strip {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0;
+  border-top: 0;
+  color: #f0edf0;
+}
+
+.lp-landing .lp-feature-strip p {
+  color: #aaa4b2;
+}
+
+.lp-landing-nav {
+  position: relative;
+  z-index: 2;
+  max-width: none;
+  padding-inline: max(5%, calc((100vw - 1440px) / 2));
+  background: transparent;
+  backdrop-filter: none;
+}
+
+@media (max-width: 760px) {
+  .lp-landing-main {
+    min-height: 690px;
+    padding: 86px 22px 64px;
+  }
+
+  .lp-landing-copy {
+    padding-top: 18px;
+  }
+
+  .lp-landing .lp-feature-strip {
+    padding: 24px 22px 36px;
+  }
+}
+
+.lp-auth-showcase.lp-register-showcase {
+  background:
+    linear-gradient(90deg, rgba(12, 14, 25, 0.48), rgba(12, 14, 25, 0.12)),
+    linear-gradient(0deg, rgba(12, 14, 25, 0.38), transparent 46%),
+    url('./assets/register-starry-canopy.png') center / cover no-repeat !important;
+}
+
+.lp-register-page {
+  background:
+    linear-gradient(rgba(10, 12, 23, 0.04), rgba(10, 12, 23, 0.12)),
+    url('./assets/register-starry-canopy.png') center / cover fixed no-repeat !important;
+}
+
+.lp-register-page .lp-auth-panel {
+  background: transparent !important;
+}
+
+.lp-register-page .lp-auth-register-wrap {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(224, 228, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(19, 20, 32, 0.12) !important;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.3),
+    0 0 48px rgba(159, 151, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(0);
+}
+
+.lp-register-page .lp-auth-register-wrap::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(196, 181, 255, 0.18), transparent 40%),
+    radial-gradient(ellipse at 0% 100%, rgba(197, 243, 106, 0.1), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 50%);
+  content: "";
+  pointer-events: none;
+}
+
+.lp-register-page .lp-auth-register-wrap::after {
+  position: absolute;
+  z-index: -1;
+  top: -54px;
+  right: -54px;
+  width: 140px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(222, 221, 255, 0.16);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 12px rgba(222, 221, 255, 0.045),
+    0 0 0 25px rgba(222, 221, 255, 0.035),
+    0 0 42px rgba(221, 212, 255, 0.18);
+  content: "";
+  pointer-events: none;
+}
+
+.lp-register-page .lp-auth-register-wrap > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .lp-register-page {
+    background-attachment: fixed !important;
+  }
+
+  .lp-register-page .lp-auth-panel {
+    background: transparent !important;
+    backdrop-filter: none;
+  }
+
+  .lp-register-page .lp-auth-register-wrap {
+    max-width: 520px;
+    padding: 22px clamp(20px, 4vw, 32px);
+    background: rgba(19, 20, 32, 0.12) !important;
+  }
+
+  .lp-register-page .lp-auth-mobile-brand {
+    display: flex;
+    margin: 0 0 16px;
+    gap: 10px;
+    font-size: 21px;
+  }
+
+  .lp-register-page .lp-auth-mobile-brand .lp-auth-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .lp-register-page .lp-auth-register-kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+    color: #d5f17e;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+
+  .lp-register-page .lp-auth-register-kicker::before {
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: #d5f17e;
+    content: "";
+  }
+
+  .lp-register-page .lp-auth-form-wrap h2 {
+    margin: 5px 0 6px;
+    font-size: 32px;
+  }
+
+  .lp-register-page .lp-auth-intro {
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+
+  .lp-register-page .lp-auth-form .form-group {
+    margin-bottom: 10px;
+  }
+
+  .lp-register-page .lp-auth-form .form-group label {
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  .lp-register-page .lp-auth-form .form-group input {
+    min-height: 44px;
+    padding: 10px 13px;
+    font-size: 14px;
+  }
+
+  .lp-register-page .lp-auth-submit {
+    min-height: 47px;
+    margin-top: 6px;
+    font-size: 15px;
+  }
+
+  .lp-register-page .lp-auth-divider {
+    margin: 15px 0;
+  }
+
+  .lp-register-page .lp-auth-footer {
+    margin: 16px 0 9px;
+    font-size: 13px;
+  }
+
+  .lp-register-page .lp-auth-back {
+    font-size: 12px;
+  }
+}
+
+.lp-login-screen {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  padding: 32px 18px !important;
+  background:
+    linear-gradient(90deg, rgba(7, 9, 18, 0.26), rgba(7, 9, 18, 0.04) 58%, rgba(7, 9, 18, 0.12)),
+    linear-gradient(0deg, rgba(7, 9, 18, 0.28), transparent 54%),
+    url('./assets/login-stargazing-tree.png') 58% center / cover no-repeat fixed !important;
+}
+
+.lp-login-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 0;
+  padding-left: clamp(0px, 6vw, 88px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.lp-login-form-panel {
+  width: min(100%, 500px);
+  min-width: 0;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid rgba(226, 225, 255, 0.2);
+  border-radius: 24px;
+  background: rgba(18, 19, 32, 0.72) !important;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.42),
+    0 0 50px rgba(142, 131, 224, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.lp-login-form-inner {
+  max-width: 430px;
+}
+
+.lp-login-brand {
+  margin-bottom: 32px;
+  color: #f5f4f1;
+}
+
+.lp-login-logo {
+  width: 40px;
+  height: 40px;
+}
+
+.lp-login-form-panel .lp-login-google button {
+  background: rgba(43, 46, 58, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.lp-login-form-panel .lp-login-input-wrap {
+  background: rgba(34, 35, 49, 0.88);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.lp-login-form-panel .lp-login-input-wrap:focus-within {
+  border-color: #c5f36a;
+  box-shadow: 0 0 0 3px rgba(197, 243, 106, 0.13);
+}
+
+@media (max-width: 900px) {
+  .lp-login-screen {
+    padding: 24px 16px !important;
+    background-attachment: scroll !important;
+    background-position: center, center, 62% center !important;
+  }
+
+  .lp-login-shell {
+    justify-content: center;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-login-screen {
+    padding: 18px 14px !important;
+    background-position: center, center, 65% center !important;
+  }
+
+  .lp-login-shell {
+    min-height: calc(100vh - 36px);
+    align-items: center;
+  }
+
+  .lp-login-form-panel {
+    padding: 26px 22px;
+    border-radius: 22px;
+    background: rgba(18, 19, 32, 0.78) !important;
+  }
+
+  .lp-login-brand {
+    margin-bottom: 24px;
+  }
+}
+
+.navbar-scrollbar > a {
+  flex: 1 1 0%;
+  min-width: 0;
+  justify-content: center;
+}
+
+.lp-home.app-green-theme .lp-create-post {
+  margin-top: 12px;
+  justify-content: center;
+  border: 1px solid rgba(197, 243, 106, 0.28);
+  background: linear-gradient(110deg, rgba(197, 243, 106, 0.16), rgba(197, 243, 106, 0.08));
+  color: #d7f58a;
+}
+
+.lp-home.app-green-theme .lp-create-post:hover {
+  background: rgba(197, 243, 106, 0.22);
+  color: #e5f8b5;
+}
+
+.lp-home.app-green-theme .lp-feed-filter {
+  max-width: 100%;
+  border: 1px solid #494451;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #292731;
+  color: #e8e2eb;
+  font: inherit;
+  font-size: 12px;
+}
+
+.lp-home.app-green-theme .lp-feed-filter:focus {
+  outline: 2px solid rgba(197, 243, 106, 0.35);
+  outline-offset: 2px;
+}
+
+.lp-home.app-green-theme .lp-feed-filter option {
+  background: #222129;
+  color: #e8e2eb;
+}
+
+.lp-home.app-green-theme .lp-like-button {
+  border: 0;
+  background: transparent;
+  color: #b6aeb9;
+  cursor: pointer;
+}
+
+.lp-home.app-green-theme .lp-like-button.is-liked {
+  color: #c5f36a;
 }

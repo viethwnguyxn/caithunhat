@@ -2,18 +2,18 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './NotificationBell'
+import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/', { replace: true })
   }
 
   const handleSearchSubmit = (e) => {
@@ -25,11 +25,11 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path
 
   const navItems = [
-    { path: '/home', label: 'Bảng tin', icon: 'dynamic_feed' },
+    { path: '/home', label: 'Trang chủ', icon: 'home' },
     { path: '/discover', label: 'Khám phá', icon: 'explore' },
     { path: '/connections', label: 'Bạn bè', icon: 'group' },
-    { path: '/communities', label: 'Cộng đồng', icon: 'groups' },
     { path: '/messages', label: 'Tin nhắn', icon: 'chat' },
+    { path: '/settings', label: 'Cài đặt', icon: 'settings' },
     ...(user?.role === 'admin'
       ? [{ path: '/admin', label: 'Quản trị', icon: 'admin_panel_settings' }]
       : []),
@@ -41,38 +41,41 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#08090a]/90 backdrop-blur-xl border-b border-[#1a232e]">
-      <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+      <div className="max-w-[1600px] mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link to="/home" className="flex items-center gap-3 shrink-0 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10b981] to-[#00ff88] flex items-center justify-center text-[#08090a] font-extrabold text-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] group-hover:scale-105 transition-transform">
-            ✳
-          </div>
+          <img
+            src={brandMark}
+            alt=""
+            className="w-10 h-10 rounded-xl shadow-[0_0_18px_rgba(197,243,106,0.18)] group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col">
-            <span className="font-extrabold text-xl text-[#00ff88] tracking-tight leading-none drop-shadow-[0_0_10px_rgba(0,255,136,0.5)]">
+            <span className="font-extrabold text-xl text-[#f5f2eb] tracking-tight leading-none">
               La Pulga
             </span>
-            <span className="text-[11px] text-[#849585] hidden sm:block tracking-wide">
+            <span className="text-[11px] text-[#aaa3b2] hidden sm:block tracking-wide">
               Kết nối từ sự đồng điệu
             </span>
           </div>
         </Link>
 
         {/* 4 Main Navigation Links (Desktop) */}
-        <nav className="hidden md:flex items-center gap-1 bg-[#0d1117] p-1 rounded-xl border border-[#1a232e]">
+        <nav className="navbar-scrollbar flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto bg-[#0d1117] p-1 rounded-xl border border-[#1a232e]">
           {navItems.map((item) => {
             const active = isActive(item.path)
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                title={item.label}
+                className={`whitespace-nowrap min-w-0 flex-1 justify-center px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
                   active
                     ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shadow-[0_0_12px_rgba(0,255,136,0.25)]'
                     : 'text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="hidden lg:inline">{item.label}</span>
               </Link>
             )
           })}
@@ -81,7 +84,7 @@ export default function Navbar() {
         {/* Right Actions: Search + Notification Bell + Profile */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Quick Search */}
-          <div className="relative hidden lg:flex items-center">
+          <div className="relative hidden 2xl:flex items-center">
             <span className="material-symbols-outlined absolute left-3 text-[#64748b] text-[18px] pointer-events-none">
               search
             </span>
@@ -159,53 +162,8 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c] border border-[#1a232e] transition-all"
-            aria-label="Toggle menu"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {mobileMenuOpen ? 'close' : 'menu'}
-            </span>
-          </button>
         </div>
       </div>
-
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-[#0d1117] border-b border-[#1a232e] px-4 py-3 flex flex-col gap-1.5 shadow-2xl animate-fadeIn">
-          {navItems.map((item) => {
-            const active = isActive(item.path)
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2.5 transition-all ${
-                  active
-                    ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shadow-[0_0_10px_rgba(0,255,136,0.2)]'
-                    : 'text-[#94a3b8] hover:text-[#00ff88] hover:bg-[#11151c]'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-
-          <div className="pt-2 mt-1 border-t border-[#1a232e] flex items-center justify-between">
-            <Link
-              to="/profile"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-xs text-[#00ff88] font-semibold"
-            >
-              Hồ sơ: @{user?.username}
-            </Link>
-            <Link to="/settings" onClick={() => setMobileMenuOpen(false)} className="text-xs text-[#94a3b8]">Cài đặt</Link>
-          </div>
-        </div>
-      )}
     </header>
   )
 }
