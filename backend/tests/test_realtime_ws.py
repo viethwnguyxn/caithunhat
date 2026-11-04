@@ -100,6 +100,15 @@ async def main():
                     if data.get("type") == "message":
                         return data
 
+            async def recv_read_receipt(ws, message_id):
+                while True:
+                    data = json.loads(await ws.recv())
+                    if (
+                        data.get("type") == "read_receipt"
+                        and data.get("message_id") == message_id
+                    ):
+                        return data
+
             # ---------------------------------------------------------
             # TEST 6: Alice gửi tin nhắn -> Cả Alice và Bob nhận realtime
             # ---------------------------------------------------------
@@ -120,6 +129,16 @@ async def main():
             print("PASSED 5: Alice gửi tin -> Bob nhận realtime broadcast thành công!")
 
             # ---------------------------------------------------------
+            # TEST 6: Bob đọc tin nhắn -> Alice nhận trạng thái đã đọc
+            # ---------------------------------------------------------
+            await bob_ws.send(json.dumps({"type": "read"}))
+            read_receipt = await recv_read_receipt(
+                alice_ws, res_alice["message"]["id"]
+            )
+            assert read_receipt["read_at"]
+            print("PASSED 6: Trạng thái đã đọc được gửi realtime tới Alice!")
+
+            # ---------------------------------------------------------
             # TEST 7: Bob trả lời tin nhắn -> Alice nhận realtime
             # ---------------------------------------------------------
             bob_msg = {"type": "message", "content": "Chào Alice, mình nhận được rồi nhé!"}
@@ -133,7 +152,7 @@ async def main():
             # Bob nhận tin của chính mình
             res_bob_2 = await recv_chat_message(bob_ws)
             assert res_bob_2["message"]["content"] == "Chào Alice, mình nhận được rồi nhé!"
-            print("PASSED 6: Bob phản hồi -> Alice nhận realtime broadcast thành công!")
+            print("PASSED 7: Bob phản hồi -> Alice nhận realtime broadcast thành công!")
 
         # -------------------------------------------------------------
         # TEST 8: Kiểm tra dữ liệu đã lưu vào database SQLite

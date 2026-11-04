@@ -290,6 +290,7 @@ export default function Messages() {
     ws.onopen = () => {
       if (isMounted) {
         setWsStatus('connected')
+        ws.send(JSON.stringify({ type: 'read' }))
       }
     }
 
@@ -318,12 +319,24 @@ export default function Messages() {
             })
           )
 
+          if (newMsg.sender_id !== user?.id && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'read' }))
+          }
+
           // Tự động xóa thông báo vì đang mở xem cuộc trò chuyện này
           markConversationNotificationsAsRead(activeConversation.id)
             .then(() => {
               window.dispatchEvent(new CustomEvent('notifications-updated'))
             })
             .catch(() => {})
+        } else if (data.type === 'read_receipt') {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === data.message_id
+                ? { ...message, read_at: data.read_at }
+                : message
+            )
+          )
         } else if (data.type === 'user_status') {
           const { user_id, is_online, last_seen } = data
           setActiveConversation((prev) => {
@@ -396,7 +409,7 @@ export default function Messages() {
         ws.close()
       }
     }
-  }, [activeConversation?.id])
+  }, [activeConversation?.id, user?.id])
 
   // 4. Gửi tin nhắn (ưu tiên WebSocket, fallback REST)
   const handleSendMessage = async (e) => {
