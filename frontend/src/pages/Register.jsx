@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Register() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const location = useLocation()
   const transitionClass = location.state?.authTransition === 'login-to-register'
     ? ' lp-auth-transition-from-login'
@@ -45,10 +47,19 @@ export default function Register() {
     try {
       await api.post('/api/auth/register', form)
       setSuccess(true)
-      // Chuyển hướng sau 1.5 giây
-      setTimeout(() => {
-        navigate('/login', { state: { authTransition: 'register-to-login' } })
-      }, 1500)
+      try {
+        await login(form.username, form.password)
+        navigate('/survey', { replace: true })
+      } catch (loginError) {
+        console.error('Tài khoản đã tạo nhưng đăng nhập tự động thất bại:', loginError)
+        navigate('/login', {
+          replace: true,
+          state: {
+            account: form.username,
+            message: 'Tài khoản đã được tạo. Đăng nhập để bắt đầu khảo sát.',
+          },
+        })
+      }
     } catch (err) {
       if (err.response && err.response.data) {
         const detail = err.response.data.detail
@@ -76,7 +87,7 @@ export default function Register() {
           <h2>Tạo tài khoản</h2>
           <p className="lp-auth-intro">Gia nhập La Pulga và tìm thấy những kết nối đồng điệu.</p>
           {error && <div className="alert alert-error">⚠️ {error}</div>}
-          {success && <div className="alert alert-success">✓ Đăng ký thành công! Đang chuyển hướng sang đăng nhập...</div>}
+          {success && <div className="alert alert-success">✓ Đăng ký thành công! Đang mở khảo sát...</div>}
           <form onSubmit={handleSubmit} className="lp-auth-form">
             <div className="form-group"><label htmlFor="reg-username">Tên đăng nhập</label><input id="reg-username" type="text" name="username" placeholder="vd: hoang_nam" value={form.username} onChange={handleChange} minLength={3} maxLength={30} disabled={loading || success} autoComplete="username" /></div>
             <div className="form-group"><label htmlFor="reg-email">Email</label><input id="reg-email" type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} disabled={loading || success} autoComplete="email" /></div>

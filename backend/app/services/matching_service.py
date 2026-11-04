@@ -49,6 +49,16 @@ def build_user_text_representation(survey: SurveyAnswer, profile: Profile | None
     return " ".join(parts).lower()
 
 
+def calculate_similarity_scores(corpus: list[str]) -> list[float]:
+    vectorizer = TfidfVectorizer()
+    analyzer = vectorizer.build_analyzer()
+    if not any(analyzer(text) for text in corpus):
+        return [0.0] * max(0, len(corpus) - 1)
+
+    tfidf_matrix = vectorizer.fit_transform(corpus)
+    return cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0].tolist()
+
+
 def find_common_interests(survey_a: SurveyAnswer, survey_b: SurveyAnswer) -> list[str]:
     """Tìm danh sách sở thích và chủ đề chung giữa 2 người dùng."""
     topics_a = set(survey_a.topics or [])
@@ -165,9 +175,7 @@ def get_user_matches(
         candidate_surveys.append(s)
         corpus.append(build_user_text_representation(s, p))
 
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(corpus)
-    similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
+    similarities = calculate_similarity_scores(corpus)
 
     matches: list[MatchItem] = []
     for idx, sim_score in enumerate(similarities):

@@ -292,7 +292,13 @@ export default function Survey() {
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span>
                   THUẬT TOÁN KẾT NỐI LAPULGA
                 </div>
-                <span className="text-[11px] font-mono text-[#849585]">CALIBRATION ID: #LPG-9421</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/home', { replace: true })}
+                  className="text-xs font-semibold text-[#b9cbb9] hover:text-[#00ff88] transition-colors"
+                >
+                  Bỏ qua khảo sát
+                </button>
               </div>
 
               {/* Error Alert */}

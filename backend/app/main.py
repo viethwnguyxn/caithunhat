@@ -106,6 +106,7 @@ cors_origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     "https://caithunhat.vercel.app",
+    "https://la-pulga-l7vw.onrender.com",
 ]
 env_cors = os.getenv("CORS_ORIGINS")
 if env_cors:

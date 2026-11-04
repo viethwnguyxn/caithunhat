@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import brandMark from '../assets/lapulga-mark.svg'
+import { getSurvey } from '../services/surveyService'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -11,10 +12,10 @@ export default function Login() {
   const transitionClass = location.state?.authTransition === 'register-to-login'
     ? ' lp-auth-transition-from-register'
     : ''
-  const [form, setForm] = useState({ account: '', password: '' })
+  const [form, setForm] = useState({ account: location.state?.account || '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(location.state?.message || '')
   const from = location.state?.from?.pathname || '/home'
 
   function handleChange(e) {
@@ -30,7 +31,14 @@ export default function Login() {
     setLoading(true)
     try {
       await login(form.account, form.password)
-      navigate(from, { replace: true })
+      let destination = from
+      try {
+        const survey = await getSurvey()
+        if (!survey) destination = '/survey'
+      } catch (surveyError) {
+        console.error('Không thể kiểm tra trạng thái khảo sát:', surveyError)
+      }
+      navigate(destination, { replace: true })
     } catch (err) {
       if (err.response?.data) {
         const detail = err.response.data.detail

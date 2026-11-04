@@ -893,11 +893,11 @@ button:disabled {
 }
 
 .lp-auth-transition-from-register {
-  animation: lp-auth-slide-right 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: lp-auth-slide-right 1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lp-auth-transition-from-login {
-  animation: lp-auth-slide-left 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: lp-auth-slide-left 1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes lp-auth-slide-right {
