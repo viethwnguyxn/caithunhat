@@ -63,7 +63,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="lp-login-form">
               <div className="lp-login-field">
                 <label htmlFor="login-account">Email hoặc Tên người dùng</label>
-                <div className="lp-login-input-wrap"><span aria-hidden="true">@</span><input id="login-account" type="text" name="account" placeholder="tenban@lapulga.vn" value={form.account} onChange={handleChange} disabled={loading} autoComplete="username" /></div>
+                <div className="lp-login-input-wrap"><span aria-hidden="true">@</span><input id="login-account" type="text" name="account" placeholder="tenban@lapulga.vn" value={form.account} onChange={handleChange} disabled={loading} autoComplete="username" spellCheck={false} autoCorrect="off" autoCapitalize="none" /></div>
               </div>
               <div className="lp-login-field">
                 <div className="lp-login-label-row"><label htmlFor="login-password">Mật khẩu</label><span className="lp-login-forgot">Quên mật khẩu?</span></div>

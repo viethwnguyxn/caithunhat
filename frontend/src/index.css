@@ -1148,13 +1148,14 @@ button:disabled {
 .lp-login-form-panel .lp-login-input-wrap input:-webkit-autofill:hover,
 .lp-login-form-panel .lp-login-input-wrap input:-webkit-autofill:focus,
 .lp-login-form-panel .lp-login-input-wrap input:autofill {
+  background: #222331 !important;
   background-color: #222331 !important;
+  background-image: none !important;
   background-clip: padding-box;
   box-shadow: 0 0 0 1000px #222331 inset !important;
   -webkit-box-shadow: 0 0 0 1000px #222331 inset !important;
   -webkit-text-fill-color: #f5f7ef !important;
   caret-color: #c5f36a !important;
-  transition: background-color 9999s ease-out;
 }
 
 @media (max-width: 900px) {
