@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
@@ -18,41 +18,46 @@ const MOODS = [
 const RELAXATION_REELS = [
   {
     id: 'breathing',
-    icon: '🌬️',
     title: 'Thở chậm cùng mình',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Thả lỏng vai, hít vào nhẹ nhàng rồi thở ra chậm hơn.',
     steps: ['Ngồi thoải mái và đặt hai chân vững trên sàn.', 'Hít vào bằng mũi trong 4 nhịp.', 'Thở ra chậm trong 6 nhịp. Lặp lại nhẹ nhàng trong một phút.'],
   },
   {
     id: 'grounding',
-    icon: '🌱',
     title: 'Trở về với hiện tại',
     duration: '2 phút',
+    durationSeconds: 120,
+    stepDurations: [40, 40, 40],
     description: 'Dùng giác quan để neo mình lại với khoảnh khắc này.',
     steps: ['Nhìn quanh và gọi tên 5 thứ bạn thấy.', 'Chạm vào 4 thứ gần bạn, để ý cảm giác của chúng.', 'Lắng nghe 3 âm thanh và thả lỏng hàm, vai.'],
   },
   {
     id: 'stretch',
-    icon: '🙆',
     title: 'Thả lỏng vai gáy',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Một vài chuyển động nhỏ để cơ thể bớt căng cứng.',
     steps: ['Hạ vai xuống và xoay vai chậm 5 vòng.', 'Nghiêng đầu nhẹ sang mỗi bên, không kéo căng.', 'Duỗi hai tay lên cao rồi thả lỏng theo nhịp thở.'],
   },
   {
     id: 'kindness',
-    icon: '💚',
     title: 'Một lời tử tế với mình',
     duration: '30 giây',
+    durationSeconds: 30,
+    stepDurations: [10, 10, 10],
     description: 'Tạm dừng và nói với bản thân điều bạn cần nghe.',
     steps: ['Đặt tay lên ngực nếu thấy thoải mái.', 'Nghĩ về một điều nhỏ bạn đã cố gắng hôm nay.', 'Nhắc mình: “Mình đang làm tốt nhất có thể, từng chút một.”'],
   },
   {
     id: 'pause',
-    icon: '☁️',
     title: 'Nghỉ mắt một chút',
     duration: '1 phút',
+    durationSeconds: 60,
+    stepDurations: [20, 20, 20],
     description: 'Rời màn hình và cho đôi mắt khoảng nghỉ ngắn.',
     steps: ['Nhìn ra xa khỏi màn hình.', 'Chớp mắt chậm vài lần và để ánh nhìn dịu lại.', 'Uống một ngụm nước, hít thở tự nhiên rồi quay lại khi sẵn sàng.'],
   },
@@ -82,7 +87,33 @@ export default function HomeFeed() {
   const [error, setError] = useState('')
   const [welcomeVisible, setWelcomeVisible] = useState(false)
   const [activeReel, setActiveReel] = useState(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [exerciseCompleted, setExerciseCompleted] = useState(false)
+  const exerciseTimerRef = useRef(null)
   const welcomeDismissedKey = `${WELCOME_DISMISSED_PREFIX}${user?.id ?? 'guest'}`
+
+  useEffect(() => {
+    if (!activeReel || exerciseCompleted) return undefined
+
+    exerciseTimerRef.current = window.setInterval(() => {
+      setElapsedSeconds((elapsed) => {
+        const nextElapsed = elapsed + 1
+        if (nextElapsed >= activeReel.durationSeconds) {
+          window.clearInterval(exerciseTimerRef.current)
+          return activeReel.durationSeconds
+        }
+        return nextElapsed
+      })
+    }, 1000)
+
+    return () => window.clearInterval(exerciseTimerRef.current)
+  }, [activeReel, exerciseCompleted])
+
+  useEffect(() => {
+    if (activeReel && elapsedSeconds >= activeReel.durationSeconds) {
+      setExerciseCompleted(true)
+    }
+  }, [activeReel, elapsedSeconds])
 
   useEffect(() => {
     if (
@@ -187,18 +218,55 @@ export default function HomeFeed() {
   const avatar = profile?.avatar_url || user?.avatar_url ||
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
+  const startReel = (reel) => {
+    if (activeReel?.id === reel.id) {
+      setActiveReel(null)
+      return
+    }
+
+    setElapsedSeconds(0)
+    setExerciseCompleted(false)
+    setActiveReel(reel)
+  }
+
+  const resetReel = () => {
+    setElapsedSeconds(0)
+    setExerciseCompleted(false)
+  }
+
+  const activeStep = activeReel
+    ? activeReel.stepDurations.findIndex((duration, index, durations) =>
+        elapsedSeconds < durations.slice(0, index + 1).reduce((total, seconds) => total + seconds, 0)
+      )
+    : 0
+  const currentStep = activeReel
+    ? activeStep < 0
+      ? activeReel.steps.length - 1
+      : activeStep
+    : 0
+  const stepElapsedSeconds = activeReel
+    ? elapsedSeconds -
+      activeReel.stepDurations
+        .slice(0, currentStep)
+        .reduce((total, seconds) => total + seconds, 0)
+    : 0
+  const stepRemainingSeconds = activeReel
+    ? activeReel.stepDurations[currentStep] - stepElapsedSeconds
+    : 0
+  const remainingSeconds = activeReel
+    ? Math.max(activeReel.durationSeconds - elapsedSeconds, 0)
+    : 0
+
+  const formatCountdown = (seconds) =>
+    `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
+
   return (
     <div className="home-feed-page">
       <Navbar />
       <main className="home-feed">
         <section className="reels-section" aria-labelledby="reels-title">
           <div className="reels-heading">
-            <div>
-              <span className="reels-eyebrow">Chăm sóc bản thân</span>
-              <h1 id="reels-title">Một phút dịu lại 🌿</h1>
-              <p>Bài tập nhỏ để thư giãn và giải tỏa căng thẳng — chọn một thẻ để bắt đầu.</p>
-            </div>
-            <span className="reels-swipe-hint">Lướt để khám phá →</span>
+            <h1 className="reels-eyebrow" id="reels-title">CHĂM SÓC BẢN THÂN</h1>
           </div>
           <div className="reels-carousel" aria-label="Các bài tập thư giãn">
             {RELAXATION_REELS.map((reel) => (
@@ -206,10 +274,9 @@ export default function HomeFeed() {
                 type="button"
                 key={reel.id}
                 className={`reel-card${activeReel?.id === reel.id ? ' is-active' : ''}`}
-                onClick={() => setActiveReel(activeReel?.id === reel.id ? null : reel)}
+                onClick={() => startReel(reel)}
                 aria-pressed={activeReel?.id === reel.id}
               >
-                <span className="reel-card-icon" aria-hidden="true">{reel.icon}</span>
                 <span className="reel-card-title">{reel.title}</span>
                 <span className="reel-card-description">{reel.description}</span>
                 <span className="reel-card-duration">{reel.duration} · Bắt đầu →</span>
@@ -226,12 +293,70 @@ export default function HomeFeed() {
               >
                 ×
               </button>
-              <span>{activeReel.icon} {activeReel.duration}</span>
+              <div className={`reel-exercise-status${exerciseCompleted ? ' is-finished' : ''}`} role="status">
+                {!exerciseCompleted && <span className="reel-exercise-status-dot" aria-hidden="true" />}
+                <span>
+                  {exerciseCompleted
+                    ? 'Hoàn thành bài tập'
+                    : remainingSeconds === 0
+                      ? 'Đã hết thời gian'
+                      : `Đang thực hiện · Bước ${currentStep + 1}/${activeReel.steps.length}`}
+                </span>
+              </div>
+              <div
+                className="reel-exercise-progress"
+                role="progressbar"
+                aria-label="Tiến trình bài tập"
+                aria-valuemin={0}
+                aria-valuemax={activeReel.durationSeconds}
+                aria-valuenow={elapsedSeconds}
+              >
+                <span
+                  style={{
+                    width: `${(elapsedSeconds / activeReel.durationSeconds) * 100}%`,
+                  }}
+                />
+              </div>
+              <div className="reel-exercise-timer" role="timer" aria-label={`Còn lại ${formatCountdown(remainingSeconds)}`}>
+                <span className="reel-exercise-timer-label">Thời gian còn lại</span>
+                <strong>{formatCountdown(remainingSeconds)}</strong>
+              </div>
               <h2>{activeReel.title}</h2>
-              <ol>
-                {activeReel.steps.map((step) => <li key={step}>{step}</li>)}
-              </ol>
-              <p>Hãy dừng lại nếu bạn thấy không thoải mái. Bạn có thể quay lại bất cứ lúc nào.</p>
+              <div className="reel-step-progress" aria-label={`Bước ${currentStep + 1} / ${activeReel.steps.length}`}>
+                {activeReel.steps.map((step, index) => (
+                  <span
+                    key={step}
+                    className={index <= currentStep ? 'is-complete' : ''}
+                    style={{
+                      opacity: index === currentStep && !exerciseCompleted
+                        ? 0.35 + (stepElapsedSeconds / activeReel.stepDurations[currentStep]) * 0.65
+                        : undefined,
+                    }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <div className="reel-current-step" aria-live="polite">
+                <span>
+                  Bước {currentStep + 1} / {activeReel.steps.length}
+                  {!exerciseCompleted && ` · ${formatCountdown(stepRemainingSeconds)}`}
+                </span>
+                <p>{activeReel.steps[currentStep]}</p>
+              </div>
+              {remainingSeconds === 0 && !exerciseCompleted && (
+                <p className="reel-exercise-time-up" role="status">
+                  Đã hết thời gian cho bài tập này.
+                </p>
+              )}
+              {exerciseCompleted ? (
+                <div className="reel-exercise-completed" role="status">
+                  <strong>Bạn đã hoàn thành bài tập này.</strong>
+                  <button type="button" onClick={resetReel}>Làm lại bài tập</button>
+                </div>
+              ) : (
+                <p className="reel-step-guidance">Các bước sẽ tự chuyển theo thời gian đã định.</p>
+              )}
+              <p className="reel-exercise-note">Hãy dừng lại nếu bạn thấy không thoải mái. Bạn có thể quay lại bất cứ lúc nào.</p>
             </article>
           )}
         </section>
@@ -241,7 +366,7 @@ export default function HomeFeed() {
             <div>
               <span className="welcome-eyebrow">Chào mừng bạn trở lại</span>
               <h1>Rất vui được gặp lại, {displayName} ✨</h1>
-              <p>Hôm nay bạn muốn chia sẻ điều gì với cộng đồng?</p>
+              <p>Hôm nay bạn thế nào?</p>
             </div>
             <button type="button" className="welcome-dismiss" onClick={dismissWelcome} aria-label="Đóng lời chào">
               ×

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { forgetAccount, getRememberedAccount, rememberAccount } from '../services/rememberedAccount'
 import ThemeToggle from '../components/ThemeToggle'
+import { getSurvey } from '../services/surveyService'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -47,7 +48,13 @@ export default function Login() {
       } else {
         forgetAccount()
       }
-      navigate(from, { replace: true })
+      let destination = from
+      try {
+        if (!(await getSurvey())) destination = '/survey'
+      } catch (surveyError) {
+        console.error('Không thể kiểm tra trạng thái khảo sát sau đăng nhập:', surveyError)
+      }
+      navigate(destination, { replace: true })
     } catch (err) {
       if (err.response && err.response.data) {
         const detail = err.response.data.detail

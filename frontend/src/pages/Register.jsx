@@ -4,9 +4,11 @@ import api from '../services/api'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { rememberAccount } from '../services/rememberedAccount'
 import ThemeToggle from '../components/ThemeToggle'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Register() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -46,10 +48,13 @@ export default function Register() {
         rememberAccount(form.email)
       }
       setSuccess(true)
-      // Chuyển hướng sau 1.5 giây
-      setTimeout(() => {
-        navigate('/login')
-      }, 1500)
+      try {
+        await login(form.email, form.password)
+        navigate('/survey', { replace: true })
+      } catch (loginError) {
+        console.error('Không thể tự động đăng nhập sau khi tạo tài khoản:', loginError)
+        setError('Tài khoản đã được tạo nhưng chưa thể đăng nhập tự động. Vui lòng đăng nhập để làm khảo sát.')
+      }
     } catch (err) {
       if (err.response && err.response.data) {
         const detail = err.response.data.detail
@@ -117,7 +122,7 @@ export default function Register() {
         {error && <div className="alert alert-error">⚠️ {error}</div>}
         {success && (
           <div className="alert alert-success">
-            ✓ Đăng ký thành công! Đang chuyển hướng sang đăng nhập...
+            ✓ Đăng ký thành công!
           </div>
         )}
 

@@ -284,6 +284,14 @@ function Survey() {
     return (
       <div className="survey-page">
         <Navbar />
+        <button
+          type="button"
+          className="survey-page-close"
+          onClick={() => navigate('/home')}
+          aria-label="Đóng khảo sát"
+        >
+          ×
+        </button>
         <p style={{ color: '#6b7280' }}>Đang tải khảo sát...</p>
       </div>
     )
@@ -292,6 +300,14 @@ function Survey() {
   return (
     <div className="survey-page">
       <Navbar />
+      <button
+        type="button"
+        className="survey-page-close"
+        onClick={() => navigate('/home')}
+        aria-label="Đóng khảo sát"
+      >
+        ×
+      </button>
       <div className="card" style={{ maxWidth: '620px', padding: '36px' }}>
         {/* Progress Bar */}
         <div style={{ marginBottom: '24px' }}>

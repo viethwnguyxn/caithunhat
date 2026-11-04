@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { getSurvey } from '../services/surveyService'
 
 export default function GoogleLoginButton({ onError }) {
   const { loginWithGoogle } = useAuth()
@@ -57,7 +58,13 @@ export default function GoogleLoginButton({ onError }) {
     setLoading(true)
     try {
       await loginWithGoogle(idToken)
-      navigate('/home', { replace: true })
+      let destination = '/home'
+      try {
+        if (!(await getSurvey())) destination = '/survey'
+      } catch (surveyError) {
+        console.error('Không thể kiểm tra trạng thái khảo sát sau đăng nhập Google:', surveyError)
+      }
+      navigate(destination, { replace: true })
     } catch (err) {
       console.error('Google login failed:', err)
       const msg = err.response?.data?.detail || 'Đăng nhập bằng Google thất bại.'

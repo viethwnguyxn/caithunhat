@@ -417,8 +417,6 @@ function Discover() {
               Bạn chưa làm khảo sát Onboarding
             </h2>
             <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-              La Pulga sử dụng thuật toán TF-IDF & Cosine Similarity để phân tích sở thích, mục tiêu và hoàn cảnh của bạn nhằm gợi ý những người bạn đồng điệu nhất.
-              <br />
               Hãy dành 1–2 phút hoàn thành bài khảo sát ngắn để mở khóa danh sách gợi ý kết đôi nhé!
             </p>
             <Link to="/survey">
