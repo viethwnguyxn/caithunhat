@@ -21,6 +21,8 @@ export default function GoogleLoginButton({ onError }) {
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredentialResponse,
+          auto_select: false,
+          button_auto_select: false,
         })
 
         if (buttonRef.current) {

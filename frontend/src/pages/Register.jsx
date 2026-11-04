@@ -1,11 +1,15 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Register() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const transitionClass = location.state?.authTransition === 'login-to-register'
+    ? ' lp-auth-transition-from-login'
+    : ''
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -43,7 +47,7 @@ export default function Register() {
       setSuccess(true)
       // Chuyển hướng sau 1.5 giây
       setTimeout(() => {
-        navigate('/login')
+        navigate('/login', { state: { authTransition: 'register-to-login' } })
       }, 1500)
     } catch (err) {
       if (err.response && err.response.data) {
@@ -64,7 +68,7 @@ export default function Register() {
   }
 
   return (
-    <main className="lp-auth-page lp-register-page">
+    <main className={`lp-auth-page lp-register-page${transitionClass}`}>
       <section className="lp-auth-panel">
         <div className="lp-auth-form-wrap lp-auth-register-wrap">
           <Link to="/" className="lp-auth-brand lp-auth-register-brand"><img src={brandMark} alt="" className="lp-auth-mark" /><span>La Pulga</span></Link>
@@ -81,7 +85,7 @@ export default function Register() {
           </form>
           <div className="lp-auth-divider"><span>hoặc tiếp tục với</span></div>
           <GoogleLoginButton onError={(msg) => setError(msg)} />
-          <p className="lp-auth-footer">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
+          <p className="lp-auth-footer">Đã có tài khoản? <Link to="/login" state={{ authTransition: 'register-to-login' }}>Đăng nhập</Link></p>
           <Link to="/" className="lp-auth-back">← Quay lại trang chủ</Link>
         </div>
       </section>

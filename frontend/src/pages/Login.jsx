@@ -8,6 +8,9 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
+  const transitionClass = location.state?.authTransition === 'register-to-login'
+    ? ' lp-auth-transition-from-register'
+    : ''
   const [form, setForm] = useState({ account: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -41,7 +44,7 @@ export default function Login() {
   }
 
   return (
-    <main className="lp-login-screen">
+    <main className={`lp-login-screen${transitionClass}`}>
       <div className="lp-login-shell">
         <section className="lp-login-form-panel">
           <div className="lp-login-form-inner">
@@ -70,7 +73,7 @@ export default function Login() {
               <button type="submit" className="lp-login-submit" disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <span>→</span></button>
             </form>
 
-            <p className="lp-login-signup">Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+            <p className="lp-login-signup">Chưa có tài khoản? <Link to="/register" state={{ authTransition: 'login-to-register' }}>Đăng ký ngay</Link></p>
             <div className="lp-login-legal"><span>Điều khoản dịch vụ</span><i>·</i><span>Chính sách bảo mật</span><i>·</i><span>Trợ giúp</span></div>
           </div>
         </section>
