@@ -225,6 +225,56 @@ def migrate_survey_answer_schema():
 migrate_survey_answer_schema()
 
 
+def migrate_profile_schema():
+    if not inspect(engine).has_table("profiles"):
+        return
+
+    columns = {
+        column["name"] for column in inspect(engine).get_columns("profiles")
+    }
+    required_identity_columns = {"id", "user_id"}
+    if missing_identity_columns := required_identity_columns - columns:
+        raise RuntimeError(
+            "Cannot safely migrate profiles; missing identity columns: "
+            + ", ".join(sorted(missing_identity_columns))
+        )
+
+    table = Profile.__table__
+    preparer = engine.dialect.identifier_preparer
+    with engine.begin() as conn:
+        for column in table.columns:
+            if column.name in columns:
+                continue
+            column_type = column.type.compile(dialect=engine.dialect)
+            definition = (
+                f"ALTER TABLE {preparer.quote(table.name)} "
+                f"ADD COLUMN {preparer.quote(column.name)} {column_type}"
+            )
+            if not column.nullable:
+                if column.name not in {"created_at", "updated_at"}:
+                    raise RuntimeError(
+                        f"Cannot safely migrate required profiles column: {column.name}"
+                    )
+                if engine.dialect.name == "sqlite":
+                    definition += " NOT NULL DEFAULT '1970-01-01 00:00:00'"
+                else:
+                    definition += " NOT NULL DEFAULT CURRENT_TIMESTAMP"
+            conn.execute(text(definition))
+
+        if engine.dialect.name == "sqlite":
+            for field in ("created_at", "updated_at"):
+                if field not in columns:
+                    conn.execute(
+                        text(
+                            f"UPDATE profiles "
+                            f"SET {preparer.quote(field)} = CURRENT_TIMESTAMP"
+                        )
+                    )
+
+
+migrate_profile_schema()
+
+
 def ensure_admin_user():
     """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại (đọc từ biến môi trường)."""
     with SessionLocal() as db:
