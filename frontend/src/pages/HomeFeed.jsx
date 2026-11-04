@@ -15,7 +15,50 @@ const MOODS = [
   '🎯 Tập trung',
 ]
 
-const WELCOME_STORAGE_PREFIX = 'lapulga_welcome_dismissed_'
+const RELAXATION_REELS = [
+  {
+    id: 'breathing',
+    icon: '🌬️',
+    title: 'Thở chậm cùng mình',
+    duration: '1 phút',
+    description: 'Thả lỏng vai, hít vào nhẹ nhàng rồi thở ra chậm hơn.',
+    steps: ['Ngồi thoải mái và đặt hai chân vững trên sàn.', 'Hít vào bằng mũi trong 4 nhịp.', 'Thở ra chậm trong 6 nhịp. Lặp lại nhẹ nhàng trong một phút.'],
+  },
+  {
+    id: 'grounding',
+    icon: '🌱',
+    title: 'Trở về với hiện tại',
+    duration: '2 phút',
+    description: 'Dùng giác quan để neo mình lại với khoảnh khắc này.',
+    steps: ['Nhìn quanh và gọi tên 5 thứ bạn thấy.', 'Chạm vào 4 thứ gần bạn, để ý cảm giác của chúng.', 'Lắng nghe 3 âm thanh và thả lỏng hàm, vai.'],
+  },
+  {
+    id: 'stretch',
+    icon: '🙆',
+    title: 'Thả lỏng vai gáy',
+    duration: '1 phút',
+    description: 'Một vài chuyển động nhỏ để cơ thể bớt căng cứng.',
+    steps: ['Hạ vai xuống và xoay vai chậm 5 vòng.', 'Nghiêng đầu nhẹ sang mỗi bên, không kéo căng.', 'Duỗi hai tay lên cao rồi thả lỏng theo nhịp thở.'],
+  },
+  {
+    id: 'kindness',
+    icon: '💚',
+    title: 'Một lời tử tế với mình',
+    duration: '30 giây',
+    description: 'Tạm dừng và nói với bản thân điều bạn cần nghe.',
+    steps: ['Đặt tay lên ngực nếu thấy thoải mái.', 'Nghĩ về một điều nhỏ bạn đã cố gắng hôm nay.', 'Nhắc mình: “Mình đang làm tốt nhất có thể, từng chút một.”'],
+  },
+  {
+    id: 'pause',
+    icon: '☁️',
+    title: 'Nghỉ mắt một chút',
+    duration: '1 phút',
+    description: 'Rời màn hình và cho đôi mắt khoảng nghỉ ngắn.',
+    steps: ['Nhìn ra xa khỏi màn hình.', 'Chớp mắt chậm vài lần và để ánh nhìn dịu lại.', 'Uống một ngụm nước, hít thở tự nhiên rồi quay lại khi sẵn sàng.'],
+  },
+]
+
+const WELCOME_DISMISSED_PREFIX = 'lapulga_welcome_dismissed_'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -29,7 +72,7 @@ function formatTimeAgo(dateString) {
 }
 
 export default function HomeFeed() {
-  const { user } = useAuth()
+  const { user, loginEventId } = useAuth()
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [content, setContent] = useState('')
@@ -37,9 +80,18 @@ export default function HomeFeed() {
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
-  const [welcomeVisible, setWelcomeVisible] = useState(
-    () => !localStorage.getItem(`${WELCOME_STORAGE_PREFIX}${user?.id ?? 'guest'}`)
-  )
+  const [welcomeVisible, setWelcomeVisible] = useState(false)
+  const [activeReel, setActiveReel] = useState(null)
+  const welcomeDismissedKey = `${WELCOME_DISMISSED_PREFIX}${user?.id ?? 'guest'}`
+
+  useEffect(() => {
+    if (
+      loginEventId > 0 &&
+      sessionStorage.getItem(welcomeDismissedKey) !== String(loginEventId)
+    ) {
+      setWelcomeVisible(true)
+    }
+  }, [loginEventId, welcomeDismissedKey])
 
   const loadFeed = async () => {
     setLoading(true)
@@ -71,7 +123,7 @@ export default function HomeFeed() {
   }, [])
 
   const dismissWelcome = () => {
-    localStorage.setItem(`${WELCOME_STORAGE_PREFIX}${user?.id ?? 'guest'}`, 'true')
+    sessionStorage.setItem(welcomeDismissedKey, String(loginEventId))
     setWelcomeVisible(false)
   }
 
@@ -139,6 +191,51 @@ export default function HomeFeed() {
     <div className="home-feed-page">
       <Navbar />
       <main className="home-feed">
+        <section className="reels-section" aria-labelledby="reels-title">
+          <div className="reels-heading">
+            <div>
+              <span className="reels-eyebrow">Chăm sóc bản thân</span>
+              <h1 id="reels-title">Một phút dịu lại 🌿</h1>
+              <p>Bài tập nhỏ để thư giãn và giải tỏa căng thẳng — chọn một thẻ để bắt đầu.</p>
+            </div>
+            <span className="reels-swipe-hint">Lướt để khám phá →</span>
+          </div>
+          <div className="reels-carousel" aria-label="Các bài tập thư giãn">
+            {RELAXATION_REELS.map((reel) => (
+              <button
+                type="button"
+                key={reel.id}
+                className={`reel-card${activeReel?.id === reel.id ? ' is-active' : ''}`}
+                onClick={() => setActiveReel(activeReel?.id === reel.id ? null : reel)}
+                aria-pressed={activeReel?.id === reel.id}
+              >
+                <span className="reel-card-icon" aria-hidden="true">{reel.icon}</span>
+                <span className="reel-card-title">{reel.title}</span>
+                <span className="reel-card-description">{reel.description}</span>
+                <span className="reel-card-duration">{reel.duration} · Bắt đầu →</span>
+              </button>
+            ))}
+          </div>
+          {activeReel && (
+            <article className="reel-exercise" aria-live="polite">
+              <button
+                type="button"
+                className="reel-exercise-close"
+                onClick={() => setActiveReel(null)}
+                aria-label="Đóng bài tập"
+              >
+                ×
+              </button>
+              <span>{activeReel.icon} {activeReel.duration}</span>
+              <h2>{activeReel.title}</h2>
+              <ol>
+                {activeReel.steps.map((step) => <li key={step}>{step}</li>)}
+              </ol>
+              <p>Hãy dừng lại nếu bạn thấy không thoải mái. Bạn có thể quay lại bất cứ lúc nào.</p>
+            </article>
+          )}
+        </section>
+
         {welcomeVisible && (
           <section className="welcome-banner" aria-label="Lời chào">
             <div>

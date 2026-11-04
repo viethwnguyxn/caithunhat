@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Home from './pages/HomeFeed'
 import Profile from './pages/Profile'
+import Activity from './pages/Activity'
 import Survey from './pages/Survey'
 import Discover from './pages/Discover'
 import Communities from './pages/Communities'
@@ -70,6 +71,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <ProtectedRoute>
+                    <Activity />
                   </ProtectedRoute>
                 }
               />

@@ -137,8 +137,10 @@ export default function NotificationBell() {
     // Điều hướng tương ứng
     switch (notif.type) {
       case 'connection_request':
+        navigate('/connections?tab=received')
+        break
       case 'connection_accepted':
-        navigate('/connections')
+        navigate('/connections?tab=connections')
         break
       case 'message':
         if (notif.related_id) {
@@ -421,4 +423,3 @@ export default function NotificationBell() {
     </div>
   )
 }
-

@@ -42,7 +42,7 @@ export default function Profile() {
       }
     }
     loadData()
-  }, [])
+  }, [user?.id])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -85,7 +85,7 @@ export default function Profile() {
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
-              <h1 style={{ fontSize: '24px', margin: 0, color: '#1a1a2e' }}>Hồ sơ cá nhân</h1>
+              <h1 style={{ fontSize: '24px', margin: 0, color: '#1a1a2e' }}>Thông tin cá nhân</h1>
               <p style={{ color: '#6b7280', fontSize: '13.5px', margin: '4px 0 0 0' }}>
                 Thông tin công khai hiển thị với bạn bè và cộng đồng La Pulga
               </p>

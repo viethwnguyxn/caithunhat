@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(localStorage.getItem('access_token'))
   const [loading, setLoading] = useState(true)
+  const [loginEventId, setLoginEventId] = useState(0)
 
   useEffect(() => {
     async function loadUser() {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }) {
       headers: { Authorization: `Bearer ${access_token}` },
     })
     setUser(userRes.data)
+    setLoginEventId((current) => current + 1)
     return userRes.data
   }
 
@@ -53,6 +55,7 @@ export function AuthProvider({ children }) {
       headers: { Authorization: `Bearer ${access_token}` },
     })
     setUser(userRes.data)
+    setLoginEventId((current) => current + 1)
     return userRes.data
   }
 
@@ -63,7 +66,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, logout, loginEventId }}>
       {children}
     </AuthContext.Provider>
   )

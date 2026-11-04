@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './NotificationBell'
@@ -9,22 +10,28 @@ const NAV_ITEMS = [
   { path: '/connections', label: 'Bạn bè', icon: '♧' },
   { path: '/messages', label: 'Tin nhắn', icon: '▤' },
   { path: '/communities', label: 'Nhóm cộng đồng', icon: '♧' },
-  { path: '/profile', label: 'Trang cá nhân', icon: '◯' },
+  { path: '/activity', label: 'Trang cá nhân', icon: '◯' },
 ]
 
 export default function Navbar() {
   const { user } = useAuth()
   const location = useLocation()
+  const [introOpen, setIntroOpen] = useState(false)
   return (
     <div className="app-shell">
       <header className="app-topbar">
-        <Link className="app-brand" to="/" aria-label="La Pulga - Giới thiệu">
+        <button
+          type="button"
+          className="app-brand app-brand-button"
+          onClick={() => setIntroOpen(true)}
+          aria-label="Giới thiệu về La Pulga"
+        >
           <img className="app-brand-mark" src="/logo-lapulga.png" alt="" />
           <span className="app-brand-copy">
             <strong>La Pulga</strong>
             <small>Tâm sự &amp; Chữa lành</small>
           </span>
-        </Link>
+        </button>
 
         <label className="app-search">
           <span aria-hidden="true">⌕</span>
@@ -32,9 +39,12 @@ export default function Navbar() {
         </label>
 
         <nav className="app-topnav" aria-label="Điều hướng chính">
-          {[...NAV_ITEMS, ...(user?.role === 'admin'
-            ? [{ path: '/admin', label: 'Quản trị', icon: '⚙' }]
-            : [])].map((item) => (
+          {[
+            ...NAV_ITEMS,
+            ...(user?.role === 'admin'
+              ? [{ path: '/admin', label: 'Quản trị', icon: '⚙' }]
+              : []),
+          ].map((item) => (
             <Link
               key={item.path}
               to={item.path}
@@ -50,16 +60,44 @@ export default function Navbar() {
             <span aria-hidden="true">✦</span>
             Khảo sát tâm lý
           </Link>
-          <Link className="top-icon-link" to="/messages" aria-label="Tin nhắn" title="Tin nhắn">
-            ▤
-          </Link>
           <NotificationBell />
           <ThemeToggle className="app-theme-toggle" />
-          <Link className="app-avatar" to="/profile" title="Trang cá nhân">
+          <Link className="app-avatar" to="/profile" title="Thông tin cá nhân" aria-label="Thông tin cá nhân">
             {(user?.username || '?')[0].toUpperCase()}
           </Link>
         </div>
       </header>
+      {introOpen && (
+        <div className="intro-overlay" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setIntroOpen(false)
+        }}>
+          <section className="intro-dialog" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+            <button
+              type="button"
+              className="intro-close"
+              onClick={() => setIntroOpen(false)}
+              aria-label="Đóng giới thiệu"
+            >
+              ×
+            </button>
+            <img className="intro-logo" src="/logo-lapulga.png" alt="" />
+            <span className="intro-eyebrow">Tâm sự &amp; Chữa lành</span>
+            <h2 id="intro-title">La Pulga — nơi bạn được lắng nghe</h2>
+            <p>
+              Một cộng đồng an toàn để chia sẻ tâm sự, lưu lại cảm xúc mỗi ngày và tìm thấy
+              những người đồng điệu. Không phán xét — chỉ có sự thấu hiểu và kết nối chân thành.
+            </p>
+            <div className="intro-highlights">
+              <span>💬 Chia sẻ và đồng cảm cùng cộng đồng</span>
+              <span>🌿 Bài tập thư giãn chăm sóc tinh thần</span>
+              <span>🤝 Kết nối với những người cùng tần số</span>
+            </div>
+            <button type="button" className="home-post-button" onClick={() => setIntroOpen(false)}>
+              Tiếp tục sử dụng La Pulga
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

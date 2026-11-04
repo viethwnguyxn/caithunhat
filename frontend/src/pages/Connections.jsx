@@ -8,6 +8,7 @@ import {
   getConnectionRequests,
   acceptConnection,
   rejectConnection,
+  removeConnection,
 } from '../services/connectionService'
 
 export default function Connections() {
@@ -127,6 +128,26 @@ export default function Connections() {
     } catch (err) {
       console.error('Lỗi khi từ chối kết nối:', err)
       alert(err.response?.data?.detail || 'Không thể từ chối lời mời. Vui lòng thử lại.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRemoveFriend = async (conn) => {
+    const name = conn.user.display_name || conn.user.username
+    setOpenMenuUserId(null)
+    if (!window.confirm(`Gỡ ${name} khỏi danh sách bạn bè? Người này sẽ không nhận được thông báo.`)) {
+      return
+    }
+
+    setActionLoading(conn.id)
+    try {
+      await removeConnection(conn.id)
+      setConnections((current) => current.filter((item) => item.id !== conn.id))
+      showToast(`Đã gỡ ${name} khỏi danh sách bạn bè.`)
+    } catch (err) {
+      console.error('Lỗi khi gỡ bạn bè:', err)
+      alert(err.response?.data?.detail || 'Không thể gỡ bạn bè. Vui lòng thử lại.')
     } finally {
       setActionLoading(null)
     }
@@ -572,6 +593,33 @@ export default function Connections() {
                               >
                                 <button
                                   type="button"
+                                  disabled={actionLoading === item.id}
+                                  onClick={() => handleRemoveFriend(item)}
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    color: '#b45309',
+                                    cursor: actionLoading === item.id ? 'wait' : 'pointer',
+                                    textAlign: 'left',
+                                    opacity: actionLoading === item.id ? 0.6 : 1,
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (actionLoading !== item.id) e.currentTarget.style.backgroundColor = '#fffbeb'
+                                  }}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                >
+                                  <span>👋</span>
+                                  <span>Gỡ bạn bè</span>
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => {
                                     setOpenMenuUserId(null)
                                     setReportTargetUser(u)
@@ -972,4 +1020,3 @@ export default function Connections() {
     </div>
   )
 }
-
