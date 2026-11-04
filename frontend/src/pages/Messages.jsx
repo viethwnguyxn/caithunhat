@@ -118,7 +118,11 @@ export default function Messages() {
         if (found) {
           setActiveConversation(found)
           if (queryCall && found.partner) {
-            startCall(found.partner, queryCall === 'video')
+            startCall(
+              found.partner,
+              found.id,
+              queryCall === 'video' ? 'video' : 'audio'
+            )
           }
           return
         }
@@ -135,7 +139,11 @@ export default function Messages() {
             return prev
           })
           if (queryCall && conv.partner) {
-            startCall(conv.partner, queryCall === 'video')
+            startCall(
+              conv.partner,
+              conv.id,
+              queryCall === 'video' ? 'video' : 'audio'
+            )
           }
         } catch (err) {
           console.error('Lỗi mở hội thoại với user:', err)
@@ -256,6 +264,18 @@ export default function Messages() {
       } else {
         const sentMsg = await sendMessage(activeConversation.id, content)
         setMessages((prev) => [...prev, sentMsg])
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === activeConversation.id
+              ? { ...conversation, last_message: sentMsg }
+              : conversation
+          )
+        )
+        setActiveConversation((prev) =>
+          prev?.id === activeConversation.id
+            ? { ...prev, last_message: sentMsg }
+            : prev
+        )
         setInputText('')
       }
     } catch (err) {
@@ -505,7 +525,9 @@ export default function Messages() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => startCall(partner, false)}
+                        onClick={() =>
+                          startCall(partner, activeConversation.id, 'audio')
+                        }
                         className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#00ff88] border border-[#00ff88]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(0,255,136,0.15)]"
                         title="Gọi thoại WebRTC HD"
                       >
@@ -515,7 +537,9 @@ export default function Messages() {
 
                       <button
                         type="button"
-                        onClick={() => startCall(partner, true)}
+                        onClick={() =>
+                          startCall(partner, activeConversation.id, 'video')
+                        }
                         className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#44fb8a] border border-[#44fb8a]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(68,251,138,0.15)]"
                         title="Gọi Video WebRTC HD"
                       >
