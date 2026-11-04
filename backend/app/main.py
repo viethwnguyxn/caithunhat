@@ -136,6 +136,95 @@ def migrate_conversation_member_schema():
 migrate_conversation_member_schema()
 
 
+def migrate_survey_answer_schema():
+    if not inspect(engine).has_table("survey_answers"):
+        return
+
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("survey_answers")
+    }
+    required_identity_columns = {"id", "user_id"}
+    if missing_identity_columns := required_identity_columns - columns:
+        raise RuntimeError(
+            "Cannot safely migrate survey_answers; missing identity columns: "
+            + ", ".join(sorted(missing_identity_columns))
+        )
+
+    defaults = {
+        "age_group": "''",
+        "current_status": "''",
+        "life_situation": "''",
+        "recent_feelings": "'[]'",
+        "goals": "'[]'",
+        "community_expectations": "'[]'",
+        "topics": "'[]'",
+        "free_time_activities": "'[]'",
+        "desired_connection_types": "'[]'",
+        "preferred_mode": "''",
+        "discovery_preference": "''",
+        "created_at": "CURRENT_TIMESTAMP",
+        "updated_at": "CURRENT_TIMESTAMP",
+    }
+    table = SurveyAnswer.__table__
+    preparer = engine.dialect.identifier_preparer
+
+    with engine.begin() as conn:
+        for column in table.columns:
+            if column.name in columns:
+                continue
+            column_type = column.type.compile(dialect=engine.dialect)
+            definition = (
+                f"ALTER TABLE {preparer.quote(table.name)} "
+                f"ADD COLUMN {preparer.quote(column.name)} {column_type}"
+            )
+            if not column.nullable:
+                default = defaults.get(column.name)
+                if default is None:
+                    raise RuntimeError(
+                        f"Cannot safely migrate required survey_answers column: {column.name}"
+                    )
+                if (
+                    engine.dialect.name == "sqlite"
+                    and default == "CURRENT_TIMESTAMP"
+                ):
+                    definition += " NOT NULL DEFAULT '1970-01-01 00:00:00'"
+                else:
+                    definition += f" NOT NULL DEFAULT {default}"
+            conn.execute(text(definition))
+
+        if engine.dialect.name == "sqlite":
+            for field in ("created_at", "updated_at"):
+                if field not in columns:
+                    conn.execute(
+                        text(
+                            f"UPDATE survey_answers "
+                            f"SET {preparer.quote(field)} = CURRENT_TIMESTAMP"
+                        )
+                    )
+
+        profile_columns = (
+            {column["name"] for column in inspect(engine).get_columns("profiles")}
+            if inspect(engine).has_table("profiles")
+            else set()
+        )
+        for field in ("age_group", "current_status"):
+            if field in profile_columns:
+                conn.execute(
+                    text(
+                        f"UPDATE survey_answers AS survey "
+                        f"SET {preparer.quote(field)} = profiles.{preparer.quote(field)} "
+                        f"FROM profiles "
+                        f"WHERE profiles.user_id = survey.user_id "
+                        f"AND survey.{preparer.quote(field)} = '' "
+                        f"AND profiles.{preparer.quote(field)} IS NOT NULL"
+                    )
+                )
+
+
+migrate_survey_answer_schema()
+
+
 def ensure_admin_user():
     """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại (đọc từ biến môi trường)."""
     with SessionLocal() as db:
