@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../services/api'
 
+const FALLBACK_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+]
+
 // Bộ tạo âm thanh chuông gọi điện bằng Web Audio API an toàn, triệt tiêu tiếng tít khi ngắt máy
 class CallAudioSynthesizer {
   constructor() {
@@ -262,13 +270,24 @@ export default function CallModal({
   const initPeerConnection = async () => {
     if (peerConnectionRef.current) return peerConnectionRef.current
 
-    const { data } = await api.get('/api/calls/ice-servers')
-    if (!Array.isArray(data.ice_servers) || data.ice_servers.length === 0) {
+    let iceServers = FALLBACK_ICE_SERVERS
+    try {
+      const { data } = await api.get('/api/calls/ice-servers')
+      if (!Array.isArray(data.ice_servers) || data.ice_servers.length === 0) {
+        throw new Error('Máy chủ chưa cung cấp cấu hình kết nối cuộc gọi.')
+      }
+      iceServers = data.ice_servers
+    } catch (err) {
+      if (err.response?.status !== 404) throw err
+      console.warn('Backend chưa có API TURN; cuộc gọi sẽ thử kết nối bằng STUN.')
+    }
+
+    if (!iceServers.length) {
       throw new Error('Máy chủ chưa cung cấp cấu hình kết nối cuộc gọi.')
     }
 
     const pc = new RTCPeerConnection({
-      iceServers: data.ice_servers,
+      iceServers,
       iceCandidatePoolSize: 10,
     })
     peerConnectionRef.current = pc
