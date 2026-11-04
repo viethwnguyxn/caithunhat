@@ -65,6 +65,11 @@ def authenticate_user(db: Session, account: str, password: str) -> User:
 
     # Nếu user tạo qua Google và chưa đặt password
     if user and user.password_hash is None:
+        if user.auth_provider == "demo":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tài khoản demo chỉ dùng để minh họa, không thể đăng nhập.",
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tài khoản này được đăng ký qua Google. Vui lòng bấm 'Continue with Google'.",
