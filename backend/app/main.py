@@ -155,21 +155,6 @@ def migrate_survey_answer_schema():
             + ", ".join(sorted(missing_identity_columns))
         )
 
-    defaults = {
-        "age_group": "''",
-        "current_status": "''",
-        "life_situation": "''",
-        "recent_feelings": "'[]'",
-        "goals": "'[]'",
-        "community_expectations": "'[]'",
-        "topics": "'[]'",
-        "free_time_activities": "'[]'",
-        "desired_connection_types": "'[]'",
-        "preferred_mode": "''",
-        "discovery_preference": "''",
-        "created_at": "CURRENT_TIMESTAMP",
-        "updated_at": "CURRENT_TIMESTAMP",
-    }
     table = SurveyAnswer.__table__
     preparer = engine.dialect.identifier_preparer
 
@@ -182,28 +167,15 @@ def migrate_survey_answer_schema():
                 f"ALTER TABLE {preparer.quote(table.name)} "
                 f"ADD COLUMN {preparer.quote(column.name)} {column_type}"
             )
-            if not column.nullable:
-                default = defaults.get(column.name)
-                if default is None:
-                    raise RuntimeError(
-                        f"Cannot safely migrate required survey_answers column: {column.name}"
-                    )
-                if (
-                    engine.dialect.name == "sqlite"
-                    and default == "CURRENT_TIMESTAMP"
-                ):
-                    definition += " NOT NULL DEFAULT '1970-01-01 00:00:00'"
-                else:
-                    definition += f" NOT NULL DEFAULT {default}"
             conn.execute(text(definition))
 
-        if engine.dialect.name == "sqlite":
-            for field in ("created_at", "updated_at"):
-                if field not in columns:
+        if engine.dialect.name == "postgresql":
+            for column in inspect(engine).get_columns("survey_answers"):
+                if column["name"] not in required_identity_columns and not column["nullable"]:
                     conn.execute(
                         text(
-                            f"UPDATE survey_answers "
-                            f"SET {preparer.quote(field)} = CURRENT_TIMESTAMP"
+                            f"ALTER TABLE {preparer.quote(table.name)} "
+                            f"ALTER COLUMN {preparer.quote(column['name'])} DROP NOT NULL"
                         )
                     )
 

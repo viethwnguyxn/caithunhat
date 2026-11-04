@@ -15,38 +15,38 @@ class SurveyAnswer(Base):
     )
 
     # 1. About You
-    age_group: Mapped[str] = mapped_column(String(50), nullable=False)
-    current_status: Mapped[str] = mapped_column(String(100), nullable=False)
+    age_group: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    current_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # 2. Life Situation
-    life_situation: Mapped[str] = mapped_column(String(100), nullable=False)
-    recent_feelings: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    life_situation: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    recent_feelings: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
 
     # 3. Goals
-    goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    community_expectations: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    goals: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    community_expectations: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
 
     # 4. Interests
-    topics: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    free_time_activities: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    topics: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    free_time_activities: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
 
     # 5. Connection
-    desired_connection_types: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    preferred_mode: Mapped[str] = mapped_column(String(50), nullable=False)
-    discovery_preference: Mapped[str] = mapped_column(String(50), nullable=False)
+    desired_connection_types: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    preferred_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    discovery_preference: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # 6. Story (Optional)
     story: Mapped[str | None] = mapped_column(Text, nullable=True)
     what_you_want_others_to_understand: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=True
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
-        nullable=False,
+        nullable=True,
     )
 
     user = relationship("User", backref="survey_answer", uselist=False)
