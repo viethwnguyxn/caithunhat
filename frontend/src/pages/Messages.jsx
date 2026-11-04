@@ -1294,6 +1294,21 @@ export default function Messages() {
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
+                            {isMe && m.read_at && (
+                              <div
+                                style={{
+                                  marginTop: '2px',
+                                  color: 'rgba(255,255,255,0.9)',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Đã đọc lúc{' '}
+                                {new Date(m.read_at).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1799,4 +1814,3 @@ export default function Messages() {
     </div>
   )
 }
-
