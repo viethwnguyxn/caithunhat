@@ -65,19 +65,9 @@ export default function Register() {
 
   return (
     <main className="lp-auth-page lp-register-page">
-      <section className="lp-auth-showcase lp-register-showcase">
-        <Link to="/" className="lp-auth-brand"><img src={brandMark} alt="" className="lp-auth-mark" /><span>La Pulga</span></Link>
-        <div className="lp-auth-story">
-          <span className="lp-auth-kicker">MỘT CỘNG ĐỒNG ĐANG CHỜ BẠN</span>
-          <h1>Câu chuyện của bạn<br /><em>xứng đáng được lắng nghe.</em></h1>
-          <p>Tạo tài khoản để khám phá những người có chung cảm xúc, sở thích và trải nghiệm.</p>
-          <div className="lp-auth-orbit" aria-hidden="true"><span>✳</span><i>♡</i><b>✦</b></div>
-        </div>
-        <div className="lp-auth-bottom">La Pulga · Find your people, share your story.</div>
-      </section>
       <section className="lp-auth-panel">
         <div className="lp-auth-form-wrap lp-auth-register-wrap">
-          <Link to="/" className="lp-auth-mobile-brand"><img src={brandMark} alt="" className="lp-auth-mark" /> La Pulga</Link>
+          <Link to="/" className="lp-auth-brand lp-auth-register-brand"><img src={brandMark} alt="" className="lp-auth-mark" /><span>La Pulga</span></Link>
           <span className="lp-auth-kicker lp-auth-register-kicker">BẮT ĐẦU HÀNH TRÌNH</span>
           <h2>Tạo tài khoản</h2>
           <p className="lp-auth-intro">Gia nhập La Pulga và tìm thấy những kết nối đồng điệu.</p>
