@@ -539,19 +539,15 @@ function Discover() {
 
                       {/* Match Percentage Badge */}
                       <div
+                        className={`discover-match-badge${isHighMatch ? ' is-high-match' : ''}`}
                         style={{
                           padding: '6px 12px',
                           borderRadius: '20px',
-                          background: isHighMatch
-                            ? 'linear-gradient(135deg, #245745, #3d705c)'
-                            : '#f3f4f6',
-                          color: isHighMatch ? '#ffffff' : '#374151',
                           fontSize: '13px',
                           fontWeight: 700,
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px',
-                          boxShadow: isHighMatch ? '0 2px 8px rgba(36, 87, 69, 0.3)' : 'none',
                         }}
                       >
                         <span>{item.match_score}%</span>

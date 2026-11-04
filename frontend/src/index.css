@@ -1642,6 +1642,17 @@ button:disabled {
   text-align: center;
 }
 
+.discover-match-badge {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.discover-match-badge.is-high-match {
+  background: linear-gradient(135deg, #245745, #3d705c);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(36, 87, 69, 0.3);
+}
+
 html[data-theme='dark'] .app-topbar {
   border-color: var(--border-color);
   background: rgba(17, 24, 39, 0.96);
@@ -1685,6 +1696,16 @@ html[data-theme='dark'] .auth-layout {
 html[data-theme='dark'] .app-sidebar {
   border-color: var(--border-color);
   background: var(--bg-card);
+}
+
+html[data-theme='dark'] .discover-match-badge {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+html[data-theme='dark'] .discover-match-badge.is-high-match {
+  background: linear-gradient(135deg, #245745, #3d705c);
+  color: #ffffff;
 }
 
 html[data-theme='dark'] .sidebar-nav a {
