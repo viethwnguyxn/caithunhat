@@ -89,6 +89,46 @@ export default function Messages() {
     scrollToBottom(true)
   }, [messages])
 
+  useEffect(() => {
+    const handleGlobalMessage = (event) => {
+      const newMsg = event.detail?.message
+      if (!newMsg) return
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === newMsg.conversation_id
+            ? {
+                ...conversation,
+                last_message: newMsg,
+                unread_count:
+                  activeConversation?.id === newMsg.conversation_id
+                    ? conversation.unread_count
+                    : (conversation.unread_count || 0) + 1,
+              }
+            : conversation
+        )
+      )
+
+      if (activeConversation?.id === newMsg.conversation_id) {
+        setMessages((prev) =>
+          prev.some((message) => message.id === newMsg.id)
+            ? prev
+            : [...prev, newMsg]
+        )
+        setActiveConversation((prev) =>
+          prev?.id === newMsg.conversation_id
+            ? { ...prev, last_message: newMsg }
+            : prev
+        )
+      }
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'))
+    }
+
+    window.addEventListener('new-chat-message', handleGlobalMessage)
+    return () => window.removeEventListener('new-chat-message', handleGlobalMessage)
+  }, [activeConversation?.id])
+
   // Load conversations
   const loadConversations = async () => {
     setLoadingConversations(true)

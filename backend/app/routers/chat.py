@@ -55,7 +55,7 @@ def get_conversation_messages(
 
 
 @router.post("/api/conversations/{conversation_id}/messages", response_model=MessageResponse)
-def send_message_rest(
+async def send_message_rest(
     conversation_id: int,
     message_in: MessageCreate,
     db: Session = Depends(get_db),
@@ -73,19 +73,18 @@ def send_message_rest(
     )
     msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
 
-    # Broadcast tới các thành viên trong phòng chat
-    import asyncio
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(
-                manager.broadcast_to_conversation(
-                    conversation_id,
-                    {"type": "message", "message": msg_dict},
-                )
-            )
-    except Exception:
-        pass
+    recipient = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.conversation_id == conversation_id,
+            ConversationMember.user_id != current_user.id,
+        )
+        .first()
+    )
+    payload = {"type": "message", "message": msg_dict}
+    await manager.broadcast_to_conversation(conversation_id, payload)
+    if recipient:
+        await manager.send_to_user(recipient.user_id, payload)
 
     return new_msg
 
@@ -393,6 +392,14 @@ async def websocket_chat(
                             content=content,
                         )
                         msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
+                        recipient = (
+                            db.query(ConversationMember)
+                            .filter(
+                                ConversationMember.conversation_id == conversation_id,
+                                ConversationMember.user_id != user_id,
+                            )
+                            .first()
+                        )
                 except HTTPException as e:
                     await manager.send_personal_message(
                         {"type": "error", "message": e.detail},
@@ -406,6 +413,8 @@ async def websocket_chat(
                     "message": msg_dict,
                 }
                 await manager.broadcast_to_conversation(conversation_id, broadcast_payload)
+                if recipient:
+                    await manager.send_to_user(recipient.user_id, broadcast_payload)
 
             elif msg_type.startswith("call:"):
                 await _handle_call_signaling(data, user_id, websocket)
