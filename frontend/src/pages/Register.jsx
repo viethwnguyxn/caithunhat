@@ -63,133 +63,37 @@ export default function Register() {
   }
 
   return (
-    <div className="page">
-      <div className="card">
-        {/* Brand header */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 800,
-              fontSize: '22px',
-              color: '#7c5cbf',
-              marginBottom: '6px',
-            }}
-          >
-            <span
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-              }}
-            >
-              ◎
-            </span>
-            <span>Kindred</span>
-          </Link>
-          <h1 style={{ fontSize: '22px', margin: '4px 0', color: '#1a1a2e' }}>Tạo tài khoản mới</h1>
-          <p style={{ color: '#6b7280', fontSize: '13.5px', margin: 0 }}>
-            Bắt đầu hành trình tìm kiếm những người hiểu bạn hôm nay
-          </p>
+    <main className="lp-auth-page">
+      <section className="lp-auth-showcase">
+        <Link to="/" className="lp-auth-brand"><span className="lp-auth-mark">✳</span><span>La Pulga</span></Link>
+        <div className="lp-auth-story">
+          <span className="lp-auth-kicker">MỘT CỘNG ĐỒNG ĐANG CHỜ BẠN</span>
+          <h1>Câu chuyện của bạn<br /><em>xứng đáng được lắng nghe.</em></h1>
+          <p>Tạo tài khoản để khám phá những người có chung cảm xúc, sở thích và trải nghiệm.</p>
+          <div className="lp-auth-orbit" aria-hidden="true"><span>✳</span><i>♡</i><b>✦</b></div>
         </div>
-
-        {error && <div className="alert alert-error">⚠️ {error}</div>}
-        {success && (
-          <div className="alert alert-success">
-            ✓ Đăng ký thành công! Đang chuyển hướng sang đăng nhập...
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="reg-username">Tên đăng nhập (Username)</label>
-            <input
-              id="reg-username"
-              type="text"
-              name="username"
-              placeholder="vd: hoang_nam"
-              value={form.username}
-              onChange={handleChange}
-              minLength={3}
-              maxLength={30}
-              disabled={loading || success}
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="reg-email">Email</label>
-            <input
-              id="reg-email"
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={handleChange}
-              disabled={loading || success}
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label>
-            <div className="password-input-wrapper">
-              <input
-                id="reg-password"
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Ít nhất 8 ký tự"
-                value={form.password}
-                onChange={handleChange}
-                disabled={loading || success}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex="-1"
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showPassword ? '👁️' : '🔒'}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={loading || success}
-            style={{ marginTop: '8px' }}
-          >
-            {loading ? 'Đang xử lý...' : 'Tạo tài khoản'}
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#ede9fe' }}></div>
-          <span style={{ padding: '0 12px', fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600 }}>
-            hoặc
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#ede9fe' }}></div>
+        <div className="lp-auth-bottom">La Pulga · Find your people, share your story.</div>
+      </section>
+      <section className="lp-auth-panel">
+        <div className="lp-auth-form-wrap lp-auth-register-wrap">
+          <Link to="/" className="lp-auth-mobile-brand"><span className="lp-auth-mark">✳</span> La Pulga</Link>
+          <span className="lp-auth-kicker">BẮT ĐẦU HÀNH TRÌNH</span>
+          <h2>Tạo tài khoản</h2>
+          <p className="lp-auth-intro">Gia nhập La Pulga và tìm thấy những kết nối đồng điệu.</p>
+          {error && <div className="alert alert-error">⚠️ {error}</div>}
+          {success && <div className="alert alert-success">✓ Đăng ký thành công! Đang chuyển hướng sang đăng nhập...</div>}
+          <form onSubmit={handleSubmit} className="lp-auth-form">
+            <div className="form-group"><label htmlFor="reg-username">Tên đăng nhập</label><input id="reg-username" type="text" name="username" placeholder="vd: hoang_nam" value={form.username} onChange={handleChange} minLength={3} maxLength={30} disabled={loading || success} autoComplete="username" /></div>
+            <div className="form-group"><label htmlFor="reg-email">Email</label><input id="reg-email" type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} disabled={loading || success} autoComplete="email" /></div>
+            <div className="form-group"><label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label><div className="password-input-wrapper"><input id="reg-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Ít nhất 8 ký tự" value={form.password} onChange={handleChange} disabled={loading || success} autoComplete="new-password" /><button type="button" className="password-toggle-btn" onClick={() => setShowPassword(!showPassword)} tabIndex="-1" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? '👁️' : '🔒'}</button></div></div>
+            <button type="submit" className="lp-auth-submit" disabled={loading || success}>{loading ? 'Đang xử lý...' : 'Tạo tài khoản miễn phí'} <span>→</span></button>
+          </form>
+          <div className="lp-auth-divider"><span>hoặc tiếp tục với</span></div>
+          <GoogleLoginButton onError={(msg) => setError(msg)} />
+          <p className="lp-auth-footer">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
+          <Link to="/" className="lp-auth-back">← Quay lại trang chủ</Link>
         </div>
-
-        {/* Nút Continue with Google */}
-        <GoogleLoginButton onError={(msg) => setError(msg)} />
-
-        <p className="auth-footer">
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
-        </p>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

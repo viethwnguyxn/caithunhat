@@ -13,6 +13,7 @@ import Communities from './pages/Communities'
 import Connections from './pages/Connections'
 import Messages from './pages/Messages'
 import AdminDashboard from './pages/AdminDashboard'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -79,6 +80,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route
               path="/admin"
               element={
