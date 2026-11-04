@@ -182,7 +182,7 @@ export default function AdminDashboard() {
   // GUARD: Nếu không phải Admin
   if (user && user.role !== 'admin') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
         <Navbar />
         <div style={{ maxWidth: '520px', margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
           <div className="card" style={{ padding: '40px 24px' }}>
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px' }}>
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
               </h1>
             </div>
             <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-              Quản lý tài khoản người dùng và kiểm duyệt an toàn cộng đồng Kindred
+              Quản lý tài khoản người dùng và kiểm duyệt an toàn cộng đồng La Pulga
             </p>
           </div>
 
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
               borderRadius: '20px',
               backgroundColor: '#faf5ff',
               border: '1px solid #d8b4fe',
-              color: '#7c5cbf',
+              color: '#245745',
               fontSize: '13px',
               fontWeight: 700,
             }}
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
           }}
         >
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#f5f0ff', color: '#7c5cbf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#e1efe8', color: '#245745', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
               👥
             </div>
             <div>
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
             borderRadius: '16px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
             marginBottom: '24px',
-            border: '1px solid #ede9fe',
+            border: '1px solid #dce8e2',
             gap: '8px',
           }}
         >
@@ -338,7 +338,7 @@ export default function AdminDashboard() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'users' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'users' ? '#245745' : 'transparent',
               color: activeTab === 'users' ? '#ffffff' : '#6b7280',
               transition: 'all 0.2s ease',
             }}
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'reports' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'reports' ? '#245745' : 'transparent',
               color: activeTab === 'reports' ? '#ffffff' : '#6b7280',
               transition: 'all 0.2s ease',
             }}
@@ -454,7 +454,7 @@ export default function AdminDashboard() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #ede9fe', color: '#6b7280' }}>
+                    <tr style={{ borderBottom: '2px solid #dce8e2', color: '#6b7280' }}>
                       <th style={{ padding: '12px 14px' }}>Người dùng</th>
                       <th style={{ padding: '12px 14px' }}>Email</th>
                       <th style={{ padding: '12px 14px' }}>Vai trò</th>
@@ -473,7 +473,7 @@ export default function AdminDashboard() {
                             borderBottom: '1px solid #f3f4f6',
                             transition: 'background 0.15s ease',
                           }}
-                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#faf9fe')}
+                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f7f4')}
                           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
                           <td style={{ padding: '12px 14px' }}>
@@ -489,12 +489,12 @@ export default function AdminDashboard() {
                                   height: '36px',
                                   borderRadius: '50%',
                                   objectFit: 'cover',
-                                  border: '1.5px solid #7c5cbf',
+                                  border: '1.5px solid #245745',
                                 }}
                               />
                               <div>
                                 <div style={{ fontWeight: 700, color: '#1a1a2e' }}>
-                                  {u.display_name || u.username} {isMe && <span style={{ color: '#7c5cbf', fontSize: '11px' }}>(Tôi)</span>}
+                                  {u.display_name || u.username} {isMe && <span style={{ color: '#245745', fontSize: '11px' }}>(Tôi)</span>}
                                 </div>
                                 <div style={{ color: '#6b7280', fontSize: '12px' }}>@{u.username}</div>
                               </div>
@@ -511,7 +511,7 @@ export default function AdminDashboard() {
                                   borderRadius: '8px',
                                   backgroundColor: '#faf5ff',
                                   border: '1px solid #d8b4fe',
-                                  color: '#7c5cbf',
+                                  color: '#245745',
                                   fontSize: '11px',
                                   fontWeight: 700,
                                 }}
@@ -626,9 +626,9 @@ export default function AdminDashboard() {
                     padding: '8px 14px',
                     borderRadius: '10px',
                     border: '1px solid',
-                    borderColor: reportStatusFilter === tab.key ? '#7c5cbf' : '#e5e7eb',
-                    backgroundColor: reportStatusFilter === tab.key ? '#f5f0ff' : '#ffffff',
-                    color: reportStatusFilter === tab.key ? '#7c5cbf' : '#4b5563',
+                    borderColor: reportStatusFilter === tab.key ? '#245745' : '#e5e7eb',
+                    backgroundColor: reportStatusFilter === tab.key ? '#e1efe8' : '#ffffff',
+                    color: reportStatusFilter === tab.key ? '#245745' : '#4b5563',
                     fontSize: '13px',
                     fontWeight: reportStatusFilter === tab.key ? 700 : 500,
                     cursor: 'pointer',
@@ -662,7 +662,7 @@ export default function AdminDashboard() {
                         padding: '18px',
                         borderRadius: '14px',
                         border: '1px solid #f3f4f6',
-                        backgroundColor: isPending ? '#faf8ff' : '#ffffff',
+                        backgroundColor: isPending ? '#f1f7f3' : '#ffffff',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '12px',

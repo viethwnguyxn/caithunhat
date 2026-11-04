@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile, updateProfile } from '../services/profileService'
 import Navbar from '../components/Navbar'
 
 export default function Profile() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [form, setForm] = useState({
     display_name: '',
     avatar_url: '',
@@ -41,7 +42,7 @@ export default function Profile() {
       }
     }
     loadData()
-  }, [])
+  }, [user?.id])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -66,12 +67,17 @@ export default function Profile() {
     }
   }
 
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   const avatarSrc =
     form.avatar_url ||
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '36px 16px 64px' }}>
@@ -79,20 +85,20 @@ export default function Profile() {
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
-              <h1 style={{ fontSize: '24px', margin: 0, color: '#1a1a2e' }}>Hồ sơ cá nhân</h1>
+              <h1 style={{ fontSize: '24px', margin: 0, color: '#1a1a2e' }}>Thông tin cá nhân</h1>
               <p style={{ color: '#6b7280', fontSize: '13.5px', margin: '4px 0 0 0' }}>
-                Thông tin công khai hiển thị với bạn bè và cộng đồng Kindred
+                Thông tin công khai hiển thị với bạn bè và cộng đồng La Pulga
               </p>
             </div>
             <Link
               to="/discover"
               style={{
                 fontSize: '13px',
-                color: '#7c5cbf',
+                color: '#245745',
                 fontWeight: 700,
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#f5f0ff',
+                backgroundColor: '#e1efe8',
               }}
             >
               Khám phá →
@@ -114,9 +120,9 @@ export default function Profile() {
               alignItems: 'center',
               gap: '18px',
               padding: '16px',
-              backgroundColor: '#faf9fe',
+              backgroundColor: '#f3f7f4',
               borderRadius: '16px',
-              border: '1px solid #ede9fe',
+              border: '1px solid #dce8e2',
               marginBottom: '24px',
             }}
           >
@@ -128,9 +134,9 @@ export default function Profile() {
                 height: '64px',
                 borderRadius: '50%',
                 objectFit: 'cover',
-                border: '2px solid #7c5cbf',
+                border: '2px solid #245745',
                 backgroundColor: '#ffffff',
-                boxShadow: '0 2px 8px rgba(124, 92, 191, 0.2)',
+                boxShadow: '0 2px 8px rgba(36, 87, 69, 0.2)',
               }}
               onError={(e) => {
                 e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
@@ -247,8 +253,8 @@ export default function Profile() {
               marginTop: '28px',
               padding: '20px',
               borderRadius: '16px',
-              border: '1.5px solid #ede9fe',
-              backgroundColor: '#faf8ff',
+              border: '1.5px solid #dce8e2',
+              backgroundColor: '#f1f7f3',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -276,14 +282,24 @@ export default function Profile() {
                 alignItems: 'center',
                 gap: '6px',
                 backgroundColor: '#ffffff',
-                border: '1.5px solid #7c5cbf',
-                color: '#7c5cbf',
+                border: '1.5px solid #245745',
+                color: '#245745',
                 transition: 'all 0.2s ease',
               }}
             >
               ✏️ Cập nhật Khảo sát
             </Link>
           </div>
+
+          <section className="profile-account-settings">
+            <div>
+              <h3>Thông tin tài khoản</h3>
+              <p>@{user?.username} · {user?.email}</p>
+            </div>
+            <button type="button" onClick={handleLogout}>
+              Đăng xuất
+            </button>
+          </section>
         </div>
       </div>
     </div>

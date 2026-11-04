@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import GoogleLoginButton from '../components/GoogleLoginButton'
+import { rememberAccount } from '../services/rememberedAccount'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -10,6 +12,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [rememberAccountOnDevice, setRememberAccountOnDevice] = useState(true)
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -39,6 +42,9 @@ export default function Register() {
     setLoading(true)
     try {
       await api.post('/api/auth/register', form)
+      if (rememberAccountOnDevice) {
+        rememberAccount(form.email)
+      }
       setSuccess(true)
       // Chuyển hướng sau 1.5 giây
       setTimeout(() => {
@@ -63,8 +69,28 @@ export default function Register() {
   }
 
   return (
-    <div className="page">
-      <div className="card">
+    <div className="page auth-screen">
+      <main className="auth-layout">
+        <ThemeToggle className="auth-theme-toggle" />
+        <section className="auth-story">
+          <div>
+            <span className="auth-story-badge">✦ Nơi mọi cảm xúc đều được lắng nghe</span>
+            <h1>Chào mừng bạn đến với <span>La Pulga</span></h1>
+            <p>
+              Không phán xét, không định kiến. Tìm thấy những tâm hồn đồng điệu và tự do sống thật
+              với chính mình.
+            </p>
+            <div className="auth-benefits">
+              <span>Ẩn danh an toàn, bảo mật dữ liệu riêng tư</span>
+              <span>Kết nối bạn bè đồng điệu theo cảm xúc</span>
+              <span>Chia sẻ câu chuyện trong không gian an yên</span>
+            </div>
+          </div>
+          <blockquote className="auth-quote">
+            “Đôi khi, chỉ cần có người lắng nghe cũng đủ khiến một ngày trở nên nhẹ nhàng hơn.”
+          </blockquote>
+        </section>
+        <div className="card auth-card">
         {/* Brand header */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <Link
@@ -75,26 +101,12 @@ export default function Register() {
               gap: '8px',
               fontWeight: 800,
               fontSize: '22px',
-              color: '#7c5cbf',
+              color: '#245745',
               marginBottom: '6px',
             }}
           >
-            <span
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-              }}
-            >
-              ◎
-            </span>
-            <span>Kindred</span>
+            <img className="auth-logo" src="/logo-lapulga.png" alt="" />
+            <span>La Pulga</span>
           </Link>
           <h1 style={{ fontSize: '22px', margin: '4px 0', color: '#1a1a2e' }}>Tạo tài khoản mới</h1>
           <p style={{ color: '#6b7280', fontSize: '13.5px', margin: 0 }}>
@@ -165,6 +177,16 @@ export default function Register() {
             </div>
           </div>
 
+          <label className="remember-account">
+            <input
+              type="checkbox"
+              checked={rememberAccountOnDevice}
+              onChange={(e) => setRememberAccountOnDevice(e.target.checked)}
+              disabled={loading || success}
+            />
+            <span>Lưu email trên thiết bị này để đăng nhập nhanh (không lưu mật khẩu)</span>
+          </label>
+
           <button
             type="submit"
             className="btn-primary"
@@ -176,11 +198,11 @@ export default function Register() {
         </form>
 
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#ede9fe' }}></div>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#dce8e2' }}></div>
           <span style={{ padding: '0 12px', fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600 }}>
             hoặc
           </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#ede9fe' }}></div>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#dce8e2' }}></div>
         </div>
 
         {/* Nút Continue with Google */}
@@ -189,7 +211,8 @@ export default function Register() {
         <p className="auth-footer">
           Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
         </p>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

@@ -1,264 +1,103 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './NotificationBell'
+import ThemeToggle from './ThemeToggle'
+
+const NAV_ITEMS = [
+  { path: '/home', label: 'Trang chủ', icon: '⌂' },
+  { path: '/discover', label: 'Khám phá', icon: '◉' },
+  { path: '/connections', label: 'Bạn bè', icon: '♧' },
+  { path: '/messages', label: 'Tin nhắn', icon: '▤' },
+  { path: '/communities', label: 'Nhóm cộng đồng', icon: '♧' },
+  { path: '/activity', label: 'Trang cá nhân', icon: '◯' },
+]
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  const isActive = (path) => location.pathname === path
-
-  const navItems = [
-    { path: '/home', label: 'Trang chủ', icon: '🏠' },
-    { path: '/discover', label: 'Khám phá', icon: '✨' },
-    { path: '/communities', label: 'Cộng đồng', icon: '🌟' },
-    { path: '/connections', label: 'Kết nối', icon: '🤝' },
-    { path: '/messages', label: 'Tin nhắn', icon: '💬' },
-    { path: '/profile', label: 'Hồ sơ', icon: '👤' },
-    ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Quản trị', icon: '⚙️' }] : []),
-  ]
-
+  const [introOpen, setIntroOpen] = useState(false)
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        backgroundColor: 'rgba(255, 255, 255, 0.92)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        borderBottom: '1px solid #ede9fe',
-        boxShadow: '0 2px 10px rgba(124, 92, 191, 0.04)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 20px',
-          height: '64px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Logo */}
-        <Link
-          to="/home"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: 800,
-            fontSize: '20px',
-            color: '#7c5cbf',
-            letterSpacing: '-0.5px',
-          }}
+    <div className="app-shell">
+      <header className="app-topbar">
+        <button
+          type="button"
+          className="app-brand app-brand-button"
+          onClick={() => setIntroOpen(true)}
+          aria-label="Giới thiệu về La Pulga"
         >
-          <span
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-            }}
-          >
-            ◎
+          <img className="app-brand-mark" src="/logo-lapulga.png" alt="" />
+          <span className="app-brand-copy">
+            <strong>La Pulga</strong>
+            <small>Tâm sự &amp; Chữa lành</small>
           </span>
-          <span>Kindred</span>
-        </Link>
+        </button>
 
-        {/* Desktop Navigation Links */}
-        <nav className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {navItems.map((item) => {
-            const active = isActive(item.path)
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '10px',
-                  fontSize: '13.5px',
-                  fontWeight: active ? 700 : 500,
-                  color: active ? '#7c5cbf' : '#4b5563',
-                  backgroundColor: active ? '#f5f0ff' : 'transparent',
-                  border: active ? '1px solid #ede9fe' : '1px solid transparent',
-                  transition: 'all 0.15s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
+        <label className="app-search">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Tìm kiếm nhóm & cộng đồng..." />
+        </label>
+
+        <nav className="app-topnav" aria-label="Điều hướng chính">
+          {[
+            ...NAV_ITEMS,
+            ...(user?.role === 'admin'
+              ? [{ path: '/admin', label: 'Quản trị', icon: '⚙' }]
+              : []),
+          ].map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={location.pathname === item.path ? 'is-active' : ''}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Right Actions: Notification Bell + User info (Desktop) / Hamburger (Mobile) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="app-top-actions">
+          <Link className="survey-shortcut" to="/survey">
+            <span aria-hidden="true">✦</span>
+            Khảo sát tâm lý
+          </Link>
           <NotificationBell />
-
-          {/* Desktop User Info & Logout */}
-          <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f5f0ff',
-                  border: '1.5px solid #7c5cbf',
-                  color: '#7c5cbf',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {(user?.username || '?')[0].toUpperCase()}
-              </span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                @{user?.username}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid #fee2e2',
-                backgroundColor: '#fff5f5',
-                color: '#ef4444',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#fecaca'
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff5f5'
-              }}
-            >
-              Đăng xuất
-            </button>
-          </div>
-
-          {/* Mobile Hamburger Toggle Button */}
-          <button
-            type="button"
-            className="nav-mobile-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              background: '#f5f0ff',
-              border: '1px solid #ede9fe',
-              color: '#7c5cbf',
-              borderRadius: '10px',
-              padding: '8px 12px',
-              fontSize: '18px',
-              cursor: 'pointer',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Toggle Navigation Menu"
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
+          <ThemeToggle className="app-theme-toggle" />
+          <Link className="app-avatar" to="/profile" title="Thông tin cá nhân" aria-label="Thông tin cá nhân">
+            {(user?.username || '?')[0].toUpperCase()}
+          </Link>
         </div>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div
-          className="nav-mobile-drawer"
-          style={{
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #ede9fe',
-            padding: '16px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-            animation: 'fadeIn 0.2s ease-in-out',
-          }}
-        >
-          {navItems.map((item) => {
-            const active = isActive(item.path)
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: active ? 700 : 500,
-                  color: active ? '#7c5cbf' : '#374151',
-                  backgroundColor: active ? '#f5f0ff' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-
-          <div
-            style={{
-              borderTop: '1px solid #f3f4f6',
-              paddingTop: '12px',
-              marginTop: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>
-              Đăng nhập với @{user?.username}
-            </span>
+      </header>
+      {introOpen && (
+        <div className="intro-overlay" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setIntroOpen(false)
+        }}>
+          <section className="intro-dialog" role="dialog" aria-modal="true" aria-labelledby="intro-title">
             <button
               type="button"
-              onClick={handleLogout}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: '1px solid #fecaca',
-                backgroundColor: '#fff5f5',
-                color: '#ef4444',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="intro-close"
+              onClick={() => setIntroOpen(false)}
+              aria-label="Đóng giới thiệu"
             >
-              Đăng xuất
+              ×
             </button>
-          </div>
+            <img className="intro-logo" src="/logo-lapulga.png" alt="" />
+            <span className="intro-eyebrow">Tâm sự &amp; Chữa lành</span>
+            <h2 id="intro-title">La Pulga — nơi bạn được lắng nghe</h2>
+            <p>
+              Một cộng đồng an toàn để chia sẻ tâm sự, lưu lại cảm xúc mỗi ngày và tìm thấy
+              những người đồng điệu. Không phán xét — chỉ có sự thấu hiểu và kết nối chân thành.
+            </p>
+            <div className="intro-highlights">
+              <span>💬 Chia sẻ và đồng cảm cùng cộng đồng</span>
+              <span>🌿 Bài tập thư giãn chăm sóc tinh thần</span>
+              <span>🤝 Kết nối với những người cùng tần số</span>
+            </div>
+            <button type="button" className="home-post-button" onClick={() => setIntroOpen(false)}>
+              Tiếp tục sử dụng La Pulga
+            </button>
+          </section>
         </div>
       )}
-    </header>
+    </div>
   )
 }

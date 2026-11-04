@@ -341,7 +341,7 @@ export default function Communities() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
       <Navbar />
 
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 16px 64px' }}>
@@ -354,9 +354,9 @@ export default function Communities() {
               gap: '6px',
               padding: '4px 14px',
               borderRadius: '20px',
-              backgroundColor: '#f5f0ff',
-              border: '1px solid #ede9fe',
-              color: '#7c5cbf',
+              backgroundColor: '#e1efe8',
+              border: '1px solid #dce8e2',
+              color: '#245745',
               fontSize: '13px',
               fontWeight: 700,
               marginBottom: '12px',
@@ -366,7 +366,7 @@ export default function Communities() {
           </div>
 
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Kết nối cùng những người <span style={{ color: '#7c5cbf' }}>chung đam mê</span>
+            Kết nối cùng những người <span style={{ color: '#245745' }}>chung đam mê</span>
           </h1>
           <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '600px', margin: '0 auto' }}>
             Đọc bài viết chia sẻ, thảo luận tâm tư và tham gia các nhóm cộng đồng ấm áp.
@@ -403,7 +403,7 @@ export default function Communities() {
         <div
           style={{
             display: 'flex',
-            backgroundColor: '#ede9fe',
+            backgroundColor: '#dce8e2',
             padding: '4px',
             borderRadius: '14px',
             marginBottom: '24px',
@@ -419,7 +419,7 @@ export default function Communities() {
               padding: '10px 18px',
               borderRadius: '10px',
               border: 'none',
-              backgroundColor: activeTab === 'feed' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'feed' ? '#245745' : 'transparent',
               color: activeTab === 'feed' ? '#ffffff' : '#4b5563',
               fontSize: '14px',
               fontWeight: 700,
@@ -429,7 +429,7 @@ export default function Communities() {
               justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'feed' ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
+              boxShadow: activeTab === 'feed' ? '0 2px 8px rgba(36, 87, 69, 0.3)' : 'none',
             }}
           >
             <span>📰</span>
@@ -444,7 +444,7 @@ export default function Communities() {
               padding: '10px 18px',
               borderRadius: '10px',
               border: 'none',
-              backgroundColor: activeTab === 'groups' ? '#7c5cbf' : 'transparent',
+              backgroundColor: activeTab === 'groups' ? '#245745' : 'transparent',
               color: activeTab === 'groups' ? '#ffffff' : '#4b5563',
               fontSize: '14px',
               fontWeight: 700,
@@ -454,7 +454,7 @@ export default function Communities() {
               justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'groups' ? '0 2px 8px rgba(124, 92, 191, 0.3)' : 'none',
+              boxShadow: activeTab === 'groups' ? '0 2px 8px rgba(36, 87, 69, 0.3)' : 'none',
             }}
           >
             <span>👥</span>
@@ -484,15 +484,15 @@ export default function Communities() {
                 style={{
                   padding: '7px 16px',
                   borderRadius: '20px',
-                  border: isSelected ? '1.5px solid #7c5cbf' : '1px solid #e5e7eb',
-                  backgroundColor: isSelected ? '#7c5cbf' : '#ffffff',
+                  border: isSelected ? '1.5px solid #245745' : '1px solid #e5e7eb',
+                  backgroundColor: isSelected ? '#245745' : '#ffffff',
                   color: isSelected ? '#ffffff' : '#4b5563',
                   fontSize: '13px',
                   fontWeight: isSelected ? 700 : 500,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 2px 8px rgba(124, 92, 191, 0.25)' : 'none',
+                  boxShadow: isSelected ? '0 2px 8px rgba(36, 87, 69, 0.25)' : 'none',
                 }}
               >
                 {cat}
@@ -512,7 +512,7 @@ export default function Communities() {
                 backgroundColor: '#ffffff',
                 borderRadius: '20px',
                 padding: '24px',
-                border: '1px solid #ede9fe',
+                border: '1px solid #dce8e2',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                 marginBottom: '28px',
               }}
@@ -528,8 +528,8 @@ export default function Communities() {
                     width: '42px',
                     height: '42px',
                     borderRadius: '50%',
-                    border: '2px solid #7c5cbf',
-                    backgroundColor: '#f5f0ff',
+                    border: '2px solid #245745',
+                    backgroundColor: '#e1efe8',
                   }}
                 />
                 <div>
@@ -649,8 +649,8 @@ export default function Communities() {
                       onClick={() => setShowImageInput((prev) => !prev)}
                       style={{
                         background: 'none',
-                        border: '1px dashed #7c5cbf',
-                        color: '#7c5cbf',
+                        border: '1px dashed #245745',
+                        color: '#245745',
                         padding: '5px 10px',
                         borderRadius: '8px',
                         fontSize: '12px',
@@ -669,13 +669,13 @@ export default function Communities() {
                       padding: '8px 20px',
                       borderRadius: '10px',
                       border: 'none',
-                      backgroundColor: '#7c5cbf',
+                      backgroundColor: '#245745',
                       color: '#ffffff',
                       fontSize: '13.5px',
                       fontWeight: 700,
                       cursor: isSubmitting || !newContent.trim() ? 'not-allowed' : 'pointer',
                       opacity: isSubmitting || !newContent.trim() ? 0.6 : 1,
-                      boxShadow: '0 2px 8px rgba(124, 92, 191, 0.3)',
+                      boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
                       transition: 'all 0.15s ease',
                     }}
                   >
@@ -698,7 +698,7 @@ export default function Communities() {
                   borderRadius: '20px',
                   padding: '48px 24px',
                   textAlign: 'center',
-                  border: '1px solid #ede9fe',
+                  border: '1px solid #dce8e2',
                 }}
               >
                 <div style={{ fontSize: '48px', marginBottom: '14px' }}>📝</div>
@@ -731,7 +731,7 @@ export default function Communities() {
                       style={{
                         backgroundColor: '#ffffff',
                         borderRadius: '20px',
-                        border: '1px solid #ede9fe',
+                        border: '1px solid #dce8e2',
                         boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                         overflow: 'hidden',
                         padding: '24px',
@@ -761,8 +761,8 @@ export default function Communities() {
                               height: '44px',
                               borderRadius: '50%',
                               objectFit: 'cover',
-                              border: '2px solid #7c5cbf',
-                              backgroundColor: '#f5f0ff',
+                              border: '2px solid #245745',
+                              backgroundColor: '#e1efe8',
                             }}
                           />
                           <div>
@@ -784,11 +784,11 @@ export default function Communities() {
                             style={{
                               fontSize: '11.5px',
                               fontWeight: 700,
-                              backgroundColor: '#f5f0ff',
-                              color: '#7c5cbf',
+                              backgroundColor: '#e1efe8',
+                              color: '#245745',
                               padding: '3px 10px',
                               borderRadius: '12px',
-                              border: '1px solid #ede9fe',
+                              border: '1px solid #dce8e2',
                             }}
                           >
                             #{post.category}
@@ -904,14 +904,14 @@ export default function Communities() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            background: isCommentsOpen ? '#f5f0ff' : 'none',
+                            background: isCommentsOpen ? '#e1efe8' : 'none',
                             border: isCommentsOpen ? '1px solid #ddd6fe' : '1px solid #e5e7eb',
                             borderRadius: '10px',
                             padding: '6px 14px',
                             cursor: 'pointer',
                             fontSize: '13px',
                             fontWeight: 600,
-                            color: isCommentsOpen ? '#7c5cbf' : '#4b5563',
+                            color: isCommentsOpen ? '#245745' : '#4b5563',
                             transition: 'all 0.15s ease',
                           }}
                         >
@@ -927,7 +927,7 @@ export default function Communities() {
                             marginTop: '16px',
                             paddingTop: '16px',
                             borderTop: '1px dashed #e5e7eb',
-                            backgroundColor: '#faf9fe',
+                            backgroundColor: '#f3f7f4',
                             padding: '16px',
                             borderRadius: '14px',
                           }}
@@ -951,7 +951,7 @@ export default function Communities() {
                                       backgroundColor: '#ffffff',
                                       padding: '10px 14px',
                                       borderRadius: '12px',
-                                      border: '1px solid #ede9fe',
+                                      border: '1px solid #dce8e2',
                                     }}
                                   >
                                     <img
@@ -1031,7 +1031,7 @@ export default function Communities() {
                                 padding: '8px 16px',
                                 borderRadius: '10px',
                                 border: 'none',
-                                backgroundColor: '#7c5cbf',
+                                backgroundColor: '#245745',
                                 color: '#ffffff',
                                 fontSize: '13px',
                                 fontWeight: 600,
@@ -1075,7 +1075,7 @@ export default function Communities() {
                   style={{
                     backgroundColor: '#ffffff',
                     borderRadius: '20px',
-                    border: '1px solid #ede9fe',
+                    border: '1px solid #dce8e2',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                     overflow: 'hidden',
                     display: 'flex',
@@ -1161,7 +1161,7 @@ export default function Communities() {
                       {/* Chủ đề thảo luận sôi nổi */}
                       <div
                         style={{
-                          backgroundColor: '#faf9fe',
+                          backgroundColor: '#f3f7f4',
                           border: '1px dashed #ddd6fe',
                           borderRadius: '12px',
                           padding: '10px 12px',
@@ -1172,7 +1172,7 @@ export default function Communities() {
                           style={{
                             fontSize: '11px',
                             fontWeight: 700,
-                            color: '#7c5cbf',
+                            color: '#245745',
                             display: 'block',
                             marginBottom: '2px',
                           }}
@@ -1223,7 +1223,7 @@ export default function Communities() {
                         padding: '9px 6px',
                         borderRadius: '10px',
                         border: 'none',
-                        backgroundColor: '#7c5cbf',
+                        backgroundColor: '#245745',
                         color: '#ffffff',
                         fontSize: '12.5px',
                         fontWeight: 700,
@@ -1232,7 +1232,7 @@ export default function Communities() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '4px',
-                        boxShadow: '0 2px 6px rgba(124, 92, 191, 0.25)',
+                        boxShadow: '0 2px 6px rgba(36, 87, 69, 0.25)',
                       }}
                     >
                       <span>📰</span>
@@ -1246,9 +1246,9 @@ export default function Communities() {
                         flex: 1,
                         padding: '9px 6px',
                         borderRadius: '10px',
-                        border: isJoined ? '1px solid #d1d5db' : '1px solid #7c5cbf',
-                        backgroundColor: isJoined ? '#ffffff' : '#f5f0ff',
-                        color: isJoined ? '#4b5563' : '#7c5cbf',
+                        border: isJoined ? '1px solid #d1d5db' : '1px solid #245745',
+                        backgroundColor: isJoined ? '#ffffff' : '#e1efe8',
+                        color: isJoined ? '#4b5563' : '#245745',
                         fontSize: '12.5px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -1264,9 +1264,9 @@ export default function Communities() {
                       style={{
                         padding: '9px 12px',
                         borderRadius: '10px',
-                        border: '1px solid #ede9fe',
+                        border: '1px solid #dce8e2',
                         backgroundColor: '#ffffff',
-                        color: '#7c5cbf',
+                        color: '#245745',
                         fontSize: '12.5px',
                         fontWeight: 600,
                         cursor: 'pointer',

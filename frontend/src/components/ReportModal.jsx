@@ -134,12 +134,12 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
                     gap: '10px',
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: reason === r ? '1.5px solid #7c5cbf' : '1px solid #e5e7eb',
-                    backgroundColor: reason === r ? '#faf8ff' : '#ffffff',
+                    border: reason === r ? '1.5px solid #245745' : '1px solid #e5e7eb',
+                    backgroundColor: reason === r ? '#f1f7f3' : '#ffffff',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: reason === r ? 600 : 400,
-                    color: reason === r ? '#7c5cbf' : '#374151',
+                    color: reason === r ? '#245745' : '#374151',
                   }}
                 >
                   <input
@@ -148,7 +148,7 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
                     value={r}
                     checked={reason === r}
                     onChange={(e) => setReason(e.target.value)}
-                    style={{ accentColor: '#7c5cbf' }}
+                    style={{ accentColor: '#245745' }}
                   />
                   <span>{r}</span>
                 </label>

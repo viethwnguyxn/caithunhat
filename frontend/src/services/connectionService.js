@@ -43,3 +43,11 @@ export const rejectConnection = async (connectionId) => {
   return response.data
 }
 
+/**
+ * Gỡ bạn bè mà không gửi thông báo cho người kia
+ * @param {number} connectionId
+ */
+export const removeConnection = async (connectionId) => {
+  const response = await api.delete(`/api/connections/${connectionId}`)
+  return response.data
+}

@@ -197,6 +197,31 @@ def get_my_connections(db: Session, current_user: User) -> list[ConnectionRespon
     return result
 
 
+def remove_connection(db: Session, connection_id: int, current_user: User) -> None:
+    """Remove an accepted friendship without notifying the other user."""
+    conn = db.query(Connection).filter(Connection.id == connection_id).first()
+    if not conn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy kết nối",
+        )
+
+    if current_user.id not in (conn.requester_id, conn.receiver_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền gỡ kết nối này",
+        )
+
+    if conn.status != "accepted":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chỉ có thể gỡ kết bạn với kết nối đã được chấp nhận",
+        )
+
+    db.delete(conn)
+    db.commit()
+
+
 def get_connection_requests(
     db: Session, current_user: User
 ) -> ConnectionRequestsResponse:

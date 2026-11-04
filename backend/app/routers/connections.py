@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from ..db.database import get_db
@@ -73,3 +73,13 @@ def reject_connection(
         connection=conn,
     )
 
+
+@router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_connection(
+    connection_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Gỡ một kết bạn đã chấp nhận mà không gửi thông báo cho người kia."""
+    connection_service.remove_connection(db, connection_id, current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
