@@ -51,7 +51,7 @@ Thay vì chạy theo các thuật toán câu tương tác gây kiệt quệ tâm
 - Tự động đánh dấu tin nhắn đã đọc (`read`) và cập nhật số lượng tin nhắn chưa đọc theo thời gian thực.
 
 ### 📞 6. Gọi Thoại & Gọi Video 1-1 (WebRTC Voice & Video Call)
-- **Công nghệ WebRTC P2P**: Truyền tải âm thanh và hình ảnh trực tiếp giữa 2 trình duyệt không qua máy chủ trung gian, sử dụng STUN server công khai miễn phí của Google (`stun:stun.l.google.com:19302`).
+- **Công nghệ WebRTC P2P**: Ưu tiên truyền tải trực tiếp qua STUN của Google; dùng TURN relay khi hai thiết bị không thể kết nối trực tiếp do NAT/firewall.
 - **Kênh Báo hiệu (Signaling Protocol)**: Tận dụng kết nối WebSocket hiện hữu để chuyển tiếp các bản tin bắt tay WebRTC (`call:offer`, `call:answer`, `call:ice_candidate`, `call:reject`, `call:end`).
 - **Giao diện Cuộc gọi Chuyên nghiệp (CallModal)**:
   - Nền tối (dark overlay) sang trọng, hiển thị video đối phương toàn màn hình và video của mình thu nhỏ ở góc.
@@ -434,6 +434,11 @@ Hệ sinh thái Kindred được triển khai thực tế trên 3 nền tảng C
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` |
 | `GOOGLE_CLIENT_ID` | OAuth Client ID từ Google Cloud Console |
 | `CORS_ORIGINS` | Domain Vercel của frontend (vd: `https://caithunhat.vercel.app`) |
+| `TURN_SERVER_URLS` | Danh sách URL TURN, phân tách bằng dấu phẩy (vd: `turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349?transport=tcp`) |
+| `TURN_SHARED_SECRET` | Shared secret của máy chủ Coturn REST API; chỉ cấu hình ở backend, không đưa vào frontend |
+| `TURN_CREDENTIAL_TTL_SECONDS` | Thời hạn thông tin xác thực tạm thời (mặc định `3600`, tối đa `86400`) |
+
+> **WebRTC:** Nếu không cấu hình TURN, ứng dụng chỉ dùng STUN và cuộc gọi có thể thất bại giữa một số mạng di động, NAT hoặc firewall. Khi cấu hình TURN, backend cấp thông tin xác thực tạm thời theo từng người dùng.
 
 ### 10.2 Start Command trên Render
 

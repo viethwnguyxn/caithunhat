@@ -19,8 +19,35 @@ export function CallProvider({ children }) {
 
   // Listeners nhận tín hiệu WebRTC Calling trực tiếp từ WebSocket (chống mất gói tin)
   const callSignalListenersRef = useRef(new Set())
+  const pendingCallSignalsRef = useRef([])
+  const deliverCallSignal = useCallback((signal) => {
+    if (callSignalListenersRef.current.size === 0) {
+      pendingCallSignalsRef.current.push(signal)
+      if (pendingCallSignalsRef.current.length > 50) {
+        pendingCallSignalsRef.current.shift()
+      }
+      return
+    }
+
+    callSignalListenersRef.current.forEach((listener) => {
+      try {
+        listener(signal)
+      } catch (err) {
+        console.error('Lỗi listener call signal:', err)
+      }
+    })
+  }, [])
+
   const registerCallSignalListener = useCallback((listener) => {
     callSignalListenersRef.current.add(listener)
+    pendingCallSignalsRef.current.forEach((signal) => {
+      try {
+        listener(signal)
+      } catch (err) {
+        console.error('Lỗi xử lý tín hiệu cuộc gọi đang chờ:', err)
+      }
+    })
+    pendingCallSignalsRef.current = []
     return () => callSignalListenersRef.current.delete(listener)
   }, [])
 
@@ -29,16 +56,12 @@ export function CallProvider({ children }) {
     const handleSignalEvent = (e) => {
       const data = e.detail
       if (data && data.type && data.type.startsWith('call:') && data.type !== 'call:offer') {
-        callSignalListenersRef.current.forEach((listener) => {
-          try {
-            listener(data)
-          } catch (err) {}
-        })
+        deliverCallSignal(data)
       }
     }
     window.addEventListener('call-signal-received', handleSignalEvent)
     return () => window.removeEventListener('call-signal-received', handleSignalEvent)
-  }, [])
+  }, [deliverCallSignal])
 
   // 1. Duy trì kết nối WebSocket toàn cục tới /api/ws/user
   useEffect(() => {
@@ -84,6 +107,7 @@ export function CallProvider({ children }) {
 
           if (data.type.startsWith('call:')) {
             if (data.type === 'call:offer') {
+              pendingCallSignalsRef.current = []
               // Nếu đang trong một cuộc gọi khác -> từ chối bận
               if (callSessionRef.current) {
                 // Tránh reject lặp nếu offer lặp từ chính phiên này
@@ -117,14 +141,7 @@ export function CallProvider({ children }) {
                 conversationId: data.conversation_id,
               })
             } else {
-              // Chuyển tiếp ngay lập tức đến CallModal
-              callSignalListenersRef.current.forEach((listener) => {
-                try {
-                  listener(data)
-                } catch (e) {
-                  console.error('Lỗi listener call signal:', e)
-                }
-              })
+              deliverCallSignal(data)
             }
           } else if (data.type === 'user_status') {
             window.dispatchEvent(new CustomEvent('user-status-changed', { detail: data }))
@@ -160,7 +177,7 @@ export function CallProvider({ children }) {
         socketRef.current = null
       }
     }
-  }, [token, user?.id])
+  }, [deliverCallSignal, token, user?.id])
 
   // 2. Hàm bắt đầu cuộc gọi tới một người dùng
   const startCall = useCallback((partner, conversationId, callType = 'audio') => {
@@ -246,4 +263,3 @@ export function useCall() {
 }
 
 export default CallContext
-

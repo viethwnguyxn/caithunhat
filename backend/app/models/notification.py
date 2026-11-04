@@ -9,7 +9,7 @@ from ..db.database import Base
 class Notification(Base):
     """
     Bảng lưu trữ thông báo cho người dùng.
-    Các type hỗ trợ: connection_request, connection_accepted, message, group_join, group_post.
+    Các type hỗ trợ gồm lời mời kết nối, tin nhắn, cuộc gọi nhỡ và hoạt động cộng đồng.
     """
     __tablename__ = "notifications"
 
@@ -27,4 +27,3 @@ class Notification(Base):
     )
 
     user = relationship("User", backref="notifications")
-

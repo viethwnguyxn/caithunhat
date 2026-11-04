@@ -11,6 +11,7 @@ VALID_NOTIFICATION_TYPES = {
     "connection_request",
     "connection_accepted",
     "message",
+    "missed_call",
     "group_join",
     "group_post",
     "post_like",
@@ -141,4 +142,3 @@ def mark_conversation_notifications_read(
     )
     db.commit()
     return updated_count
-

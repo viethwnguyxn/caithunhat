@@ -1,16 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-
-// Cấu hình Google STUN servers miễn phí cho WebRTC
-const RTC_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-  ],
-  iceCandidatePoolSize: 10,
-}
+import api from '../services/api'
 
 // Bộ tạo âm thanh chuông gọi điện bằng Web Audio API an toàn, triệt tiêu tiếng tít khi ngắt máy
 class CallAudioSynthesizer {
@@ -270,10 +259,18 @@ export default function CallModal({
   }, [callStatus, isVideoCall])
 
   // 5. Khởi tạo WebRTC PeerConnection
-  const initPeerConnection = () => {
+  const initPeerConnection = async () => {
     if (peerConnectionRef.current) return peerConnectionRef.current
 
-    const pc = new RTCPeerConnection(RTC_CONFIG)
+    const { data } = await api.get('/api/calls/ice-servers')
+    if (!Array.isArray(data.ice_servers) || data.ice_servers.length === 0) {
+      throw new Error('Máy chủ chưa cung cấp cấu hình kết nối cuộc gọi.')
+    }
+
+    const pc = new RTCPeerConnection({
+      iceServers: data.ice_servers,
+      iceCandidatePoolSize: 10,
+    })
     peerConnectionRef.current = pc
 
     // Gửi ICE candidate tới đối phương qua WebSocket
@@ -432,7 +429,7 @@ export default function CallModal({
   const startOutgoingCall = async () => {
     try {
       const stream = await getMediaStream(isVideoCall)
-      const pc = initPeerConnection()
+      const pc = await initPeerConnection()
 
       stream.getTracks().forEach((track) => {
         pc.addTrack(track, stream)
@@ -465,7 +462,7 @@ export default function CallModal({
 
     try {
       const stream = await getMediaStream(isVideoCall)
-      const pc = initPeerConnection()
+      const pc = await initPeerConnection()
 
       stream.getTracks().forEach((track) => {
         pc.addTrack(track, stream)

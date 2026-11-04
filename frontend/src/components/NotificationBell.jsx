@@ -30,6 +30,8 @@ function getNotificationIcon(type) {
       return 'celebration'
     case 'message':
       return 'chat'
+    case 'missed_call':
+      return 'phone_missed'
     case 'group_join':
       return 'groups'
     case 'group_post':
@@ -138,6 +140,7 @@ export default function NotificationBell() {
         navigate('/connections?tab=connections')
         break
       case 'message':
+      case 'missed_call':
         if (notif.related_id) {
           navigate('/messages', { state: { conversationId: notif.related_id } })
         } else {

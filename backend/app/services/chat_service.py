@@ -268,7 +268,11 @@ def is_conversation_blocked(db: Session, conversation_id: int, user_id: int) -> 
 
 
 def create_message(
-    db: Session, conversation_id: int, sender_id: int, content: str
+    db: Session,
+    conversation_id: int,
+    sender_id: int,
+    content: str,
+    notify_recipient: bool = True,
 ) -> Message:
     """
     Lưu tin nhắn mới vào database sau khi xác thực quyền thành viên.
@@ -313,7 +317,7 @@ def create_message(
         )
         .first()
     )
-    if recipient_member:
+    if recipient_member and notify_recipient:
         sender = db.query(User).filter(User.id == sender_id).first()
         sender_profile = getattr(sender, "profile", None)
         if isinstance(sender_profile, list):
