@@ -22,7 +22,7 @@ export default function CallModal({
 
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
-  const remoteAudioRef = useRef(null)
+  const remoteMediaRef = useRef(null)
   const callRef = useRef(null)
   const mediaTracksRef = useRef(new Set())
   const localStreamRef = useRef(null)
@@ -109,9 +109,9 @@ export default function CallModal({
     }
     if (localVideoRef.current) localVideoRef.current.srcObject = null
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.pause()
-      remoteAudioRef.current.srcObject = null
+    if (remoteMediaRef.current) {
+      remoteMediaRef.current.pause()
+      remoteMediaRef.current.srcObject = null
     }
     mediaTracksRef.current.forEach((track) => {
       try {
@@ -213,10 +213,11 @@ export default function CallModal({
       stopRinging()
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
 
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = stream
-        remoteAudioRef.current.play().catch((error) => {
-          console.warn('Không thể phát âm thanh đối phương:', error)
+      if (remoteMediaRef.current) {
+        remoteMediaRef.current.srcObject = stream
+        remoteMediaRef.current.play().catch((error) => {
+          console.error('Không thể phát media đối phương:', error)
+          setErrorMessage('Trình duyệt chưa phát được âm thanh. Hãy kiểm tra quyền âm thanh và thử lại.')
         })
       }
     })
@@ -383,6 +384,12 @@ export default function CallModal({
   }
 
   const handleEndCall = (reason = 'user_hangup') => {
+    const finalReason =
+      reason === 'user_hangup' &&
+      callSession.mode === 'outgoing' &&
+      statusRef.current !== 'connected'
+        ? 'no_answer'
+        : reason
     const call = callRef.current
     if (call) {
       call.hangup((result) => {
@@ -391,7 +398,7 @@ export default function CallModal({
         }
       })
     }
-    void finalizeCall(reason, true)
+    void finalizeCall(finalReason, true)
   }
   endCallRef.current = handleEndCall
 
@@ -436,7 +443,22 @@ export default function CallModal({
         backdropFilter: 'blur(12px)',
       }}
     >
-      <audio ref={remoteAudioRef} autoPlay playsInline />
+      {isVideoCall ? (
+        <audio ref={remoteMediaRef} autoPlay playsInline />
+      ) : (
+        <video
+          ref={remoteMediaRef}
+          autoPlay
+          playsInline
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {callStatus === 'incoming' ? (
         <section
