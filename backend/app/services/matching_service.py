@@ -211,6 +211,7 @@ def get_user_matches(
                 username=cand_user.username,
                 display_name=cand_profile.display_name if cand_profile else cand_user.username,
                 avatar_url=cand_profile.avatar_url if cand_profile else cand_user.avatar_url,
+                is_online=bool(cand_user.is_online),
                 bio=cand_profile.bio if cand_profile else None,
                 age_group=cand_survey.age_group,
                 current_status=cand_survey.current_status,

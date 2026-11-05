@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile } from '../services/profileService'
 import { getSurvey } from '../services/surveyService'
@@ -9,7 +10,6 @@ import { getConversations } from '../services/chatService'
 import postService from '../services/postService'
 import '../styles/lapulga.css'
 
-const avatarFor = (name = 'user') => `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
 const unwrapList = (value) => Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : Array.isArray(value?.posts) ? value.posts : Array.isArray(value?.data) ? value.data : []
 
 export default function Home() {
@@ -23,7 +23,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('Phù hợp với bạn')
   const displayName = profile?.display_name || user?.display_name || user?.username || 'Bạn'
-  const avatar = profile?.avatar_url || user?.avatar_url || avatarFor(user?.username)
+  const avatar = profile?.avatar_url || user?.avatar_url
 
   useEffect(() => {
     let alive = true
@@ -97,7 +97,7 @@ export default function Home() {
     <div className="lp-home-grid">
       <main className="lp-home-center">
         <section className="lp-hero"><small>LA PULGA · KHÔNG GIAN ĐỒNG ĐIỆU</small><h1>Chào {displayName}, hôm nay bạn cảm thấy thế nào?</h1><p>Một nơi để chia sẻ câu chuyện thật, gặp gỡ những người cùng cảm xúc và tìm thấy sự thấu hiểu.</p><div className="lp-hero-actions"><Link to="/discover">Khám phá kết nối mới　→</Link>{!loading && !survey && <Link to="/survey" className="lp-survey-cta">Làm khảo sát　→</Link>}</div></section>
-        <div className="lp-feed-card lp-create-card" style={{padding:16}}><div className="lp-feed-head"><img src={avatar} alt="Avatar của bạn"/><div style={{flex:1}}><b>Chia sẻ điều bạn đang nghĩ, {displayName}?</b><small>Bài viết của bạn có thể giúp ai đó cảm thấy được thấu hiểu.</small></div></div><Link to="/communities?tab=feed" className="lp-filter lp-create-post">＋　Tạo bài viết / chia sẻ khoảnh khắc</Link></div>
+        <div className="lp-feed-card lp-create-card" style={{padding:16}}><div className="lp-feed-head"><Avatar src={avatar} alt="Avatar của bạn"/><div style={{flex:1}}><b>Chia sẻ điều bạn đang nghĩ, {displayName}?</b><small>Bài viết của bạn có thể giúp ai đó cảm thấy được thấu hiểu.</small></div></div><Link to="/communities?tab=feed" className="lp-filter lp-create-post">＋　Tạo bài viết / chia sẻ khoảnh khắc</Link></div>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'22px 2px 12px',gap:12}}><div><div className="lp-section-label" style={{margin:0}}>Cộng đồng La Pulga</div><h2 style={{fontSize:20,marginTop:5}}>Bảng tin mới nhất</h2></div><select className="lp-feed-filter" value={filter} onChange={(e)=>setFilter(e.target.value)}><option>Phù hợp với bạn</option><option>Bạn bè kết nối</option><option>Cùng tâm trạng & hoàn cảnh</option><option>Tất cả bài viết</option></select></div>
         {loading ? <div className="lp-feed-card lp-home-empty">Đang tải bảng tin...</div> : visiblePosts.length === 0 ? <div className="lp-feed-card lp-home-empty">{posts.length === 0 ? 'Chưa có bài viết nào. Hãy khám phá cộng đồng hoặc kết nối với mọi người nhé.' : 'Chưa có bài viết phù hợp với bộ lọc này.'}<div style={{marginTop:14}}><Link className="lp-chip" to="/discover">Khám phá mọi người →</Link></div></div> : visiblePosts.map((post, index) => {
           const author = post.author || post.user || {}
@@ -105,7 +105,7 @@ export default function Home() {
           const content = post.content || post.body || post.text || ''
           const postId = post.id || post.post_id || index
           const postImage = post.image_url || post.image
-          return <article className="lp-feed-card" key={postId}><div className="lp-feed-head"><img src={author.avatar_url || avatarFor(name)} alt={name}/><div style={{flex:1}}><b>{name}</b><small>{post.created_at ? new Date(post.created_at).toLocaleString('vi-VN') : 'Vừa chia sẻ'}{post.mood ? ` · ${post.mood}` : ''}</small></div><span className="lp-muted">•••</span></div><p>{content}</p>{postImage && <img src={postImage} alt="Ảnh trong bài viết" style={{width:'100%',maxHeight:420,objectFit:'cover',borderRadius:12,marginBottom:14}}/>}<div className="lp-feed-actions"><button type="button" onClick={()=>handleLike(post)} className={`lp-like-button ${post.is_liked || post.liked ? 'is-liked' : ''}`}>♡　{post.likes_count ?? post.like_count ?? 0} Thích</button><span>▢　{post.comments_count ?? post.comment_count ?? 0} Bình luận</span><span>↗　Chia sẻ</span></div></article>
+          return <article className="lp-feed-card" key={postId}><div className="lp-feed-head"><Avatar src={author.avatar_url} alt={name}/><div style={{flex:1}}><b>{name}</b><small>{post.created_at ? new Date(post.created_at).toLocaleString('vi-VN') : 'Vừa chia sẻ'}{post.mood ? ` · ${post.mood}` : ''}</small></div><span className="lp-muted">•••</span></div><p>{content}</p>{postImage && <img src={postImage} alt="Ảnh trong bài viết" style={{width:'100%',maxHeight:420,objectFit:'cover',borderRadius:12,marginBottom:14}}/>}<div className="lp-feed-actions"><button type="button" onClick={()=>handleLike(post)} className={`lp-like-button ${post.is_liked || post.liked ? 'is-liked' : ''}`}>♡　{post.likes_count ?? post.like_count ?? 0} Thích</button><span>▢　{post.comments_count ?? post.comment_count ?? 0} Bình luận</span><span>↗　Chia sẻ</span></div></article>
         })}
       </main>
 

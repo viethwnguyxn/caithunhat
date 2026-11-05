@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { adminService } from '../services/adminService'
+import Avatar from '../components/Avatar'
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -478,11 +479,8 @@ export default function AdminDashboard() {
                         >
                           <td style={{ padding: '12px 14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <img
-                                src={
-                                  u.avatar_url ||
-                                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-                                }
+                              <Avatar
+                                src={u.avatar_url}
                                 alt={u.username}
                                 style={{
                                   width: '36px',
@@ -903,4 +901,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-

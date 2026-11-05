@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './NotificationBell'
+import Avatar from './Avatar'
 import brandMark from '../assets/lapulga-mark.svg'
 
 export default function Navbar() {
@@ -34,10 +35,6 @@ export default function Navbar() {
       ? [{ path: '/admin', label: 'Quản trị', icon: 'admin_panel_settings' }]
       : []),
   ]
-
-  const userAvatar =
-    user?.avatar_url ||
-    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#08090a]/90 backdrop-blur-xl border-b border-[#1a232e]">
@@ -109,13 +106,10 @@ export default function Navbar() {
               title="Tài khoản cá nhân"
             >
               <div className="relative">
-                <img
-                  src={userAvatar}
+                <Avatar
+                  src={user?.avatar_url}
                   alt={user?.username || 'Avatar'}
                   className="w-8 h-8 rounded-full object-cover border border-[#00ff88]/40"
-                  onError={(e) => {
-                    e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=user`
-                  }}
                 />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] border-2 border-[#08090a] shadow-[0_0_6px_#00ff88]" />
               </div>

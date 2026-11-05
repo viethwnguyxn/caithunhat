@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
 import { COMMUNITY_CATEGORIES, COMMUNITY_DIRECTORY } from '../data/communities'
@@ -192,10 +194,6 @@ export default function Communities() {
     })
   }
 
-  const userAvatar =
-    user?.avatar_url ||
-    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
-
   return (
     <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
@@ -297,15 +295,10 @@ export default function Communities() {
                   <div className="flex items-start gap-4">
                     <div className="relative shrink-0">
                       <div className="w-11 h-11 rounded-xl bg-[#181d26] overflow-hidden border border-[#00ff88]/30">
-                        <img
-                          src={userAvatar}
+                        <Avatar
+                          src={user?.avatar_url}
                           alt="User Avatar"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                              user?.username || 'user'
-                            )}`
-                          }}
                         />
                       </div>
                       <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
@@ -403,11 +396,6 @@ export default function Communities() {
                 ) : posts.length > 0 ? (
                   posts.map((post) => {
                     const author = post.author || {}
-                    const avatar =
-                      author.avatar_url ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                        author.username || 'user'
-                      )}`
                     const isMyPost = user?.id === author.id
 
                     return (
@@ -419,17 +407,15 @@ export default function Communities() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
                             <div className="relative">
-                              <img
-                                src={avatar}
+                              <Avatar
+                                src={author.avatar_url}
                                 alt={author.username}
                                 className="w-12 h-12 rounded-xl object-cover bg-[#08090a] border border-[#00ff88]/30"
-                                onError={(e) => {
-                                  e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                    author.username || 'user'
-                                  )}`
-                                }}
                               />
-                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+                              <OnlineStatusDot
+                                isOnline={author.is_online}
+                                className="absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-[#11151c]"
+                              />
                             </div>
 
                             <div>

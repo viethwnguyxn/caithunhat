@@ -8,6 +8,7 @@ class MatchUserResponse(BaseModel):
     username: str
     display_name: str | None = None
     avatar_url: str | None = None
+    is_online: bool = False
     bio: str | None = None
     age_group: str | None = None
     current_status: str | None = None

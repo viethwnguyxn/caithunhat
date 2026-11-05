@@ -26,6 +26,7 @@ def to_connection_user_response(user: User) -> ConnectionUserResponse:
         bio=profile.bio if profile else None,
         age_group=profile.age_group if profile else None,
         current_status=profile.current_status if profile else None,
+        is_online=bool(user.is_online),
     )
 
 

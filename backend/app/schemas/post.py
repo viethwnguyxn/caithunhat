@@ -8,6 +8,7 @@ class PostAuthorResponse(BaseModel):
     username: str
     display_name: str | None = None
     avatar_url: str | None = None
+    is_online: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,4 +68,3 @@ class PostActionResponse(BaseModel):
     """Schema phản hồi cho thao tác xóa bài viết hoặc bình luận."""
     success: bool = True
     message: str
-

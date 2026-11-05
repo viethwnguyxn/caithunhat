@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import { getMatches } from '../services/matchingService'
@@ -523,10 +525,6 @@ export default function Discover() {
                   const u = item.user
                   const score = item.match_score
                   const status = connectionStatuses[u.id]
-                  const avatarUrl =
-                    u.avatar_url ||
-                    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-
                   return (
                     <div
                       key={u.id}
@@ -537,17 +535,14 @@ export default function Discover() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="relative shrink-0">
-                              <img
-                                src={avatarUrl}
+                              <Avatar
+                                src={u.avatar_url}
                                 alt={u.display_name || u.username}
                                 className="w-13 h-13 rounded-xl object-cover border border-[#1a232e] bg-[#0d1117]"
-                                onError={(e) => {
-                                  e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`
-                                }}
                               />
-                              <span
-                                className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#00ff88] border-2 border-[#11151c] shadow-[0_0_8px_#00ff88]"
-                                title="Trực tuyến"
+                              <OnlineStatusDot
+                                isOnline={u.is_online}
+                                className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#11151c]"
                               />
                             </div>
 
@@ -710,11 +705,8 @@ export default function Discover() {
 
               {/* User Header */}
               <div className="flex items-center gap-4 mb-6">
-                <img
-                  src={
-                    selectedUserForProfile.user.avatar_url ||
-                    `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedUserForProfile.user.username}`
-                  }
+                <Avatar
+                  src={selectedUserForProfile.user.avatar_url}
                   alt={selectedUserForProfile.user.display_name}
                   className="w-16 h-16 rounded-2xl object-cover border-2 border-[#00ff88]/50 shadow-[0_0_15px_rgba(0,255,136,0.3)]"
                 />

@@ -28,6 +28,7 @@ def _build_post_author(db: Session, user_id: int) -> PostAuthorResponse:
         username=user.username,
         display_name=profile.display_name if profile and profile.display_name else user.username,
         avatar_url=profile.avatar_url if profile and profile.avatar_url else user.avatar_url,
+        is_online=bool(user.is_online),
     )
 
 
@@ -307,4 +308,3 @@ def delete_comment(db: Session, user: User, comment_id: int) -> PostActionRespon
     db.commit()
 
     return PostActionResponse(success=True, message="Đã xóa bình luận thành công")
-

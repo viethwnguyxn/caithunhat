@@ -6,6 +6,7 @@ import { getSurvey } from '../services/surveyService'
 import { getMyConnections } from '../services/connectionService'
 import postService from '../services/postService'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
 
 const PRESET_AVATARS = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCiQ_9KvdGg49TZie-zDjVeOftAxNCznV6JPzx4pJuGpDLiP3cMwgIzRYJv0BXvzvYmoqkLvkb5DC9pKojWcGf1TIZYjSg_bhLv31lF7U_me8dOsc9FjEyHP4WqQiu9OD4ro-Firy3DdCECYjpKZTZkFEi8wKUV3lEnRuvn010z3zVsfOH0-s4aasvto5JX88VuqpgV9umBb-z4uc5IsfcwDfbyW7tia7QNAXx0TPw',
@@ -67,9 +68,7 @@ export default function Profile() {
           const p = prof.value
           const initialProf = {
             display_name: p.display_name || user?.username || 'Lapulga User',
-            avatar_url:
-              p.avatar_url ||
-              `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`,
+            avatar_url: p.avatar_url || '',
             bio:
               p.bio ||
               'Đam mê tìm kiếm những kết nối sâu sắc, cùng chia sẻ tri thức về công nghệ, sách và tư duy đa chiều.',
@@ -179,9 +178,7 @@ export default function Profile() {
     }
   }
 
-  const currentAvatar =
-    profileData.avatar_url ||
-    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
+  const currentAvatar = profileData.avatar_url
 
   return (
     <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
@@ -249,15 +246,10 @@ export default function Profile() {
                 <div className="relative group">
                   <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1 bg-[#08090a] ring-4 ring-[#00ff88]/30 shadow-[0_0_24px_rgba(0,255,136,0.35)]">
                     <div className="w-full h-full rounded-full overflow-hidden border-2 border-[#00ff88] bg-[#1a232e]">
-                      <img
+                      <Avatar
                         className="w-full h-full object-cover"
                         src={currentAvatar}
                         alt="Avatar"
-                        onError={(e) => {
-                          e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                            user?.username || 'user'
-                          )}`
-                        }}
                       />
                     </div>
                   </div>
@@ -613,14 +605,9 @@ export default function Profile() {
                   title="Nhấp để chọn ảnh avatar"
                 >
                   <div className="w-24 h-24 rounded-full p-1 bg-[#08090a] ring-2 ring-[#00ff88]/60 group-hover:ring-[#00ff88] group-hover:shadow-[0_0_20px_rgba(0,255,136,0.4)] transition-all">
-                    <img
+                    <Avatar
                       className="w-full h-full object-cover rounded-full"
-                      src={
-                        modalForm.avatar_url ||
-                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                          user?.username || 'user'
-                        )}`
-                      }
+                      src={modalForm.avatar_url}
                       alt="Modal avatar"
                     />
                   </div>

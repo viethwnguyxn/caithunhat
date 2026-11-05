@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import {
@@ -307,28 +309,21 @@ export default function Connections() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {receivedRequests.map((req) => {
                     const u = req.user || {}
-                    const avatar =
-                      u.avatar_url ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                        u.username || 'user'
-                      )}`
                     return (
                       <div
                         key={req.id}
                         className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-[#181d26] border border-[#1a232e] hover:border-[#00ff88]/30 transition-all shadow-sm"
                       >
                         <div className="relative shrink-0 w-14 h-14">
-                          <img
-                            src={avatar}
+                          <Avatar
+                            src={u.avatar_url}
                             alt={u.username}
                             className="w-14 h-14 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
-                            onError={(e) => {
-                              e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                u.username || 'user'
-                              )}`
-                            }}
                           />
-                          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+                          <OnlineStatusDot
+                            isOnline={u.is_online}
+                            className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#181d26]"
+                          />
                         </div>
 
                         <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
@@ -423,11 +418,6 @@ export default function Connections() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {filteredConnections.map((conn) => {
                     const u = conn.user || {}
-                    const avatar =
-                      u.avatar_url ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                        u.username || 'user'
-                      )}`
                     return (
                       <div
                         key={conn.id}
@@ -435,17 +425,15 @@ export default function Connections() {
                       >
                         <div className="flex items-start gap-4">
                           <div className="relative shrink-0">
-                            <img
-                              src={avatar}
+                            <Avatar
+                              src={u.avatar_url}
                               alt={u.username}
                               className="w-16 h-16 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
-                              onError={(e) => {
-                                e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                  u.username || 'user'
-                                )}`
-                              }}
                             />
-                            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]"></span>
+                            <OnlineStatusDot
+                              isOnline={u.is_online}
+                              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#11151c]"
+                            />
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -471,7 +459,9 @@ export default function Connections() {
                             <div className="flex items-center gap-2 mt-0.5 text-xs font-mono">
                               <span className="text-[#849585]">@{u.username}</span>
                               <span className="text-[#849585]">•</span>
-                              <span className="text-[#44fb8a]">Đang trực tuyến</span>
+                              <span className={u.is_online ? 'text-[#44fb8a]' : 'text-[#849585]'}>
+                                {u.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                              </span>
                             </div>
 
                             <p className="text-xs text-[#b9cbb9] mt-1 truncate">
@@ -589,26 +579,16 @@ export default function Connections() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sentRequests.map((req) => {
                     const u = req.user || {}
-                    const avatar =
-                      u.avatar_url ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                        u.username || 'user'
-                      )}`
                     return (
                       <div
                         key={req.id}
                         className="flex items-center justify-between p-4 rounded-xl bg-[#11151c] border border-[#1a232e]"
                       >
                         <div className="flex items-center gap-3 truncate mr-3">
-                          <img
-                            src={avatar}
+                          <Avatar
+                            src={u.avatar_url}
                             alt={u.username}
                             className="w-12 h-12 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
-                            onError={(e) => {
-                              e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                u.username || 'user'
-                              )}`
-                            }}
                           />
                           <div className="truncate">
                             <h4 className="text-sm font-bold text-[#f1ffef] truncate">

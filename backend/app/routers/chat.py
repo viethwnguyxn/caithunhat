@@ -233,7 +233,7 @@ async def record_call_event(
     await manager.send_to_user(recipient_id, message_payload)
     await manager.send_to_user(current_user.id, message_payload)
 
-    if call_event.outcome == "missed":
+    if call_event.outcome in {"missed", "busy"}:
         profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
         caller_name = (
             profile.display_name

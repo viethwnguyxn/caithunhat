@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import { useAuth } from '../contexts/AuthContext'
@@ -288,6 +290,21 @@ export default function Messages() {
             .catch(() => {})
         } else if (data.type === 'user_status') {
           const { user_id, is_online, last_seen } = data
+          setConversations((prev) =>
+            prev.map((conversation) =>
+              conversation.partner?.id === user_id
+                ? {
+                    ...conversation,
+                    partner: {
+                      ...conversation.partner,
+                      is_online,
+                      last_seen:
+                        last_seen !== undefined ? last_seen : conversation.partner.last_seen,
+                    },
+                  }
+                : conversation
+            )
+          )
           setActiveConversation((prev) => {
             if (prev?.partner?.id === user_id) {
               return {
@@ -418,9 +435,7 @@ export default function Messages() {
   })
 
   const partner = activeConversation?.partner
-  const partnerAvatar =
-    partner?.avatar_url ||
-    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
+  const partnerAvatar = partner?.avatar_url
 
   return (
     <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] flex flex-col justify-between">
@@ -489,12 +504,6 @@ export default function Messages() {
                     filteredConversations.map((c) => {
                       const p = c.partner || {}
                       const isActive = activeConversation?.id === c.id
-                      const avatar =
-                        p.avatar_url ||
-                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                          p.username || 'user'
-                        )}`
-
                       return (
                         <div
                           key={c.id}
@@ -513,19 +522,15 @@ export default function Messages() {
                           )}
 
                           <div className="relative shrink-0">
-                            <img
-                              src={avatar}
+                            <Avatar
+                              src={p.avatar_url}
                               alt={p.username}
                               className="w-11 h-11 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
-                              onError={(e) => {
-                                e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                  p.username || 'user'
-                                )}`
-                              }}
                             />
-                            {p.is_online && (
-                              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
-                            )}
+                            <OnlineStatusDot
+                              isOnline={p.is_online}
+                              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#11151c]"
+                            />
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -571,14 +576,15 @@ export default function Messages() {
                         onClick={handleOpenPartnerProfile}
                         title="Xem hồ sơ chi tiết"
                       >
-                        <img
+                        <Avatar
                           src={partnerAvatar}
                           alt={partner?.username}
                           className="w-10 h-10 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
                         />
-                        {partner?.is_online && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_6px_#00ff88]"></span>
-                        )}
+                        <OnlineStatusDot
+                          isOnline={partner?.is_online}
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[#11151c]"
+                        />
                       </div>
 
                       <div onClick={handleOpenPartnerProfile} className="cursor-pointer">
@@ -597,7 +603,7 @@ export default function Messages() {
                           <span>@{partner?.username}</span>
                           <span>•</span>
                           <span className={partner?.is_online ? 'text-[#00ff88]' : 'text-[#849585]'}>
-                            {partner?.is_online ? 'Đang trực tuyến' : 'Ngoại tuyến'}
+                            {partner?.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
                           </span>
                         </div>
                       </div>
@@ -822,13 +828,8 @@ export default function Messages() {
             </div>
 
             <div className="flex items-center gap-4">
-              <img
-                src={
-                  partnerProfileModal.avatar_url ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                    partnerProfileModal.username || 'user'
-                  )}`
-                }
+              <Avatar
+                src={partnerProfileModal.avatar_url}
                 alt=""
                 className="w-16 h-16 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
               />

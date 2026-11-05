@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../services/api'
+import Avatar from './Avatar'
 
 const avatarFor = (partner) =>
-  partner?.avatar_url ||
-  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
+  partner?.avatar_url
 
 export default function CallModal({
   callSession,
@@ -129,7 +129,7 @@ export default function CallModal({
   }
 
   const recordCallResult = async (reason) => {
-    if (callSession.mode !== 'outgoing') return
+    if (callSession.mode !== 'outgoing') return true
 
     let outcome = null
     if (reason === 'busy') outcome = 'busy'
@@ -472,7 +472,7 @@ export default function CallModal({
             boxShadow: '0 25px 50px -12px rgba(0,0,0,.5)',
           }}
         >
-          <img
+          <Avatar
             src={avatarFor(partner)}
             alt=""
             style={{
@@ -528,7 +528,7 @@ export default function CallModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={avatarFor(partner)} alt="" style={avatarStyle(40)} />
+              <Avatar src={avatarFor(partner)} alt="" style={avatarStyle(40)} />
               <div>
                 <h3 style={{ margin: 0, fontSize: 15 }}>
                   {partner?.display_name || partner?.username}
@@ -583,7 +583,7 @@ export default function CallModal({
               </>
             ) : (
               <div style={{ padding: 40, textAlign: 'center' }}>
-                <img
+                <Avatar
                   src={avatarFor(partner)}
                   alt=""
                   style={{
