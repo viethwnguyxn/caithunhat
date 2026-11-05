@@ -30,7 +30,6 @@ export default function Navbar() {
     { path: '/discover', label: 'Khám phá', icon: 'explore' },
     { path: '/connections', label: 'Bạn bè', icon: 'group' },
     { path: '/messages', label: 'Tin nhắn', icon: 'chat' },
-    { path: '/settings', label: 'Cài đặt', icon: 'settings' },
     ...(user?.role === 'admin'
       ? [{ path: '/admin', label: 'Quản trị', icon: 'admin_panel_settings' }]
       : []),
