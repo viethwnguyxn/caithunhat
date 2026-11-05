@@ -1,5 +1,8 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
+
+ReactionType = Literal["heart", "like", "angry", "sad", "haha"]
 
 
 class PostAuthorResponse(BaseModel):
@@ -51,6 +54,8 @@ class PostResponse(BaseModel):
     likes_count: int = 0
     comments_count: int = 0
     is_liked_by_me: bool = False
+    my_reaction: ReactionType | None = None
+    reactions: dict[str, int] = Field(default_factory=dict)
     comments: list[CommentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -63,8 +68,27 @@ class LikeToggleResponse(BaseModel):
     message: str
 
 
+class ReactionCreate(BaseModel):
+    reaction: ReactionType
+
+
+class ReactionResponse(BaseModel):
+    reaction: ReactionType | None
+    reactions_count: int
+    reactions: dict[str, int]
+    message: str
+
+
+class PostMentionResponse(BaseModel):
+    id: str
+    type: Literal["bài viết", "bình luận"]
+    content: str
+    created_at: datetime
+    author: PostAuthorResponse
+    post: PostResponse
+
+
 class PostActionResponse(BaseModel):
     """Schema phản hồi cho thao tác xóa bài viết hoặc bình luận."""
     success: bool = True
     message: str
-

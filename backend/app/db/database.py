@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -32,6 +32,20 @@ else:
         db_url,
         connect_args=connect_args,
     )
+
+# Upgrade existing databases without requiring a destructive reset.
+if inspect(engine).has_table("post_likes"):
+    post_like_columns = {
+        column["name"] for column in inspect(engine).get_columns("post_likes")
+    }
+    if "reaction_type" not in post_like_columns:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE post_likes "
+                    "ADD COLUMN reaction_type VARCHAR(20) NOT NULL DEFAULT 'like'"
+                )
+            )
 
 # Session factory — mỗi request sẽ tạo một session riêng
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -16,6 +16,14 @@ const MOODS = [
   '🎯 Tập trung',
 ]
 
+const REACTIONS = [
+  { value: 'heart', emoji: '❤️', label: 'Tim' },
+  { value: 'like', emoji: '👍', label: 'Thích' },
+  { value: 'angry', emoji: '😠', label: 'Giận' },
+  { value: 'sad', emoji: '😢', label: 'Buồn' },
+  { value: 'haha', emoji: '😂', label: 'Haha' },
+]
+
 const RELAXATION_REELS = [
   {
     id: 'breathing',
@@ -81,6 +89,10 @@ export default function HomeFeed() {
   const { user, loginEventId } = useAuth()
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
+  const [comments, setComments] = useState({})
+  const [commentsOpen, setCommentsOpen] = useState({})
+  const [commentInputs, setCommentInputs] = useState({})
+  const [commentLoading, setCommentLoading] = useState({})
   const [content, setContent] = useState('')
   const [mood, setMood] = useState(MOODS[0])
   const [imageUrl, setImageUrl] = useState('')
@@ -187,25 +199,79 @@ export default function HomeFeed() {
     }
   }
 
-  const handleLike = async (postId) => {
-    const previousPosts = posts
+  const handleReaction = async (postId, reaction) => {
+    const previousPost = posts.find((post) => post.id === postId)
+    if (!previousPost) return
+    const nextReaction = previousPost.my_reaction === reaction ? null : reaction
+    const nextCounts = { ...(previousPost.reactions || {}) }
+    if (previousPost.my_reaction) {
+      nextCounts[previousPost.my_reaction] = Math.max(0, (nextCounts[previousPost.my_reaction] || 0) - 1)
+    }
+    if (nextReaction) nextCounts[nextReaction] = (nextCounts[nextReaction] || 0) + 1
+    const updateReaction = (post, value, counts) => ({
+      ...post,
+      my_reaction: value,
+      is_liked_by_me: value === 'heart' || value === 'like',
+      reactions: counts,
+      likes_count: Object.values(counts).reduce((total, count) => total + count, 0),
+    })
     setPosts((currentPosts) =>
-      currentPosts.map((post) => {
-        if (post.id !== postId) return post
-        const liked = !post.is_liked_by_me
-        return {
-          ...post,
-          is_liked_by_me: liked,
-          likes_count: Math.max(0, (post.likes_count || 0) + (liked ? 1 : -1)),
-        }
-      })
+      currentPosts.map((post) => post.id === postId ? updateReaction(post, nextReaction, nextCounts) : post)
     )
     try {
-      await postService.toggleLike(postId)
-    } catch (likeError) {
-      console.error('Không thể cập nhật cảm xúc bài viết:', likeError)
-      setPosts(previousPosts)
-      setError('Không thể cập nhật lượt thích. Vui lòng thử lại.')
+      const result = await postService.setReaction(postId, reaction)
+      setPosts((currentPosts) =>
+        currentPosts.map((post) => post.id === postId
+          ? updateReaction(post, result.reaction, result.reactions)
+          : post)
+      )
+    } catch (reactionError) {
+      console.error('Không thể cập nhật cảm xúc bài viết:', reactionError)
+      setPosts((currentPosts) =>
+        currentPosts.map((post) => post.id === postId
+          ? updateReaction(post, previousPost.my_reaction || null, previousPost.reactions || {})
+          : post)
+      )
+      setError('Không thể cập nhật cảm xúc. Vui lòng thử lại.')
+    }
+  }
+
+  const toggleComments = async (postId) => {
+    if (commentsOpen[postId]) {
+      setCommentsOpen((current) => ({ ...current, [postId]: false }))
+      return
+    }
+    setCommentsOpen((current) => ({ ...current, [postId]: true }))
+    if (comments[postId]) return
+    setCommentLoading((current) => ({ ...current, [postId]: true }))
+    try {
+      const result = await postService.getComments(postId)
+      setComments((current) => ({ ...current, [postId]: result || [] }))
+    } catch (commentError) {
+      console.error('Không thể tải bình luận:', commentError)
+      setError('Không thể tải bình luận. Vui lòng thử lại.')
+    } finally {
+      setCommentLoading((current) => ({ ...current, [postId]: false }))
+    }
+  }
+
+  const handleComment = async (event, postId) => {
+    event.preventDefault()
+    const commentContent = commentInputs[postId]?.trim()
+    if (!commentContent || commentLoading[postId]) return
+    setCommentLoading((current) => ({ ...current, [postId]: true }))
+    try {
+      const created = await postService.addComment(postId, commentContent)
+      setComments((current) => ({ ...current, [postId]: [...(current[postId] || []), created] }))
+      setPosts((current) => current.map((post) => post.id === postId
+        ? { ...post, comments_count: (post.comments_count || 0) + 1 }
+        : post))
+      setCommentInputs((current) => ({ ...current, [postId]: '' }))
+    } catch (commentError) {
+      console.error('Không thể gửi bình luận:', commentError)
+      setError(commentError.response?.data?.detail || 'Không thể gửi bình luận. Vui lòng thử lại.')
+    } finally {
+      setCommentLoading((current) => ({ ...current, [postId]: false }))
     }
   }
 
@@ -392,7 +458,7 @@ export default function HomeFeed() {
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
-              placeholder="Bạn đang cảm thấy thế nào? Hãy viết ra điều bạn muốn chia sẻ..."
+              placeholder="Bạn đang cảm thấy thế nào? Hãy viết ra điều bạn muốn chia sẻ... Dùng @username để nhắc đến ai đó."
               rows={4}
               maxLength={5000}
               aria-label="Nội dung tâm sự"
@@ -491,16 +557,71 @@ export default function HomeFeed() {
                   <p className="home-post-content">{post.content}</p>
                   {post.image_url && <img className="home-post-image" src={post.image_url} alt="Ảnh đính kèm" />}
                   <footer className="home-post-footer">
+                    <div className="home-reactions" aria-label="Bày tỏ cảm xúc">
+                      {REACTIONS.map((reaction) => (
+                        <button
+                          type="button"
+                          key={reaction.value}
+                          className={`home-reaction${post.my_reaction === reaction.value ? ' is-selected' : ''}`}
+                          onClick={() => handleReaction(post.id, reaction.value)}
+                          aria-label={`${reaction.label}, ${post.reactions?.[reaction.value] || 0} lượt`}
+                          aria-pressed={post.my_reaction === reaction.value}
+                          title={reaction.label}
+                        >
+                          <span aria-hidden="true">{reaction.emoji}</span>
+                          {(post.reactions?.[reaction.value] || 0) > 0 && (
+                            <span>{post.reactions[reaction.value]}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       type="button"
-                      className={post.is_liked_by_me ? 'home-like-button is-liked' : 'home-like-button'}
-                      onClick={() => handleLike(post.id)}
-                      aria-pressed={Boolean(post.is_liked_by_me)}
+                      className="home-comments-toggle"
+                      onClick={() => toggleComments(post.id)}
+                      aria-expanded={Boolean(commentsOpen[post.id])}
                     >
-                      {post.is_liked_by_me ? '♥' : '♡'} Đồng cảm · {post.likes_count || 0}
+                      <MessageCircle size={15} aria-hidden="true" />
+                      {post.comments_count || 0} bình luận
                     </button>
-                    <span>{post.comments_count || 0} bình luận</span>
                   </footer>
+                  {commentsOpen[post.id] && (
+                    <div className="home-comments">
+                      {commentLoading[post.id] && !comments[post.id] ? (
+                        <p>Đang tải bình luận...</p>
+                      ) : (
+                        <>
+                          {(comments[post.id] || []).map((comment) => (
+                            <div className="home-comment" key={comment.id}>
+                              <strong>@{comment.author?.username || 'thành viên'}</strong>
+                              <span>{comment.content}</span>
+                            </div>
+                          ))}
+                          {(comments[post.id] || []).length === 0 && (
+                            <p>Chưa có bình luận. Hãy bắt đầu cuộc trò chuyện.</p>
+                          )}
+                          <form className="home-comment-form" onSubmit={(event) => handleComment(event, post.id)}>
+                            <input
+                              value={commentInputs[post.id] || ''}
+                              onChange={(event) => setCommentInputs((current) => ({
+                                ...current,
+                                [post.id]: event.target.value,
+                              }))}
+                              placeholder="Viết bình luận... Dùng @username để nhắc đến ai đó"
+                              aria-label="Viết bình luận"
+                              maxLength={1000}
+                            />
+                            <button
+                              type="submit"
+                              disabled={!commentInputs[post.id]?.trim() || commentLoading[post.id]}
+                            >
+                              Gửi
+                            </button>
+                          </form>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </article>
               )
             })}

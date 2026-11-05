@@ -1391,12 +1391,125 @@ button:disabled {
 
 .home-post-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
+  justify-content: space-between;
+  gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.home-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.home-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.home-reaction:hover,
+.home-reaction.is-selected {
+  border-color: var(--primary-border);
+  background: var(--bg-page);
+  color: var(--primary);
+}
+
+.home-comments-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.home-comments-toggle:hover {
+  color: var(--primary);
+}
+
+.home-comments {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.home-comments > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.home-comment {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.home-comment strong {
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.home-comment-form {
+  display: flex;
+  gap: 8px;
+}
+
+.home-comment-form input {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  outline: none;
+  background: var(--bg-page);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 12px;
+}
+
+.home-comment-form input:focus {
+  border-color: var(--primary);
+}
+
+.home-comment-form button {
+  padding: 0 13px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-comment-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .home-like-button {
@@ -2063,6 +2176,37 @@ html[data-theme='dark'] [style*="color: rgb(73, 103, 90)"] {
 .auth-card .btn-primary {
   background: #245745;
   box-shadow: 0 3px 12px rgba(36, 87, 69, 0.2);
+}
+
+.admin-stat-card {
+  width: 100%;
+  max-width: none;
+  border: 1px solid #dce8e2;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.admin-stat-card:hover,
+.admin-stat-card.is-selected {
+  border-color: #9ac4b4;
+  box-shadow: 0 5px 16px rgba(36, 87, 69, 0.11);
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.admin-stat-card:focus-visible {
+  outline: 3px solid rgba(36, 87, 69, 0.24);
+  outline-offset: 2px;
+}
+
+.admin-user-panel,
+.admin-report-panel {
+  width: 100%;
+  max-width: none;
 }
 
 @media (max-width: 1050px) {

@@ -74,6 +74,7 @@ def test_posts_and_feed_flow():
         # 1. Setup users
         alice = ensure_user(db, "alice_dev", "alice@example.com", role="user")
         bob = ensure_user(db, "bob_coder", "bob@example.com", role="user")
+        quang = ensure_user(db, "quang_tech", "quang@example.com", role="user")
         admin = ensure_user(db, "admin", "admin@kindred.local", role="admin")
 
         # Dọn dẹp notifications cũ giữa Alice và Bob
@@ -83,7 +84,7 @@ def test_posts_and_feed_flow():
         print("\n--- [1] KIỂM TRA ĐĂNG BÀI VIẾT / KHOẢNH KHẮC (POST CREATE) ---")
         post_in = PostCreate(
             category="Công nghệ",
-            content="Hôm nay mình vừa hoàn thành xong tính năng Realtime Chat WebSocket! Cảm giác thật tuyệt vời 🚀",
+            content="@bob_coder Hôm nay mình vừa hoàn thành xong tính năng Realtime Chat WebSocket! Cảm giác thật tuyệt vời 🚀",
             image_url="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600",
             mood="Hào hứng",
         )
@@ -95,6 +96,20 @@ def test_posts_and_feed_flow():
         assert post_res.likes_count == 0
         assert post_res.comments_count == 0
         print(f"  ✓ Tạo bài viết thành công: ID #{post_res.id} bởi @{alice.username}")
+
+        bob_mentions = post_service.get_user_mentions(db, bob.id)
+        assert any(mention.post.id == post_res.id for mention in bob_mentions)
+        mention_notif = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == bob.id,
+                Notification.type == "mention",
+                Notification.related_id == post_res.id,
+            )
+            .first()
+        )
+        assert mention_notif is not None
+        print("  ✓ @mention trong bài viết xuất hiện ở mục nhắc đến và tạo thông báo")
 
         print("\n--- [2] KIỂM TRA TRUY VẤN BẢNG TIN (FEED & FILTER) ---")
         # 2.1 Tất cả feed
@@ -113,6 +128,22 @@ def test_posts_and_feed_flow():
         print("  ✓ Lọc theo chủ đề khác 'Đọc sách': Loại trừ bài viết chính xác")
 
         print("\n--- [3] KIỂM TRA THẢ TIM & HỦY THẢ TIM (LIKE / UNLIKE TOGGLE) ---")
+        reaction_res = post_service.set_post_reaction(db, bob, post_res.id, "haha")
+        assert reaction_res.reaction == "haha"
+        assert reaction_res.reactions == {"haha": 1}
+        bob_post_view = next(
+            p for p in post_service.get_posts(db, current_user_id=bob.id)
+            if p.id == post_res.id
+        )
+        assert bob_post_view.my_reaction == "haha"
+        assert bob_post_view.is_liked_by_me is False
+        print("  ✓ Bày tỏ cảm xúc haha được lưu và trả về đúng loại cảm xúc")
+
+        reaction_res = post_service.set_post_reaction(db, bob, post_res.id, "haha")
+        assert reaction_res.reaction is None
+        assert reaction_res.reactions_count == 0
+        print("  ✓ Bấm lại cảm xúc đang chọn sẽ gỡ cảm xúc")
+
         # 3.1 Bob thả tim bài viết của Alice
         like_res = post_service.toggle_like_post(db, bob, post_res.id)
         assert like_res.liked is True
@@ -126,13 +157,13 @@ def test_posts_and_feed_flow():
         print("  ✓ Cờ is_liked_by_me = True khi Bob xem bài viết")
 
         # Kiểm tra Alice nhận được thông báo post_like
-        notif = (
+        notifs = (
             db.query(Notification)
             .filter(Notification.user_id == alice.id, Notification.type == "post_like")
-            .first()
+            .all()
         )
-        assert notif is not None
-        assert "thích bài viết" in notif.content or "thả tim" in notif.title
+        assert any("thích" in item.content or "👍" in item.title for item in notifs)
+        notif = next(item for item in notifs if "thích" in item.content or "👍" in item.title)
         print(f"  ✓ Đã tự động tạo thông báo cho tác giả: '{notif.title}'")
 
         # 3.2 Bob bấm thả tim lần nữa -> Hủy like (Toggle)
@@ -147,12 +178,26 @@ def test_posts_and_feed_flow():
         print("\n--- [4] KIỂM TRA BÌNH LUẬN (COMMENTS) ---")
         # 4.1 Bob bình luận vào bài viết của Alice
         comment_res = post_service.create_comment(
-            db, bob, post_res.id, CommentCreate(content="Chúc mừng bạn nhé, dự án trông xịn quá!")
+            db, bob, post_res.id, CommentCreate(content="@quang_tech Chúc mừng bạn nhé, dự án trông xịn quá!")
         )
         assert comment_res.id is not None
         assert comment_res.author.username == "bob_coder"
-        assert comment_res.content == "Chúc mừng bạn nhé, dự án trông xịn quá!"
+        assert comment_res.content == "@quang_tech Chúc mừng bạn nhé, dự án trông xịn quá!"
         print(f"  ✓ Tạo bình luận thành công: ID #{comment_res.id}")
+
+        quang_mentions = post_service.get_user_mentions(db, quang.id)
+        assert any(mention.id == f"comment-{comment_res.id}" for mention in quang_mentions)
+        comment_mention_notif = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == quang.id,
+                Notification.type == "mention",
+                Notification.related_id == post_res.id,
+            )
+            .first()
+        )
+        assert comment_mention_notif is not None
+        print("  ✓ @mention trong bình luận xuất hiện ở mục nhắc đến và tạo thông báo")
 
         # Kiểm tra thông báo post_comment cho Alice
         comm_notif = (
@@ -205,4 +250,3 @@ def test_posts_and_feed_flow():
 if __name__ == "__main__":
     if not test_posts_and_feed_flow():
         sys.exit(1)
-

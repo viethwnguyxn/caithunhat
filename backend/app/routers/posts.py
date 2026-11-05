@@ -9,8 +9,11 @@ from ..schemas.post import (
     CommentResponse,
     LikeToggleResponse,
     PostActionResponse,
+    PostMentionResponse,
     PostCreate,
     PostResponse,
+    ReactionCreate,
+    ReactionResponse,
 )
 from ..services import post_service
 
@@ -45,6 +48,15 @@ def get_community_feed(
     )
 
 
+@router.get("/posts/mentions", response_model=list[PostMentionResponse])
+def get_my_mentions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Lấy mọi bài viết và bình luận nhắc đến username của người dùng hiện tại."""
+    return post_service.get_user_mentions(db=db, user_id=current_user.id)
+
+
 @router.get("/posts/{post_id}", response_model=PostResponse)
 def get_post_detail(
     post_id: int,
@@ -75,6 +87,25 @@ def toggle_like(
 ):
     """Thả tim hoặc hủy thả tim bài viết."""
     return post_service.toggle_like_post(db=db, user=current_user, post_id=post_id)
+
+
+@router.put(
+    "/posts/{post_id}/reaction",
+    response_model=ReactionResponse,
+)
+def set_reaction(
+    post_id: int,
+    reaction_in: ReactionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Thêm, đổi hoặc gỡ cảm xúc trên bài viết."""
+    return post_service.set_post_reaction(
+        db=db,
+        user=current_user,
+        post_id=post_id,
+        reaction=reaction_in.reaction,
+    )
 
 
 @router.post("/posts/{post_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
@@ -108,4 +139,3 @@ def delete_comment(
 ):
     """Xóa bình luận (Người bình luận, tác giả bài viết, hoặc Admin)."""
     return post_service.delete_comment(db=db, user=current_user, comment_id=comment_id)
-

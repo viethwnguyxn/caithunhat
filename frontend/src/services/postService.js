@@ -40,6 +40,11 @@ export const postService = {
     return response.data
   },
 
+  setReaction: async (postId, reaction) => {
+    const response = await api.put(`/api/posts/${postId}/reaction`, { reaction })
+    return response.data
+  },
+
   // Đăng bình luận
   addComment: async (postId, content) => {
     const response = await api.post(`/api/posts/${postId}/comments`, { content })
@@ -52,6 +57,11 @@ export const postService = {
     return response.data
   },
 
+  getMentions: async () => {
+    const response = await api.get('/api/posts/mentions')
+    return response.data
+  },
+
   // Xóa bình luận
   deleteComment: async (commentId) => {
     const response = await api.delete(`/api/comments/${commentId}`)
@@ -60,4 +70,3 @@ export const postService = {
 }
 
 export default postService
-

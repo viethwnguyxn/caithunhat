@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Heart, MessageCircle } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
+const REACTIONS = [
+  { value: 'heart', emoji: '❤️', label: 'Tim' },
+  { value: 'like', emoji: '👍', label: 'Thích' },
+  { value: 'angry', emoji: '😠', label: 'Giận' },
+  { value: 'sad', emoji: '😢', label: 'Buồn' },
+  { value: 'haha', emoji: '😂', label: 'Haha' },
+]
 
 export default function Activity() {
   const { user } = useAuth()
@@ -48,46 +52,8 @@ export default function Activity() {
     setMentionsLoading(true)
     setMentionsError('')
     try {
-      const feed = await postService.getFeed({ limit: 100 })
-      const mentionPattern = new RegExp(`(^|[^\\w])@${escapeRegExp(user.username)}(?![\\w.-])`, 'i')
-      const matched = []
-
-      for (const post of feed || []) {
-        if (post.author?.id !== user.id && mentionPattern.test(post.content || '')) {
-          matched.push({
-            id: `post-${post.id}`,
-            post,
-            content: post.content,
-            author: post.author,
-            created_at: post.created_at,
-            type: 'bài viết',
-          })
-        }
-      }
-
-      const commentedPosts = (feed || [])
-        .filter((post) => post.author?.id !== user.id && post.comments_count > 0)
-        .slice(0, 20)
-      const commentLists = await Promise.all(
-        commentedPosts.map((post) => postService.getComments(post.id))
-      )
-      commentLists.forEach((comments, index) => {
-        const post = commentedPosts[index]
-        comments.forEach((comment) => {
-          if (comment.author?.id !== user.id && mentionPattern.test(comment.content || '')) {
-            matched.push({
-              id: `comment-${comment.id}`,
-              post,
-              content: comment.content,
-              author: comment.author,
-              created_at: comment.created_at,
-              type: 'bình luận',
-            })
-          }
-        })
-      })
-
-      setMentions(matched.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+      const matched = await postService.getMentions()
+      setMentions(matched || [])
       setMentionsLoaded(true)
     } catch (error) {
       console.error('Lỗi khi tải nội dung nhắc đến bạn:', error)
@@ -109,24 +75,31 @@ export default function Activity() {
     )))
   }
 
-  const handleLike = async (post) => {
-    const liked = !post.is_liked_by_me
-    updatePost(post.id, (current) => ({
+  const handleReaction = async (post, reaction) => {
+    const previousReaction = post.my_reaction || null
+    const previousCounts = post.reactions || {}
+    const nextReaction = previousReaction === reaction ? null : reaction
+    const nextCounts = { ...previousCounts }
+    if (previousReaction) {
+      nextCounts[previousReaction] = Math.max(0, (nextCounts[previousReaction] || 0) - 1)
+    }
+    if (nextReaction) nextCounts[nextReaction] = (nextCounts[nextReaction] || 0) + 1
+    const withReaction = (current, value, counts) => ({
       ...current,
-      is_liked_by_me: liked,
-      likes_count: Math.max(0, (current.likes_count || 0) + (liked ? 1 : -1)),
-    }))
+      my_reaction: value,
+      is_liked_by_me: value === 'heart' || value === 'like',
+      reactions: counts,
+      likes_count: Object.values(counts).reduce((total, count) => total + count, 0),
+    })
+    updatePost(post.id, (current) => withReaction(current, nextReaction, nextCounts))
     setActionError('')
     try {
-      await postService.toggleLike(post.id)
+      const result = await postService.setReaction(post.id, reaction)
+      updatePost(post.id, (current) => withReaction(current, result.reaction, result.reactions))
     } catch (error) {
       console.error('Lỗi khi bày tỏ đồng cảm:', error)
-      updatePost(post.id, (current) => ({
-        ...current,
-        is_liked_by_me: !liked,
-        likes_count: Math.max(0, (current.likes_count || 0) + (liked ? -1 : 1)),
-      }))
-      setActionError('Không thể cập nhật lượt đồng cảm. Vui lòng thử lại.')
+      updatePost(post.id, (current) => withReaction(current, previousReaction, previousCounts))
+      setActionError('Không thể cập nhật cảm xúc. Vui lòng thử lại.')
     }
   }
 
@@ -193,15 +166,22 @@ export default function Activity() {
       <p>{post.content}</p>
       {post.image_url && <img className="activity-post-image" src={post.image_url} alt="Ảnh trong bài viết" />}
       <div className="activity-post-actions">
-        <button
-          type="button"
-          className={post.is_liked_by_me ? 'home-like-button is-liked' : 'home-like-button'}
-          onClick={() => handleLike(post)}
-          aria-pressed={Boolean(post.is_liked_by_me)}
-        >
-          <Heart size={15} aria-hidden="true" fill={post.is_liked_by_me ? 'currentColor' : 'none'} />
-          Đồng cảm · {post.likes_count || 0}
-        </button>
+        {REACTIONS.map((reaction) => (
+          <button
+            type="button"
+            key={reaction.value}
+            className={`home-reaction${post.my_reaction === reaction.value ? ' is-selected' : ''}`}
+            onClick={() => handleReaction(post, reaction.value)}
+            aria-label={`${reaction.label}, ${post.reactions?.[reaction.value] || 0} lượt`}
+            aria-pressed={post.my_reaction === reaction.value}
+            title={reaction.label}
+          >
+            <span aria-hidden="true">{reaction.emoji}</span>
+            {(post.reactions?.[reaction.value] || 0) > 0 && (
+              <span>{post.reactions[reaction.value]}</span>
+            )}
+          </button>
+        ))}
         <button type="button" className="activity-comments-toggle" onClick={() => toggleComments(post.id)}>
           <MessageCircle size={15} aria-hidden="true" />
           {commentsOpen[post.id] ? 'Ẩn bình luận' : `Bình luận · ${post.comments_count || 0}`}

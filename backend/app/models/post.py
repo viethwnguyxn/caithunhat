@@ -51,6 +51,9 @@ class PostLike(Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    reaction_type: Mapped[str] = mapped_column(
+        String(20), default="like", server_default="like", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -77,4 +80,3 @@ class PostComment(Base):
     )
 
     author = relationship("User", foreign_keys=[author_id])
-

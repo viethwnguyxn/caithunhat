@@ -4,6 +4,7 @@ import {
   Bell,
   BellOff,
   Check,
+  AtSign,
   Heart,
   MessageCircle,
   Pencil,
@@ -50,6 +51,8 @@ function getNotificationIcon(type) {
       return Heart
     case 'post_comment':
       return MessageCircle
+    case 'mention':
+      return AtSign
     default:
       return Bell
   }
@@ -168,6 +171,9 @@ export default function NotificationBell() {
         } else {
           navigate('/communities')
         }
+        break
+      case 'mention':
+        navigate('/activity')
         break
       default:
         break

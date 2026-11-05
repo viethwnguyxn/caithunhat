@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
+  const [userStatusFilter, setUserStatusFilter] = useState('all')
   const [togglingUserId, setTogglingUserId] = useState(null)
 
   // Reports Tab state
@@ -180,6 +181,23 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleStatsClick = (filter) => {
+    if (filter === 'pending-reports') {
+      setActiveTab('reports')
+      setReportStatusFilter('pending')
+      return
+    }
+
+    setActiveTab('users')
+    setUserStatusFilter(filter)
+  }
+
+  const filteredUsers = users.filter((targetUser) => {
+    if (userStatusFilter === 'active') return targetUser.is_active
+    if (userStatusFilter === 'locked') return !targetUser.is_active
+    return true
+  })
+
   // GUARD: Nếu không phải Admin
   if (user && user.role !== 'admin') {
     return (
@@ -247,6 +265,7 @@ export default function AdminDashboard() {
 
         {/* THẺ THỐNG KÊ (STATS CARDS) */}
         <div
+          className="admin-stats-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
@@ -254,7 +273,13 @@ export default function AdminDashboard() {
             marginBottom: '28px',
           }}
         >
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            type="button"
+            className={`card admin-stat-card${activeTab === 'users' && userStatusFilter === 'all' ? ' is-selected' : ''}`}
+            onClick={() => handleStatsClick('all')}
+            aria-pressed={activeTab === 'users' && userStatusFilter === 'all'}
+            style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          >
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#e1efe8', color: '#245745', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
               <UsersRound size={22} aria-hidden="true" />
             </div>
@@ -266,9 +291,15 @@ export default function AdminDashboard() {
                 {loadingStats ? '...' : stats?.total_users ?? 0}
               </div>
             </div>
-          </div>
+          </button>
 
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            type="button"
+            className={`card admin-stat-card${activeTab === 'users' && userStatusFilter === 'active' ? ' is-selected' : ''}`}
+            onClick={() => handleStatsClick('active')}
+            aria-pressed={activeTab === 'users' && userStatusFilter === 'active'}
+            style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          >
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
               <Activity size={22} aria-hidden="true" />
             </div>
@@ -280,9 +311,15 @@ export default function AdminDashboard() {
                 {loadingStats ? '...' : stats?.active_users ?? 0}
               </div>
             </div>
-          </div>
+          </button>
 
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            type="button"
+            className={`card admin-stat-card${activeTab === 'users' && userStatusFilter === 'locked' ? ' is-selected' : ''}`}
+            onClick={() => handleStatsClick('locked')}
+            aria-pressed={activeTab === 'users' && userStatusFilter === 'locked'}
+            style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          >
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
               <LockKeyhole size={22} aria-hidden="true" />
             </div>
@@ -294,9 +331,15 @@ export default function AdminDashboard() {
                 {loadingStats ? '...' : stats?.locked_users ?? 0}
               </div>
             </div>
-          </div>
+          </button>
 
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            type="button"
+            className={`card admin-stat-card${activeTab === 'reports' && reportStatusFilter === 'pending' ? ' is-selected' : ''}`}
+            onClick={() => handleStatsClick('pending-reports')}
+            aria-pressed={activeTab === 'reports' && reportStatusFilter === 'pending'}
+            style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          >
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
               <Flag size={22} aria-hidden="true" />
             </div>
@@ -308,7 +351,7 @@ export default function AdminDashboard() {
                 {loadingStats ? '...' : stats?.pending_reports ?? 0}
               </div>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* THANH CHUYỂN TAB CHÍNH */}
@@ -400,7 +443,7 @@ export default function AdminDashboard() {
         {/* TAB 1: QUẢN LÝ NGƯỜI DÙNG                                  */}
         {/* ========================================================= */}
         {activeTab === 'users' && (
-          <div className="card" style={{ padding: '24px' }}>
+          <div className="card admin-user-panel" style={{ padding: '24px' }}>
             {/* Bộ lọc & tìm kiếm */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
@@ -447,9 +490,11 @@ export default function AdminDashboard() {
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
                 Đang tải danh sách người dùng...
               </div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                Không tìm thấy người dùng nào phù hợp.
+                {userStatusFilter === 'active' && 'Không có tài khoản nào đang hoạt động.'}
+                {userStatusFilter === 'locked' && 'Không có tài khoản nào bị khóa.'}
+                {userStatusFilter === 'all' && 'Không tìm thấy người dùng nào phù hợp.'}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -465,7 +510,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => {
+                    {filteredUsers.map((u) => {
                       const isMe = u.id === user?.id
                       return (
                         <tr
@@ -610,7 +655,7 @@ export default function AdminDashboard() {
         {/* TAB 2: KIỂM DUYỆT BÁO CÁO VI PHẠM (REPORTS MODERATION)      */}
         {/* ========================================================= */}
         {activeTab === 'reports' && (
-          <div className="card" style={{ padding: '24px' }}>
+          <div className="card admin-report-panel" style={{ padding: '24px' }}>
             {/* Lọc theo trạng thái báo cáo */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {[

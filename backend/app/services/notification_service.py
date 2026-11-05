@@ -15,6 +15,7 @@ VALID_NOTIFICATION_TYPES = {
     "group_post",
     "post_like",
     "post_comment",
+    "mention",
 }
 
 
@@ -141,4 +142,3 @@ def mark_conversation_notifications_read(
     )
     db.commit()
     return updated_count
-
