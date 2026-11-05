@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { adminService } from '../services/adminService'
 import Avatar from '../components/Avatar'
+import AdminUserProfileModal from '../components/AdminUserProfileModal'
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
   const [togglingUserId, setTogglingUserId] = useState(null)
+  const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
 
   // Reports Tab state
   const [reports, setReports] = useState([])
@@ -566,32 +568,48 @@ export default function AdminDashboard() {
                           </td>
 
                           <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                            {isMe ? (
-                              <span style={{ fontSize: '12px', color: '#9ca3af' }}>Tài khoản của bạn</span>
-                            ) : (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
                               <button
                                 type="button"
-                                disabled={togglingUserId === u.id}
-                                onClick={() => handleToggleUserStatus(u)}
+                                onClick={() => setSelectedUserForProfile(u)}
                                 style={{
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  border: u.is_active ? '1px solid #fee2e2' : '1px solid #a7f3d0',
-                                  backgroundColor: u.is_active ? '#fff5f5' : '#ecfdf5',
-                                  color: u.is_active ? '#dc2626' : '#059669',
+                                  border: '1px solid #ddd6fe',
+                                  backgroundColor: '#f5f0ff',
+                                  color: '#6d4bb3',
                                   fontSize: '12px',
                                   fontWeight: 600,
-                                  cursor: togglingUserId === u.id ? 'not-allowed' : 'pointer',
-                                  transition: 'all 0.15s ease',
+                                  cursor: 'pointer',
                                 }}
                               >
-                                {togglingUserId === u.id
-                                  ? 'Đang xử lý...'
-                                  : u.is_active
-                                  ? 'Khóa tài khoản'
-                                  : 'Mở khóa'}
+                                Xem hồ sơ
                               </button>
-                            )}
+                              {!isMe && (
+                                <button
+                                  type="button"
+                                  disabled={togglingUserId === u.id}
+                                  onClick={() => handleToggleUserStatus(u)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: u.is_active ? '1px solid #fee2e2' : '1px solid #a7f3d0',
+                                    backgroundColor: u.is_active ? '#fff5f5' : '#ecfdf5',
+                                    color: u.is_active ? '#dc2626' : '#059669',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: togglingUserId === u.id ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  {togglingUserId === u.id
+                                    ? 'Đang xử lý...'
+                                    : u.is_active
+                                    ? 'Khóa tài khoản'
+                                    : 'Mở khóa'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -784,6 +802,15 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {selectedUserForProfile && (
+        <AdminUserProfileModal
+          targetUser={selectedUserForProfile}
+          currentUserId={user?.id}
+          onClose={() => setSelectedUserForProfile(null)}
+          onNotify={showToast}
+        />
+      )}
 
       {/* MODAL XÁC NHẬN XỬ LÝ VI PHẠM */}
       {selectedReportForAction && (

@@ -20,6 +20,13 @@ export default function Home() {
   const [connectedUserIds, setConnectedUserIds] = useState([])
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
   const [posts, setPosts] = useState([])
+  const [expandedComments, setExpandedComments] = useState({})
+  const [commentsMap, setCommentsMap] = useState({})
+  const [commentInputs, setCommentInputs] = useState({})
+  const [commentsLoading, setCommentsLoading] = useState({})
+  const [submittingComment, setSubmittingComment] = useState({})
+  const [likingPosts, setLikingPosts] = useState({})
+  const [interactionErrors, setInteractionErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('Phù hợp với bạn')
   const displayName = profile?.display_name || user?.display_name || user?.username || 'Bạn'
@@ -85,12 +92,90 @@ export default function Home() {
   }, [posts, connectedUserIds, survey, filter, user?.id])
 
   const handleLike = async (post) => {
-    const id = post?.id || post?.post_id
-    if (!id) return
+    const postId = post?.id
+    if (!postId || likingPosts[postId]) return
+
+    setLikingPosts((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
     try {
-      await postService.toggleLike(id)
-      setPosts((current) => current.map((item) => (item.id || item.post_id) === id ? { ...item, is_liked: !item.is_liked, liked: !item.liked, likes_count: Math.max(0, (item.likes_count || item.like_count || 0) + (item.is_liked ? -1 : 1)) } : item))
-    } catch (error) { console.error('Không thể thích bài viết:', error) }
+      const result = await postService.toggleLike(postId)
+      setPosts((current) =>
+        current.map((item) =>
+          item.id === postId
+            ? {
+                ...item,
+                is_liked_by_me: result.liked,
+                likes_count: result.likes_count,
+              }
+            : item
+        )
+      )
+    } catch (error) {
+      console.error('Không thể thích bài viết:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể cập nhật lượt thích.',
+      }))
+    } finally {
+      setLikingPosts((current) => ({ ...current, [postId]: false }))
+    }
+  }
+
+  const handleToggleComments = async (postId) => {
+    if (expandedComments[postId]) {
+      setExpandedComments((current) => ({ ...current, [postId]: false }))
+      return
+    }
+
+    setExpandedComments((current) => ({ ...current, [postId]: true }))
+    if (commentsMap[postId]) return
+
+    setCommentsLoading((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
+    try {
+      const comments = await postService.getComments(postId)
+      setCommentsMap((current) => ({ ...current, [postId]: comments }))
+    } catch (error) {
+      console.error('Không thể tải bình luận:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể tải bình luận.',
+      }))
+    } finally {
+      setCommentsLoading((current) => ({ ...current, [postId]: false }))
+    }
+  }
+
+  const handleAddComment = async (event, postId) => {
+    event.preventDefault()
+    const content = commentInputs[postId]?.trim()
+    if (!content || submittingComment[postId]) return
+
+    setSubmittingComment((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
+    try {
+      const comment = await postService.addComment(postId, content)
+      setCommentsMap((current) => ({
+        ...current,
+        [postId]: [...(current[postId] || []), comment],
+      }))
+      setPosts((current) =>
+        current.map((item) =>
+          item.id === postId
+            ? { ...item, comments_count: (item.comments_count || 0) + 1 }
+            : item
+        )
+      )
+      setCommentInputs((current) => ({ ...current, [postId]: '' }))
+    } catch (error) {
+      console.error('Không thể gửi bình luận:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể gửi bình luận.',
+      }))
+    } finally {
+      setSubmittingComment((current) => ({ ...current, [postId]: false }))
+    }
   }
 
   return <div className="lp-home app-green-theme"><Navbar />
@@ -105,7 +190,156 @@ export default function Home() {
           const content = post.content || post.body || post.text || ''
           const postId = post.id || post.post_id || index
           const postImage = post.image_url || post.image
-          return <article className="lp-feed-card" key={postId}><div className="lp-feed-head"><Avatar src={author.avatar_url} alt={name}/><div style={{flex:1}}><b>{name}</b><small>{post.created_at ? new Date(post.created_at).toLocaleString('vi-VN') : 'Vừa chia sẻ'}{post.mood ? ` · ${post.mood}` : ''}</small></div><span className="lp-muted">•••</span></div><p>{content}</p>{postImage && <img src={postImage} alt="Ảnh trong bài viết" style={{width:'100%',maxHeight:420,objectFit:'cover',borderRadius:12,marginBottom:14}}/>}<div className="lp-feed-actions"><button type="button" onClick={()=>handleLike(post)} className={`lp-like-button ${post.is_liked || post.liked ? 'is-liked' : ''}`}>♡　{post.likes_count ?? post.like_count ?? 0} Thích</button><span>▢　{post.comments_count ?? post.comment_count ?? 0} Bình luận</span><span>↗　Chia sẻ</span></div></article>
+          return (
+            <article className="lp-feed-card" key={postId}>
+              <div className="lp-feed-head">
+                <Avatar src={author.avatar_url} alt={name} />
+                <div style={{ flex: 1 }}>
+                  <b>{name}</b>
+                  <small>
+                    {post.created_at
+                      ? new Date(post.created_at).toLocaleString('vi-VN')
+                      : 'Vừa chia sẻ'}
+                    {post.mood ? ` · ${post.mood}` : ''}
+                  </small>
+                </div>
+                <span className="lp-muted">•••</span>
+              </div>
+              <p>{content}</p>
+              {postImage && (
+                <img
+                  src={postImage}
+                  alt="Ảnh trong bài viết"
+                  style={{
+                    width: '100%',
+                    maxHeight: 420,
+                    objectFit: 'cover',
+                    borderRadius: 12,
+                    marginBottom: 14,
+                  }}
+                />
+              )}
+              <div className="lp-feed-actions">
+                <button
+                  type="button"
+                  disabled={Boolean(likingPosts[postId])}
+                  onClick={() => handleLike(post)}
+                  className={`lp-like-button ${post.is_liked_by_me ? 'is-liked' : ''}`}
+                  aria-pressed={Boolean(post.is_liked_by_me)}
+                >
+                  {post.is_liked_by_me ? '♥' : '♡'}　{post.likes_count ?? 0} Thích
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleComments(postId)}
+                  aria-expanded={Boolean(expandedComments[postId])}
+                  aria-controls={`home-comments-${postId}`}
+                >
+                  ▢　{post.comments_count ?? 0} Bình luận
+                </button>
+                <span>↗　Chia sẻ</span>
+              </div>
+
+              {interactionErrors[postId] && (
+                <p role="alert" style={{ color: '#fca5a5', fontSize: 12 }}>
+                  {interactionErrors[postId]}
+                </p>
+              )}
+
+              {expandedComments[postId] && (
+                <section
+                  id={`home-comments-${postId}`}
+                  aria-label={`Bình luận bài viết của ${name}`}
+                  style={{ marginTop: 14 }}
+                >
+                  {commentsLoading[postId] ? (
+                    <p className="lp-muted">Đang tải bình luận...</p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 12, marginBottom: 14 }}>
+                      {(commentsMap[postId] || []).length === 0 ? (
+                        <p className="lp-muted">Chưa có bình luận nào.</p>
+                      ) : (
+                        commentsMap[postId].map((comment) => (
+                          <div
+                            key={comment.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 10,
+                            }}
+                          >
+                            <Avatar
+                              src={comment.author?.avatar_url}
+                              alt={comment.author?.display_name || comment.author?.username}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                flexShrink: 0,
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                            <div
+                              style={{
+                                flex: 1,
+                                padding: '9px 12px',
+                                borderRadius: 12,
+                                backgroundColor: 'rgba(255,255,255,.05)',
+                              }}
+                            >
+                              <b style={{ fontSize: 12 }}>
+                                {comment.author?.display_name ||
+                                  comment.author?.username ||
+                                  'Thành viên'}
+                              </b>
+                              <p style={{ margin: '4px 0 0', fontSize: 13 }}>
+                                {comment.content}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <form
+                    onSubmit={(event) => handleAddComment(event, postId)}
+                    style={{ display: 'flex', gap: 8 }}
+                  >
+                    <input
+                      type="text"
+                      value={commentInputs[postId] || ''}
+                      onChange={(event) =>
+                        setCommentInputs((current) => ({
+                          ...current,
+                          [postId]: event.target.value,
+                        }))
+                      }
+                      placeholder="Viết bình luận..."
+                      maxLength={1000}
+                      aria-label="Viết bình luận"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: '10px 12px',
+                        border: '1px solid #3b473f',
+                        borderRadius: 10,
+                        color: 'inherit',
+                        backgroundColor: 'rgba(0,0,0,.18)',
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!commentInputs[postId]?.trim() || submittingComment[postId]}
+                      className="lp-chip"
+                      style={{ border: 0, cursor: 'pointer' }}
+                    >
+                      {submittingComment[postId] ? 'Đang gửi...' : 'Gửi'}
+                    </button>
+                  </form>
+                </section>
+              )}
+            </article>
+          )
         })}
       </main>
 
