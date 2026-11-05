@@ -65,7 +65,7 @@ export function CallProvider({ children }) {
           })
         }
 
-        const handleIncomingCall = async (call) => {
+        const handleIncomingCall = async (call, callType) => {
           if (isCancelled) {
             rejectIncomingCall(call, 'Không thể nhận cuộc gọi trong phiên hiện tại.')
             return
@@ -93,14 +93,16 @@ export function CallProvider({ children }) {
               return
             }
 
-            call.ringing((result) => {
-              if (result?.r !== 0) {
-                console.error('Không thể báo chuông cuộc gọi Stringee:', result)
-              }
-            })
+            if (typeof call.ringing === 'function') {
+              call.ringing((result) => {
+                if (result?.r !== 0) {
+                  console.error('Không thể báo chuông cuộc gọi Stringee:', result)
+                }
+              })
+            }
             updateCallSession({
               mode: 'incoming',
-              callType: call.isVideoCall ? 'video' : 'audio',
+              callType,
               partner: conversation.partner,
               conversationId: conversation.id,
               stringeeCall: call,
@@ -125,7 +127,8 @@ export function CallProvider({ children }) {
         client.on('disconnect', () => {
           if (!isCancelled) setStringeeClient(null)
         })
-        client.on('incomingcall', handleIncomingCall)
+        client.on('incomingcall', (call) => handleIncomingCall(call, 'audio'))
+        client.on('incomingcall2', (call) => handleIncomingCall(call, 'video'))
         client.on('requestnewtoken', fetchTokenAndConnect)
         await fetchTokenAndConnect()
       } catch (error) {

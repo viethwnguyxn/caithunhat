@@ -24,6 +24,7 @@ export default function CallModal({
   const remoteVideoRef = useRef(null)
   const remoteAudioRef = useRef(null)
   const callRef = useRef(null)
+  const mediaTracksRef = useRef(new Set())
   const localStreamRef = useRef(null)
   const remoteStreamRef = useRef(null)
   const ringIntervalRef = useRef(null)
@@ -112,6 +113,16 @@ export default function CallModal({
       remoteAudioRef.current.pause()
       remoteAudioRef.current.srcObject = null
     }
+    mediaTracksRef.current.forEach((track) => {
+      try {
+        track.detachAndRemove()
+      } catch (error) {
+        console.warn('Không thể gỡ media track Stringee:', error)
+      }
+    })
+    mediaTracksRef.current.clear()
+    localVideoRef.current?.replaceChildren()
+    remoteVideoRef.current?.replaceChildren()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
     if (finalizeTimeoutRef.current) clearTimeout(finalizeTimeoutRef.current)
     if (durationTimerRef.current) clearInterval(durationTimerRef.current)
@@ -163,28 +174,45 @@ export default function CallModal({
 
   const attachCallEvents = (call) => {
     callRef.current = call
+    const attachVideoTrack = (track, container, isLocal) => {
+      if (!container) return
+      const element = track.attach()
+      element.autoplay = true
+      element.playsInline = true
+      element.muted = isLocal
+      element.style.width = '100%'
+      element.style.height = '100%'
+      element.style.objectFit = 'cover'
+      if (isLocal) element.style.transform = 'scaleX(-1)'
+      container.appendChild(element)
+      mediaTracksRef.current.add(track)
+    }
+
+    if (isVideoCall) {
+      call.on('addlocaltrack', (track) => {
+        attachVideoTrack(track, localVideoRef.current, true)
+      })
+      call.on('addremotetrack', (track) => {
+        attachVideoTrack(track, remoteVideoRef.current, false)
+      })
+      call.on('removelocaltrack', (track) => {
+        mediaTracksRef.current.delete(track)
+        track.detachAndRemove()
+      })
+      call.on('removeremotetrack', (track) => {
+        mediaTracksRef.current.delete(track)
+        track.detachAndRemove()
+      })
+    }
+
     call.on('addlocalstream', (stream) => {
       localStreamRef.current = stream
-      if (localVideoRef.current && isVideoCall) {
-        localVideoRef.current.srcObject = stream
-        localVideoRef.current.play().catch((error) => {
-          console.warn('Không thể phát video của bạn:', error)
-        })
-      }
     })
     call.on('addremotestream', (stream) => {
       remoteStreamRef.current = stream
-      updateStatus('connected')
       stopRinging()
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
 
-      if (remoteVideoRef.current && isVideoCall) {
-        remoteVideoRef.current.srcObject = stream
-        remoteVideoRef.current.muted = true
-        remoteVideoRef.current.play().catch((error) => {
-          console.warn('Không thể phát video đối phương:', error)
-        })
-      }
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream
         remoteAudioRef.current.play().catch((error) => {
@@ -193,7 +221,8 @@ export default function CallModal({
       }
     })
     call.on('signalingstate', (state) => {
-      if (state?.code === 4) {
+      console.info('Stringee signalingstate:', state)
+      if (state?.code === 3) {
         updateStatus('connected')
         stopRinging()
         if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
@@ -210,6 +239,9 @@ export default function CallModal({
           endingReasonRef.current || (connected ? 'remote_ended' : 'no_answer')
         void finalizeCallRef.current(reason, true)
       }
+    })
+    call.on('mediastate', (state) => {
+      console.info('Stringee mediastate:', state)
     })
     call.on('error', (info) => {
       console.error('Stringee call error:', info)
@@ -234,15 +266,18 @@ export default function CallModal({
     let isCancelled = false
     callStartedRef.current = true
     import('stringee')
-      .then(({ StringeeCall }) => {
+    .then(({ StringeeCall, StringeeCall2 }) => {
         if (isCancelled) return
-        const call = new StringeeCall(
-          callClient,
-          String(currentUserId),
-          String(partner?.id),
-          isVideoCall
-        )
-        attachCallEvents(call)
+      const CallConstructor = isVideoCall ? StringeeCall2 : StringeeCall
+      const call = isVideoCall
+        ? new CallConstructor(
+            callClient,
+            String(currentUserId),
+            String(partner?.id),
+            true
+          )
+        : new CallConstructor(callClient, String(currentUserId), String(partner?.id))
+      attachCallEvents(call)
         call.makeCall((result) => {
           if (result?.r !== 0) {
             const message = result?.message || 'Stringee không thể bắt đầu cuộc gọi.'
@@ -496,11 +531,9 @@ export default function CallModal({
           >
             {isVideoCall ? (
               <>
-                <video
+                <div
                   ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{ position: 'absolute', inset: 0 }}
                 />
                 <div
                   style={{
@@ -515,17 +548,12 @@ export default function CallModal({
                     background: '#1e293b',
                   }}
                 >
-                  <video
+                  <div
                     ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
                     style={{
                       display: isCameraOff ? 'none' : 'block',
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover',
-                      transform: 'scaleX(-1)',
                     }}
                   />
                   {isCameraOff && <div style={{ padding: 16, color: '#94a3b8' }}>Camera tắt</div>}
