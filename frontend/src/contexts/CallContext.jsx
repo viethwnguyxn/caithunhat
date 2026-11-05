@@ -167,7 +167,7 @@ export function CallProvider({ children }) {
       if (!currentToken) return
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const wsBaseUrl = apiUrl.replace(/^http/, 'ws')
+      const wsBaseUrl = apiUrl.replace(/^http/, 'ws').replace(/\/+$/, '')
       const wsUrl = `${wsBaseUrl}/api/ws/user?token=${encodeURIComponent(currentToken)}`
       const ws = new WebSocket(wsUrl)
       socketRef.current = ws

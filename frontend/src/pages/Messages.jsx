@@ -267,7 +267,7 @@ export default function Messages() {
     }
 
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-    const wsBaseUrl = apiUrl.replace(/^http/, 'ws')
+    const wsBaseUrl = apiUrl.replace(/^http/, 'ws').replace(/\/+$/, '')
     const wsUrl = `${wsBaseUrl}/api/ws/chat/${activeConversation.id}?token=${encodeURIComponent(token)}`
     const ws = new WebSocket(wsUrl)
     socketRef.current = ws

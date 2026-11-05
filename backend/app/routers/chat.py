@@ -626,6 +626,7 @@ async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocke
 # 3. WEBSOCKET TOÀN CỤC (GLOBAL USER WS)
 # ==========================================
 
+@router.websocket("/ws/user")
 @router.websocket("/api/ws/user")
 async def websocket_user_global(
     websocket: WebSocket,
@@ -675,6 +676,7 @@ async def websocket_user_global(
 # 4. WEBSOCKET PHÒNG CHAT (ROOM CHAT WS)
 # ==========================================
 
+@router.websocket("/ws/chat/{conversation_id}")
 @router.websocket("/api/ws/chat/{conversation_id}")
 async def websocket_chat(
     websocket: WebSocket,
