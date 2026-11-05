@@ -1,7 +1,7 @@
 # Kindred — Community Connection Platform
 
 > **"Find people who understand you."**  
-> Nền tảng kết nối cộng đồng thông minh, giúp người dùng tìm thấy những người bạn đồng điệu và sẻ chia dựa trên khảo sát tâm lý, hoàn cảnh sống và sở thích cá nhân. Tích hợp trò chuyện thời gian thực (WebSocket) và gọi thoại / video trực tiếp (WebRTC P2P).
+> Nền tảng kết nối cộng đồng thông minh, giúp người dùng tìm thấy những người bạn đồng điệu và sẻ chia dựa trên khảo sát tâm lý, hoàn cảnh sống và sở thích cá nhân. Tích hợp trò chuyện thời gian thực (WebSocket) và gọi thoại / video qua Stringee Call API.
 
 ---
 
@@ -12,7 +12,7 @@
 Thay vì chạy theo các thuật toán câu tương tác gây kiệt quệ tâm lý hay lướt mạng xã hội vô định, Kindred tập trung vào sự đồng cảm sâu sắc:
 1. **Khảo sát Đồng điệu (Onboarding Survey)**: Người dùng hoàn thành một bảng khảo sát ngắn gọn gồm 6 nhóm nội dung (nhóm tuổi, hoàn cảnh hiện tại, cảm xúc gần đây, mục tiêu cá nhân, sở thích và câu chuyện tự thuật).
 2. **Thuật toán Khớp đôi Thông minh (Matching Engine)**: Sử dụng kỹ thuật xử lý ngôn ngữ tự nhiên truyền thống (**TF-IDF + Cosine Similarity**) để tính toán độ tương đồng giữa các hồ sơ mà không cần đến các mô hình Deep Learning phức tạp.
-3. **Kết nối & Trò chuyện Thời gian thực (Realtime Chat & Calling)**: Sau khi tìm thấy người đồng điệu, người dùng có thể gửi kết nối, trò chuyện trực tiếp qua **WebSocket**, và thực hiện cuộc gọi thoại / video 1-1 qua giao thức **WebRTC P2P**.
+3. **Kết nối & Trò chuyện Thời gian thực (Realtime Chat & Calling)**: Sau khi tìm thấy người đồng điệu, người dùng có thể gửi kết nối, trò chuyện trực tiếp qua **WebSocket**, và thực hiện cuộc gọi thoại / video 1-1 qua **Stringee Web SDK**.
 4. **Bảng tin Cộng đồng (Community Feed & Moments)**: Chia sẻ những khoảnh khắc, tâm sự theo từng chủ đề, thảo luận và tương tác lành mạnh.
 5. **Môi trường An toàn & Kiểm duyệt (Safety & Moderation)**: Hỗ trợ tính năng Chặn 2 chiều (Block), Báo cáo vi phạm (Report) và Bảng điều khiển Quản trị viên (Admin Dashboard) để giữ gìn môi trường cộng đồng văn minh.
 
@@ -50,16 +50,17 @@ Thay vì chạy theo các thuật toán câu tương tác gây kiệt quệ tâm
 - Tự động lưu trữ tin nhắn bền vững vào cơ sở dữ liệu; hỗ trợ fallback REST API nếu kết nối mạng của người dùng không ổn định.
 - Tự động đánh dấu tin nhắn đã đọc (`read`) và cập nhật số lượng tin nhắn chưa đọc theo thời gian thực.
 
-### 📞 6. Gọi Thoại & Gọi Video 1-1 (WebRTC Voice & Video Call)
-- **Công nghệ WebRTC P2P**: Ưu tiên truyền tải trực tiếp qua STUN của Google; dùng TURN relay khi hai thiết bị không thể kết nối trực tiếp do NAT/firewall.
-- **Kênh Báo hiệu (Signaling Protocol)**: Tận dụng kết nối WebSocket hiện hữu để chuyển tiếp các bản tin bắt tay WebRTC (`call:offer`, `call:answer`, `call:ice_candidate`, `call:reject`, `call:end`).
+### 📞 6. Gọi Thoại & Gọi Video 1-1 (Stringee Call API)
+- **Stringee Web SDK**: Quản lý xác thực client, báo hiệu và kết nối media cho cuộc gọi ứng dụng-đến-ứng-dụng.
+- **Bảo vệ khóa API**: Backend cấp access token JWT ngắn hạn; API secret và project signing secret chỉ được cấu hình trên backend.
+- **Kiểm tra quyền cuộc gọi**: Stringee gọi answer URL có chữ ký; backend chỉ cho phép hai user cùng hội thoại và chưa bị chặn kết nối.
 - **Giao diện Cuộc gọi Chuyên nghiệp (CallModal)**:
   - Nền tối (dark overlay) sang trọng, hiển thị video đối phương toàn màn hình và video của mình thu nhỏ ở góc.
   - Chế độ Gọi thoại hiển thị avatar to cùng hiệu ứng sóng âm (Pulse Ripple Effect).
   - Bảng điều khiển nổi: Bật/Tắt Micro, Bật/Tắt Camera, Kết thúc cuộc gọi và Đồng hồ đếm thời gian thực (`00:01`, `00:02`...).
 - **Hệ thống Âm thanh Thuần Web Audio API**: Tự động tổng hợp âm thanh tút đổ chuông (ringback tone) và chuông reo cuộc gọi đến bằng dao động sóng âm (OscillatorNode), triệt tiêu hoàn toàn lỗi rò rỉ âm thanh mà không cần dùng file mp3 ngoài.
 - **Tự động Ghi vết Lịch sử**: Khi cuộc gọi kết thúc, hệ thống tự động lưu tin nhắn vào đoạn chat: `📞 Cuộc gọi thoại (Thời lượng: 00:26)`, `📹 Cuộc gọi video (Thời lượng: 00:53)` hoặc `📞 Cuộc gọi nhỡ`.
-- **Ràng buộc An toàn**: Tự động hủy sau 30 giây đổ chuông nếu đối phương không nghe máy; vô hiệu hóa nút gọi nếu hai người dùng đã chặn nhau.
+- **Ràng buộc An toàn**: Tự động hủy sau 45 giây đổ chuông nếu đối phương không nghe máy; từ chối cuộc gọi nếu hai người dùng đã chặn nhau.
 
 ### 📰 7. Bảng tin Cộng đồng & Khoảnh khắc (Community Feed & Moments)
 - Đăng bài viết chia sẻ cảm nghĩ, khoảnh khắc cuộc sống kèm lựa chọn danh mục chủ đề (Công nghệ, Đọc sách, Nghệ thuật, Sinh viên, v.v.).
@@ -103,7 +104,7 @@ flowchart TD
     end
 
     subgraph ExternalServices [Hạ tầng Mạng & Hỗ trợ]
-        GoogleSTUN["Google STUN Server\n(stun.l.google.com:19302)"]
+        Stringee["Stringee Call API\n(Web SDK / Voice / Video)"]
     end
 
     subgraph Storage [Cơ sở Dữ liệu]
@@ -113,13 +114,13 @@ flowchart TD
     %% REST & WebSocket Communication
     ClientA -->|HTTP / REST Requests| Router
     ClientB -->|HTTP / REST Requests| Router
-    ClientA <-->|WebSocket Realtime & Signaling| WSEndpoint
-    ClientB <-->|WebSocket Realtime & Signaling| WSEndpoint
+    ClientA <-->|WebSocket Realtime Chat| WSEndpoint
+    ClientB <-->|WebSocket Realtime Chat| WSEndpoint
 
-    %% WebRTC Direct Stream
-    ClientA <-.->|NAT Traversal / ICE Candidates| GoogleSTUN
-    ClientB <-.->|NAT Traversal / ICE Candidates| GoogleSTUN
-    ClientA <===>|WebRTC P2P Direct Media Stream\n(Audio / Video)| ClientB
+    %% Stringee call handling
+    ClientA <-->|Stringee Web SDK| Stringee
+    ClientB <-->|Stringee Web SDK| Stringee
+    Stringee -->|Signed answer URL| Router
 
     %% Backend Internals
     Router --> AuthMiddleware
@@ -142,7 +143,7 @@ flowchart TD
 | **Database** | PostgreSQL (Supabase) | Supabase Cloud PostgreSQL cho production; SQLite local cho phát triển. NullPool + pool_pre_ping cho Supabase |
 | **Xác thực** | JWT & Google OAuth 2.0 | `PyJWT`, `bcrypt`, Google Identity Services (`@react-oauth/google`) |
 | **Realtime Chat** | Native WebSocket | Giao thức WebSocket chuẩn RFC 6455, tự động quản lý trạng thái Online/Offline |
-| **Gọi thoại & Video**| WebRTC & Web Audio API | Kết nối P2P trực tiếp, Google STUN (`stun:stun.l.google.com:19302`), Web Audio synthesizer |
+| **Gọi thoại & Video**| Stringee Web SDK | Stringee Call API cho gọi thoại/video, Web Audio synthesizer cho chuông |
 | **Triển khai (Deploy)**| Vercel + Render + Supabase | Frontend trên Vercel, Backend API trên Render Web Service, Database trên Supabase |
 
 ---
@@ -176,7 +177,7 @@ chat/
 │   │   ├── routers/            # FastAPI Routers (/api/...)
 │   │   │   ├── auth.py, users.py, profile.py, survey.py, matching.py
 │   │   │   ├── connections.py, chat.py, posts.py, reports.py, admin.py
-│   │   ├── websocket/          # Quản lý kết nối WebSocket và tín hiệu gọi điện WebRTC
+│   │   ├── websocket/          # Quản lý kết nối WebSocket chat và trạng thái online
 │   │   │   └── manager.py
 │   │   └── main.py             # Entrypoint FastAPI, CORS middleware, auto-migration
 │   ├── tests/                  # Bộ kiểm thử tự động (Automated Test Suites)
@@ -216,7 +217,7 @@ chat/
 ### 6.1 Yêu cầu Môi trường
 - **Python**: Phiên bản 3.10 trở lên.
 - **Node.js**: Phiên bản 18 trở lên (kèm `npm`).
-- Trình duyệt hiện đại hỗ trợ WebRTC và HTML5 WebSocket (Google Chrome, Microsoft Edge, Firefox, Safari).
+- Trình duyệt hiện đại hỗ trợ WebRTC, HTML5 WebSocket và quyền truy cập Micro / Camera (Google Chrome, Microsoft Edge, Firefox, Safari).
 
 ### 6.2 Cài đặt & Khởi động Backend
 ```bash
@@ -304,7 +305,7 @@ npm run dev
 | `PUT` | `/api/connections/{id}/accept` | Chấp nhận lời mời kết nối | Bearer JWT |
 | `PUT` | `/api/connections/{id}/reject` | Từ chối lời mời kết nối | Bearer JWT |
 
-### 💬 Trò chuyện & Báo hiệu Cuộc gọi (Chat & WebRTC Signaling)
+### 💬 Trò chuyện & Gọi điện (Chat & Stringee Calling)
 | Method / Giao thức | Endpoint / Event | Mô tả | Yêu cầu Auth |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/conversations` | Lấy danh sách các cuộc trò chuyện | Bearer JWT |
@@ -312,12 +313,10 @@ npm run dev
 | `GET` | `/api/conversations/{id}/messages`| Lấy lịch sử tin nhắn trong cuộc trò chuyện | Bearer JWT |
 | `POST` | `/api/conversations/{id}/messages`| Gửi tin nhắn qua REST API (Fallback) | Bearer JWT |
 | `PUT` | `/api/messages/{id}/read` | Đánh dấu tin nhắn đã đọc | Bearer JWT |
-| `WS` | `/api/ws/chat/{conv_id}?token=...`| Kết nối WebSocket truyền tin nhắn & Báo hiệu WebRTC | Query Token |
-| *WS Event* | `call:offer` | Gửi lời mời gọi điện thoại/video kèm SDP Offer | WebSocket |
-| *WS Event* | `call:answer` | Chấp nhận cuộc gọi kèm SDP Answer | WebSocket |
-| *WS Event* | `call:ice_candidate` | Trao đổi ứng viên ICE để kết nối P2P WebRTC | WebSocket |
-| *WS Event* | `call:reject` | Từ chối cuộc gọi đến | WebSocket |
-| *WS Event* | `call:end` | Kết thúc cuộc gọi và tự động ghi lịch sử đàm thoại | WebSocket |
+| `WS` | `/api/ws/chat/{conv_id}?token=...`| Kết nối WebSocket truyền tin nhắn realtime | Query Token |
+| `GET` | `/api/calls/stringee-token` | Cấp access token Stringee ngắn hạn cho user hiện tại | ****** |
+| `GET` | `/api/calls/stringee-answer` | Answer URL xác thực chữ ký và quyền gọi từ Stringee | Chữ ký Stringee |
+| `POST` | `/api/calls/{conv_id}/events` | Lưu kết quả gọi vào lịch sử hội thoại | ****** |
 
 ### 📰 Bảng tin & Khoảnh khắc Cộng đồng (Community Feed)
 | Method | Endpoint | Mô tả | Yêu cầu Auth |
@@ -421,7 +420,7 @@ Hệ sinh thái Kindred được triển khai thực tế trên 3 nền tảng C
 | Thành phần | Nền tảng | Ghi chú |
 | :--- | :--- | :--- |
 | **Frontend** | [Vercel](https://vercel.com) | CI/CD tự động deploy mỗi khi push lên `main`, cấu hình SPA rewrite qua `vercel.json` |
-| **Backend API** | [Render](https://render.com) | Python 3.10+, hỗ trợ đầy đủ WebSocket và WebRTC Signaling |
+| **Backend API** | [Render](https://render.com) | Python 3.10+, hỗ trợ WebSocket, cấp token và Stringee answer URL |
 | **Database** | [Supabase](https://supabase.com) | PostgreSQL cloud, kết nối qua `DATABASE_URL`, NullPool + pool_pre_ping |
 
 ### 10.1 Biến môi trường cần set trên Render
@@ -434,11 +433,18 @@ Hệ sinh thái Kindred được triển khai thực tế trên 3 nền tảng C
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` |
 | `GOOGLE_CLIENT_ID` | OAuth Client ID từ Google Cloud Console |
 | `CORS_ORIGINS` | Domain Vercel của frontend (vd: `https://caithunhat.vercel.app`) |
-| `TURN_SERVER_URLS` | Danh sách URL TURN, phân tách bằng dấu phẩy (vd: `turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349?transport=tcp`) |
-| `TURN_SHARED_SECRET` | Shared secret của máy chủ Coturn REST API; chỉ cấu hình ở backend, không đưa vào frontend |
-| `TURN_CREDENTIAL_TTL_SECONDS` | Thời hạn thông tin xác thực tạm thời (mặc định `3600`, tối đa `86400`) |
+| `STRINGEE_API_KEY_SID` | API Key SID từ Stringee Dashboard |
+| `STRINGEE_API_KEY_SECRET` | API Key Secret; chỉ lưu ở backend |
+| `STRINGEE_SIGNING_SECRET` | Project signing secret để xác thực callback answer URL |
+| `STRINGEE_ACCESS_TOKEN_TTL_SECONDS` | Thời hạn access token Stringee (mặc định `3600`, tối đa `86400`) |
 
-> **WebRTC:** Nếu không cấu hình TURN, ứng dụng chỉ dùng STUN và cuộc gọi có thể thất bại giữa một số mạng di động, NAT hoặc firewall. Khi cấu hình TURN, backend cấp thông tin xác thực tạm thời theo từng người dùng.
+### 10.1.1 Thiết lập Stringee
+
+1. Tạo tài khoản và project trên [Stringee Developer](https://developer.stringee.com/account/register); gọi app-to-app không cần mua số điện thoại.
+2. Lấy API Key SID, API Key Secret và Project Signing Secret từ project; cấu hình ba biến `STRINGEE_*` tương ứng trên backend. Không đặt secret trong biến `VITE_*` và không gửi secret qua chat.
+3. Đặt Project Answer URL thành `https://<backend-domain>/api/calls/stringee-answer` (HTTPS bắt buộc ở production).
+4. Sao chép `backend/.env.example` thành `backend/.env` khi chạy local và điền các giá trị Stringee; trên Render, đặt các giá trị tương tự trong Environment.
+5. Chạy ứng dụng với hai tài khoản đã đăng nhập và có hội thoại; cấp quyền micro/camera khi trình duyệt hỏi.
 
 ### 10.2 Start Command trên Render
 
@@ -450,9 +456,9 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 ---
 
-## 11. Hướng dẫn Test Tính Năng Gọi Thoại / Video (WebRTC Demo)
+## 11. Hướng dẫn Test Tính Năng Gọi Thoại / Video (Stringee)
 
-Để kiểm tra trực tiếp tính năng Gọi điện WebRTC giữa 2 người dùng trên cùng một máy tính:
+Để kiểm tra cuộc gọi Stringee giữa hai tài khoản:
 1. Mở trình duyệt thường (ví dụ: Google Chrome) đăng nhập tài khoản A.
 2. Mở một cửa sổ ẩn danh (Incognito) đăng nhập tài khoản B.
 3. Đảm bảo tài khoản A và B đã kết bạn với nhau và mở khung chat của nhau tại `/messages`.
@@ -460,8 +466,8 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 5. Tài khoản B sẽ nghe thấy tiếng chuông reo và xuất hiện popup Cuộc gọi đến kèm avatar rung nhẹ.
 6. Bấm nút 🟢 **Chấp nhận** trên tài khoản B:
    - Trình duyệt yêu cầu quyền truy cập Micro / Camera → Bấm **Allow**.
-   - Màn hình cuộc gọi tối sang trọng xuất hiện: Camera 2 bên được truyền tải tức thì, đồng hồ đếm giây hoạt động.
+   - Màn hình cuộc gọi xuất hiện; đồng hồ bắt đầu chạy khi media kết nối.
    - Thử nghiệm bấm nút **Tắt Micro** hoặc **Tắt Camera** để kiểm tra phản hồi.
 7. Bấm nút 🔴 **Kết thúc cuộc gọi**:
    - Màn hình cuộc gọi đóng lại.
-   - Trong khung chat của cả 2 tài khoản xuất hiện ngay thông báo hệ thống: `📹 Cuộc gọi video (Thời lượng: 00:xx)`.
+   - Trong khung chat của cả 2 tài khoản xuất hiện lịch sử cuộc gọi.

@@ -51,14 +51,13 @@
 | • Nhận/Gửi tin nhắn Realtime | `DONE` | Broadcast tức thời qua `ConnectionManager`, lưu trữ bền vững vào SQLite. |
 | • Fallback REST API | `DONE` | `POST /api/conversations/{id}/messages` tự động phát sóng tới WebSocket khi mạng yếu. |
 | • Đánh dấu tin nhắn đã đọc | `DONE` | `PUT /api/messages/{id}/read`, tự động cập nhật `unread_count` và đồng bộ realtime. |
-| **8. Realtime WebRTC 1-1 Voice & Video Call (Gọi thoại & Video)** | | |
-| • P2P WebRTC Direct Stream | `DONE` | Sử dụng Google STUN miễn phí (`stun:stun.l.google.com:19302`), truyền tải video/audio trực tiếp P2P. |
-| • Signaling Protocol qua WebSocket | `DONE` | Chuyển tiếp các bản tin: `call:offer`, `call:answer`, `call:ice_candidate`, `call:reject`, `call:end`. |
-| • Giao diện Cuộc gọi (CallModal) | `DONE` | Dark overlay sang trọng: Remote Video toàn khung, Local Video thu nhỏ góc, hiệu ứng sóng âm khi gọi thoại. |
-| • Điều khiển trong cuộc gọi | `DONE` | Đồng hồ đếm thời gian thực, nút Bật/Tắt Micro, Bật/Tắt Camera, nút Kết thúc cuộc gọi. |
-| • Bộ âm thanh thuần Web Audio API | `DONE` | Âm báo tút đổ chuông (ringback) và chuông reo cuộc gọi đến (incoming chime) không phụ thuộc file mp3 ngoài, triệt tiêu rò rỉ âm thanh. |
-| • Lưu vết lịch sử cuộc gọi | `DONE` | Tự động ghi nhận tin nhắn thông báo vào đoạn chat (`Cuộc gọi thoại/video (Thời lượng: mm:ss)`, `Cuộc gọi nhỡ`). |
-| • Ràng buộc nghiệp vụ gọi điện | `DONE` | Chặn gọi nếu bị Block, đổ chuông tối đa 30s tự hủy nếu không nghe, chống mất kết nối bất ngờ. |
+| **8. Realtime Stringee 1-1 Voice & Video Call (Gọi thoại & Video)** | | |
+| • Tích hợp Stringee Web SDK | `PARTIAL` | Frontend kết nối bằng access token ngắn hạn; cần API Key, signing secret và project answer URL hợp lệ để xác thực cuộc gọi thật. |
+| • Giao diện Cuộc gọi (CallModal) | `DONE` | Giao diện dark overlay cho cuộc gọi thoại/video, hỗ trợ nhận cuộc gọi đến và trạng thái kết nối. |
+| • Điều khiển trong cuộc gọi | `DONE` | Đồng hồ đếm thời gian thực, nút Bật/Tắt Micro, Bật/Tắt Camera và Kết thúc cuộc gọi. |
+| • Âm thanh chuông | `DONE` | Tạo âm báo gọi đi và gọi đến bằng Web Audio API. |
+| • Lưu vết lịch sử cuộc gọi | `DONE` | Lưu cuộc gọi hoàn tất, nhỡ, bị từ chối hoặc bận vào đoạn chat. |
+| • Ràng buộc nghiệp vụ gọi điện | `PARTIAL` | Backend answer URL kiểm tra hội thoại và Block; cần cấu hình project Stringee và kiểm thử bằng hai tài khoản thật. |
 | **9. Community Feed & Moments (Bảng tin & Khoảnh khắc)** | | |
 | • Đăng bài viết cộng đồng | `DONE` | `POST /api/posts`, hỗ trợ chọn danh mục chủ đề (Công nghệ, Đọc sách, Nghệ thuật, v.v.). |
 | • Xem bảng tin & Lọc theo chủ đề | `DONE` | `GET /api/posts?category=...`, phân trang, hiển thị avatar tác giả, thời gian tạo, số lượt tương tác. |
@@ -89,9 +88,9 @@
 
 ## 2. Thống Kê Tiến Độ Tổng Hợp
 
-- **Tổng số tính năng cốt lõi**: **32 / 32** chức năng (`100% DONE`).
-- **Tính năng hoàn thiện một phần (PARTIAL)**: `0`
-- **Tính năng chưa hoàn thành (TODO)**: `0` (Toàn bộ các yêu cầu từ P0 đến P2 mở rộng WebRTC Calling và Moderation đều đã hoàn thành và kiểm thử).
+- **Tổng số tính năng cốt lõi**: **32 / 32** chức năng đã có phần triển khai.
+- **Tính năng hoàn thiện một phần (PARTIAL)**: `2` (Tích hợp gọi Stringee chờ cấu hình project và kiểm thử hai tài khoản).
+- **Tính năng chưa hoàn thành (TODO)**: `0`
 
 ---
 

@@ -3,13 +3,31 @@ import hashlib
 import hmac
 import logging
 import time
-from datetime import datetime, timezone
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+import jwt
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..core.config import TURN_CREDENTIAL_TTL_SECONDS, TURN_SERVER_URLS, TURN_SHARED_SECRET
+from ..core.config import (
+    STRINGEE_ACCESS_TOKEN_TTL_SECONDS,
+    STRINGEE_API_KEY_SECRET,
+    STRINGEE_API_KEY_SID,
+    STRINGEE_SIGNING_SECRET,
+    TURN_CREDENTIAL_TTL_SECONDS,
+    TURN_SERVER_URLS,
+    TURN_SHARED_SECRET,
+)
 from ..core.security import decode_access_token
 from ..db.database import SessionLocal, get_db
 from ..models.chat import ConversationMember
@@ -17,6 +35,7 @@ from ..models.profile import Profile
 from ..models.user import User
 from ..routers.deps import get_current_user
 from ..schemas.chat import (
+    CallEventCreate,
     ConversationResponse,
     MessageCreate,
     MessageResponse,
@@ -31,6 +50,207 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 1. REST APIs
 # ==========================================
+
+@router.get("/api/calls/stringee-token")
+def get_stringee_access_token(current_user: User = Depends(get_current_user)):
+    if (
+        not STRINGEE_API_KEY_SID
+        or not STRINGEE_API_KEY_SECRET
+        or not STRINGEE_SIGNING_SECRET
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stringee chưa được cấu hình đầy đủ trên máy chủ.",
+        )
+
+    now = int(time.time())
+    expires_at = now + STRINGEE_ACCESS_TOKEN_TTL_SECONDS
+    access_token = jwt.encode(
+        {
+            "jti": f"{STRINGEE_API_KEY_SID}-{now}-{uuid.uuid4().hex}",
+            "iss": STRINGEE_API_KEY_SID,
+            "exp": expires_at,
+            "userId": str(current_user.id),
+        },
+        STRINGEE_API_KEY_SECRET,
+        algorithm="HS256",
+        headers={"cty": "stringee-api;v=1"},
+    )
+    return {
+        "access_token": access_token,
+        "user_id": str(current_user.id),
+        "expires_at": expires_at,
+    }
+
+
+@router.get("/api/calls/stringee-answer")
+def get_stringee_answer(
+    request: Request,
+    from_user: str = Query(alias="from"),
+    to_user: str = Query(alias="to"),
+    from_internal: bool = Query(alias="fromInternal"),
+    user_id: str = Query(alias="userId"),
+    db: Session = Depends(get_db),
+):
+    if not STRINGEE_SIGNING_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stringee webhook chưa được cấu hình trên máy chủ.",
+        )
+
+    request_uri = request.scope["raw_path"].decode("ascii")
+    if request.scope.get("query_string"):
+        request_uri += "?" + request.scope["query_string"].decode("ascii")
+    expected_signature = base64.b64encode(
+        hmac.new(
+            STRINGEE_SIGNING_SECRET.encode("utf-8"),
+            request_uri.encode("utf-8"),
+            hashlib.sha1,
+        ).digest()
+    ).decode("ascii")
+    received_signature = request.headers.get("X-STRINGEE-SIGNATURE")
+    if not received_signature or not hmac.compare_digest(
+        received_signature, expected_signature
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chữ ký Stringee không hợp lệ.",
+        )
+
+    if not from_internal:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ cho phép cuộc gọi giữa các tài khoản trong ứng dụng.",
+        )
+
+    try:
+        caller_id = int(from_user)
+        recipient_id = int(to_user)
+        authenticated_user_id = int(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản gọi không hợp lệ.",
+        )
+
+    participants = {
+        member.user_id
+        for member in db.query(ConversationMember)
+        .filter(ConversationMember.user_id.in_([caller_id, recipient_id]))
+        .all()
+    }
+    if (
+        caller_id == recipient_id
+        or caller_id != authenticated_user_id
+        or caller_id not in participants
+        or recipient_id not in participants
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không thể gọi giữa các tài khoản này.",
+        )
+
+    shared_conversation = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.user_id == caller_id,
+            ConversationMember.conversation_id.in_(
+                select(ConversationMember.conversation_id).where(
+                    ConversationMember.user_id == recipient_id
+                )
+            ),
+        )
+        .first()
+    )
+    if not shared_conversation or chat_service.is_conversation_blocked(
+        db, shared_conversation.conversation_id, caller_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền gọi trong cuộc hội thoại này.",
+        )
+
+    return [
+        {
+            "action": "connect",
+            "from": {"type": "internal", "number": from_user, "alias": from_user},
+            "to": {"type": "internal", "number": to_user, "alias": to_user},
+        }
+    ]
+
+
+@router.post(
+    "/api/calls/{conversation_id}/events",
+    response_model=MessageResponse,
+)
+async def record_call_event(
+    conversation_id: int,
+    call_event: CallEventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    members = (
+        db.query(ConversationMember)
+        .filter(ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+    if len(members) != 2 or current_user.id not in {member.user_id for member in members}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền ghi lịch sử cuộc gọi này.",
+        )
+    if chat_service.is_conversation_blocked(db, conversation_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cuộc hội thoại đã bị chặn.",
+        )
+
+    recipient_id = next(member.user_id for member in members if member.user_id != current_user.id)
+    icon = "📹" if call_event.call_type == "video" else "📞"
+    call_name = "Cuộc gọi video" if call_event.call_type == "video" else "Cuộc gọi thoại"
+    if call_event.outcome == "completed":
+        minutes, seconds = divmod(call_event.duration_seconds, 60)
+        content = f"{icon} {call_name} (Thời lượng: {minutes:02d}:{seconds:02d})"
+    elif call_event.outcome == "missed":
+        content = f"{icon} {call_name} nhỡ"
+    elif call_event.outcome == "busy":
+        content = f"{icon} Đối phương đang bận"
+    else:
+        content = f"{icon} {call_name} bị từ chối"
+
+    message = chat_service.create_message(
+        db=db,
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        content=content,
+        notify_recipient=False,
+    )
+    message_payload = {
+        "type": "message",
+        "message": MessageResponse.model_validate(message).model_dump(mode="json"),
+    }
+    await manager.broadcast_to_conversation(conversation_id, message_payload)
+    await manager.send_to_user(recipient_id, message_payload)
+    await manager.send_to_user(current_user.id, message_payload)
+
+    if call_event.outcome == "missed":
+        profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+        caller_name = (
+            profile.display_name
+            if profile and profile.display_name
+            else current_user.username
+        )
+        notification_service.create_notification(
+            db=db,
+            user_id=recipient_id,
+            type="missed_call",
+            title=f"Cuộc gọi nhỡ từ {caller_name}",
+            content=f"Bạn có cuộc gọi {call_name.lower()} nhỡ.",
+            related_id=conversation_id,
+        )
+
+    return message
+
 
 @router.get("/api/calls/ice-servers")
 def get_call_ice_servers(current_user: User = Depends(get_current_user)):

@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -17,6 +19,14 @@ class MessageResponse(BaseModel):
     read_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CallEventCreate(BaseModel):
+    """Thông tin kết quả cuộc gọi cần lưu vào lịch sử hội thoại."""
+
+    call_type: Literal["audio", "video"]
+    outcome: Literal["completed", "missed", "declined", "busy"]
+    duration_seconds: int = Field(default=0, ge=0, le=86400)
 
 
 class ConversationPartnerResponse(BaseModel):
@@ -55,4 +65,3 @@ class WebSocketServerMessage(BaseModel):
     """Định dạng server broadcast tới các client qua WebSocket."""
     type: str = "message"
     message: MessageResponse
-

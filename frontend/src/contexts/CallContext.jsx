@@ -1,69 +1,153 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import CallModal from '../components/CallModal'
+import api from '../services/api'
 
 const CallContext = createContext(null)
 
 export function CallProvider({ children }) {
   const { user } = useAuth()
   const token = localStorage.getItem('access_token')
-
-  // Trạng thái phiên gọi hiện tại: null hoặc { mode: 'outgoing' | 'incoming', callType: 'audio' | 'video', partner: {...}, conversationId: number, sdp?: any }
   const [callSession, setCallSession] = useState(null)
+  const [stringeeClient, setStringeeClient] = useState(null)
+  const [stringeeError, setStringeeError] = useState('')
   const callSessionRef = useRef(null)
-  callSessionRef.current = callSession
-
+  const stringeeClientRef = useRef(null)
   const socketRef = useRef(null)
   const reconnectTimeoutRef = useRef(null)
   const pingIntervalRef = useRef(null)
 
-  // Listeners nhận tín hiệu WebRTC Calling trực tiếp từ WebSocket (chống mất gói tin)
-  const callSignalListenersRef = useRef(new Set())
-  const pendingCallSignalsRef = useRef([])
-  const deliverCallSignal = useCallback((signal) => {
-    if (callSignalListenersRef.current.size === 0) {
-      pendingCallSignalsRef.current.push(signal)
-      if (pendingCallSignalsRef.current.length > 50) {
-        pendingCallSignalsRef.current.shift()
-      }
+  const updateCallSession = useCallback((session) => {
+    callSessionRef.current = session
+    setCallSession(session)
+  }, [])
+
+  useEffect(() => {
+    if (!token || !user) {
+      setStringeeClient(null)
+      stringeeClientRef.current = null
+      setStringeeError('')
+      updateCallSession(null)
       return
     }
 
-    callSignalListenersRef.current.forEach((listener) => {
-      try {
-        listener(signal)
-      } catch (err) {
-        console.error('Lỗi listener call signal:', err)
-      }
-    })
-  }, [])
+    let isCancelled = false
+    let client = null
+    setStringeeError('')
 
-  const registerCallSignalListener = useCallback((listener) => {
-    callSignalListenersRef.current.add(listener)
-    pendingCallSignalsRef.current.forEach((signal) => {
+    const initializeClient = async () => {
       try {
-        listener(signal)
-      } catch (err) {
-        console.error('Lỗi xử lý tín hiệu cuộc gọi đang chờ:', err)
-      }
-    })
-    pendingCallSignalsRef.current = []
-    return () => callSignalListenersRef.current.delete(listener)
-  }, [])
+        const { StringeeClient } = await import('stringee')
+        if (isCancelled) return
 
-  // Lắng nghe tín hiệu gọi dự phòng từ socket phòng chat Messages (hai luồng tín hiệu song song đảm bảo 100% không mất tin)
-  useEffect(() => {
-    const handleSignalEvent = (e) => {
-      const data = e.detail
-      if (data && data.type && data.type.startsWith('call:') && data.type !== 'call:offer') {
-        deliverCallSignal(data)
+        client = new StringeeClient()
+        stringeeClientRef.current = client
+
+        const fetchTokenAndConnect = async () => {
+          try {
+            const { data } = await api.get('/api/calls/stringee-token')
+            if (!isCancelled) client.connect(data.access_token)
+          } catch (error) {
+            if (!isCancelled) {
+              const message =
+                error.response?.data?.detail || 'Không thể xác thực dịch vụ gọi Stringee.'
+              console.error('Không thể lấy Stringee access token:', error)
+              setStringeeError(message)
+            }
+          }
+        }
+
+        const rejectIncomingCall = (call, message) => {
+          call.reject((result) => {
+            if (result?.r !== 0) {
+              console.error('Không thể từ chối cuộc gọi Stringee:', result, message)
+            }
+          })
+        }
+
+        const handleIncomingCall = async (call) => {
+          if (isCancelled) {
+            rejectIncomingCall(call, 'Không thể nhận cuộc gọi trong phiên hiện tại.')
+            return
+          }
+          if (callSessionRef.current) {
+            rejectIncomingCall(call, 'Đang bận với cuộc gọi khác.')
+            return
+          }
+
+          const callerId = Number.parseInt(call.fromNumber, 10)
+          if (!Number.isSafeInteger(callerId) || callerId < 1) {
+            rejectIncomingCall(call, 'Không nhận diện được người gọi.')
+            return
+          }
+
+          try {
+            const { data: conversations } = await api.get('/api/conversations')
+            if (isCancelled) {
+              rejectIncomingCall(call, 'Không thể nhận cuộc gọi trong phiên hiện tại.')
+              return
+            }
+            const conversation = conversations.find((item) => item.partner?.id === callerId)
+            if (!conversation || conversation.is_blocked) {
+              rejectIncomingCall(call, 'Không có quyền nhận cuộc gọi này.')
+              return
+            }
+
+            call.ringing((result) => {
+              if (result?.r !== 0) {
+                console.error('Không thể báo chuông cuộc gọi Stringee:', result)
+              }
+            })
+            updateCallSession({
+              mode: 'incoming',
+              callType: call.isVideoCall ? 'video' : 'audio',
+              partner: conversation.partner,
+              conversationId: conversation.id,
+              stringeeCall: call,
+            })
+          } catch (error) {
+            console.error('Không thể xác minh người gọi Stringee:', error)
+            rejectIncomingCall(call, 'Không thể xác minh người gọi.')
+          }
+        }
+
+        client.on('authen', (result) => {
+          if (isCancelled) return
+          if (result?.r === 0) {
+            setStringeeError('')
+            setStringeeClient(client)
+          } else {
+            const message = result?.message || 'Stringee từ chối xác thực tài khoản.'
+            console.error('Stringee xác thực thất bại:', result)
+            setStringeeError(message)
+          }
+        })
+        client.on('disconnect', () => {
+          if (!isCancelled) setStringeeClient(null)
+        })
+        client.on('incomingcall', handleIncomingCall)
+        client.on('requestnewtoken', fetchTokenAndConnect)
+        await fetchTokenAndConnect()
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Không thể tải Stringee Web SDK:', error)
+          setStringeeError('Không thể tải thư viện gọi Stringee.')
+        }
       }
     }
-    window.addEventListener('call-signal-received', handleSignalEvent)
-    return () => window.removeEventListener('call-signal-received', handleSignalEvent)
-  }, [deliverCallSignal])
 
-  // 1. Duy trì kết nối WebSocket toàn cục tới /api/ws/user
+    void initializeClient()
+
+    return () => {
+      isCancelled = true
+      if (stringeeClientRef.current === client) {
+        stringeeClientRef.current = null
+      }
+      client?.disconnect()
+      setStringeeClient((current) => (current === client ? null : current))
+    }
+  }, [token, user?.id, updateCallSession])
+
   useEffect(() => {
     if (!token || !user) {
       if (socketRef.current) {
@@ -74,22 +158,18 @@ export function CallProvider({ children }) {
     }
 
     let isCancelled = false
-
     const connectGlobalWs = () => {
       if (isCancelled) return
-
       const currentToken = localStorage.getItem('access_token')
       if (!currentToken) return
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       const wsBaseUrl = apiUrl.replace(/^http/, 'ws')
       const wsUrl = `${wsBaseUrl}/api/ws/user?token=${encodeURIComponent(currentToken)}`
-
       const ws = new WebSocket(wsUrl)
       socketRef.current = ws
 
       ws.onopen = () => {
-        // Gửi ping định kỳ 25 giây để giữ ấm kết nối qua reverse proxy (Render, Nginx)
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current)
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -101,68 +181,27 @@ export function CallProvider({ children }) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          if (!data || !data.type) return
+          if (!data || !data.type || data.type === 'pong') return
 
-          if (data.type === 'pong') return
-
-          if (data.type.startsWith('call:')) {
-            if (data.type === 'call:offer') {
-              pendingCallSignalsRef.current = []
-              // Nếu đang trong một cuộc gọi khác -> từ chối bận
-              if (callSessionRef.current) {
-                // Tránh reject lặp nếu offer lặp từ chính phiên này
-                if (callSessionRef.current.conversationId === data.conversation_id) {
-                  return
-                }
-                if (ws.readyState === WebSocket.OPEN) {
-                  ws.send(
-                    JSON.stringify({
-                      type: 'call:reject',
-                      call_type: data.call_type,
-                      reason: 'busy',
-                      target_user_id: data.sender_id,
-                      conversation_id: data.conversation_id,
-                    })
-                  )
-                }
-                return
-              }
-
-              // Nhận cuộc gọi đến dù đang ở bất kỳ trang nào (/home, /discover, /communities, /messages...)!
-              setCallSession({
-                mode: 'incoming',
-                callType: data.call_type || 'audio',
-                partner: data.caller || {
-                  id: data.sender_id,
-                  username: 'Đối phương',
-                  display_name: 'Đối phương',
-                },
-                sdp: data.sdp,
-                conversationId: data.conversation_id,
-              })
-            } else {
-              deliverCallSignal(data)
-            }
-          } else if (data.type === 'user_status') {
+          if (data.type === 'user_status') {
             window.dispatchEvent(new CustomEvent('user-status-changed', { detail: data }))
           } else if (data.type === 'message') {
             window.dispatchEvent(new CustomEvent('new-chat-message', { detail: data }))
           }
-        } catch (e) {
-          console.error('Lỗi parse global ws message:', e)
+        } catch (error) {
+          console.error('Lỗi parse global ws message:', error)
         }
       }
 
       ws.onclose = () => {
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current)
-        // Tự động kết nối lại sau 3.5 giây nếu user vẫn đăng nhập
         if (!isCancelled && localStorage.getItem('access_token')) {
           reconnectTimeoutRef.current = setTimeout(connectGlobalWs, 3500)
         }
       }
 
-      ws.onerror = (err) => {
-        console.warn('Global WebSocket error:', err)
+      ws.onerror = (error) => {
+        console.warn('Global WebSocket error:', error)
       }
     }
 
@@ -177,56 +216,34 @@ export function CallProvider({ children }) {
         socketRef.current = null
       }
     }
-  }, [deliverCallSignal, token, user?.id])
+  }, [token, user?.id])
 
-  // 2. Hàm bắt đầu cuộc gọi tới một người dùng
-  const startCall = useCallback((partner, conversationId, callType = 'audio') => {
-    if (callSessionRef.current) {
-      alert('Bạn đang trong một cuộc gọi khác.')
-      return
-    }
-
-    setCallSession({
-      mode: 'outgoing',
-      callType,
-      partner,
-      conversationId,
-    })
-  }, [])
-
-  // 3. Gửi tín hiệu WebRTC qua WebSocket toàn cục (có cơ chế hàng đợi retry an toàn nếu socket đang kết nối lại)
-  const sendCallSignal = useCallback((payload) => {
-    const currentSession = callSessionRef.current
-    const enriched = {
-      ...payload,
-      target_user_id: payload.target_user_id || currentSession?.partner?.id,
-      conversation_id: payload.conversation_id || currentSession?.conversationId,
-    }
-
-    const trySend = (retries = 6) => {
-      const ws = socketRef.current
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(enriched))
-      } else if (ws && ws.readyState === WebSocket.CONNECTING && retries > 0) {
-        setTimeout(() => trySend(retries - 1), 200)
-      } else {
-        console.warn('WebSocket toàn cục chưa sẵn sàng để gửi tín hiệu:', enriched.type)
+  const startCall = useCallback(
+    (partner, conversationId, callType = 'audio') => {
+      if (callSessionRef.current) {
+        alert('Bạn đang trong một cuộc gọi khác.')
+        return
       }
-    }
 
-    trySend()
-  }, [])
+      updateCallSession({
+        mode: 'outgoing',
+        callType,
+        partner,
+        conversationId,
+      })
+    },
+    [updateCallSession]
+  )
 
-  // 4. Kết thúc phiên gọi
-  const endCallSession = useCallback(({ duration, reason } = {}) => {
-    setCallSession(null)
-    callSessionRef.current = null
-
-    // Phát sự kiện cuộc gọi kết thúc để trang Messages cập nhật lịch sử tin nhắn
-    window.dispatchEvent(
-      new CustomEvent('call-session-ended', { detail: { duration, reason } })
-    )
-  }, [])
+  const endCallSession = useCallback(
+    ({ duration, reason } = {}) => {
+      updateCallSession(null)
+      window.dispatchEvent(
+        new CustomEvent('call-session-ended', { detail: { duration, reason } })
+      )
+    },
+    [updateCallSession]
+  )
 
   return (
     <CallContext.Provider
@@ -235,19 +252,16 @@ export function CallProvider({ children }) {
         isCallActive: !!callSession,
         startCall,
         endCallSession,
-        sendCallSignal,
-        registerCallSignalListener,
       }}
     >
       {children}
-
-      {/* MODAL CUỘC GỌI TOÀN CỤC: Hiển thị trên mọi trang của ứng dụng */}
       {callSession && (
         <CallModal
           callSession={callSession}
+          callClient={stringeeClient}
+          currentUserId={user?.id}
+          callError={stringeeError}
           onEndCall={endCallSession}
-          onSendSignal={sendCallSignal}
-          onRegisterSignalListener={registerCallSignalListener}
         />
       )}
     </CallContext.Provider>
