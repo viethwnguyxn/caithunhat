@@ -18,6 +18,9 @@ class Post(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    community_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("communities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     mood: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -32,6 +35,7 @@ class Post(Base):
     )
 
     author = relationship("User", foreign_keys=[author_id], backref="posts")
+    community = relationship("Community", back_populates="posts", foreign_keys=[community_id])
     likes = relationship("PostLike", backref="post", cascade="all, delete-orphan")
     comments = relationship("PostComment", backref="post", cascade="all, delete-orphan")
 

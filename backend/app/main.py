@@ -8,6 +8,8 @@ from .core.security import hash_password
 from .db.database import Base, SessionLocal, engine, get_db
 from .models import (
     Block,
+    Community,
+    CommunityMember,
     Connection,
     Conversation,
     ConversationMember,
@@ -25,6 +27,7 @@ from .routers import (
     admin_router,
     auth_router,
     chat_router,
+    communities_router,
     connections_router,
     matching_router,
     notifications_router,
@@ -34,6 +37,7 @@ from .routers import (
     survey_router,
     users_router,
 )
+from .services import community_service
 
 # Tự động tạo bảng nếu chưa có
 Base.metadata.create_all(bind=engine)
@@ -263,6 +267,43 @@ def migrate_profile_schema():
 migrate_profile_schema()
 
 
+def migrate_community_schema():
+    if not inspect(engine).has_table("conversations"):
+        return
+
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("conversations")
+    }
+    with engine.begin() as conn:
+        if "is_group" not in columns:
+            conn.execute(
+                text("ALTER TABLE conversations ADD COLUMN is_group BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "title" not in columns:
+            conn.execute(
+                text("ALTER TABLE conversations ADD COLUMN title VARCHAR(100)")
+            )
+        if "community_id" not in columns:
+            conn.execute(
+                text("ALTER TABLE conversations ADD COLUMN community_id INTEGER")
+            )
+
+    if inspect(engine).has_table("posts"):
+        post_cols = {
+            column["name"]
+            for column in inspect(engine).get_columns("posts")
+        }
+        with engine.begin() as conn:
+            if "community_id" not in post_cols:
+                conn.execute(
+                    text("ALTER TABLE posts ADD COLUMN community_id INTEGER")
+                )
+
+
+migrate_community_schema()
+
+
 def ensure_admin_user():
     """Khởi tạo tài khoản Quản trị viên mặc định nếu chưa tồn tại (đọc từ biến môi trường)."""
     with SessionLocal() as db:
@@ -295,6 +336,12 @@ def ensure_admin_user():
             )
             db.add(p)
             db.commit()
+
+        # Tự động khởi tạo 6 nhóm cộng đồng chuẩn ban đầu nếu database chưa có
+        try:
+            community_service.seed_default_communities(db, admin.id)
+        except Exception:
+            pass
 
 
 try:
@@ -335,6 +382,7 @@ app.include_router(survey_router)
 app.include_router(matching_router)
 app.include_router(connections_router)
 app.include_router(chat_router)
+app.include_router(communities_router)
 app.include_router(notifications_router)
 app.include_router(reports_router)
 app.include_router(admin_router)

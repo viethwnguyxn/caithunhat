@@ -1,6 +1,7 @@
 from .admin import router as admin_router
 from .auth import router as auth_router
 from .chat import router as chat_router
+from .communities import router as communities_router
 from .connections import router as connections_router
 from .matching import router as matching_router
 from .notifications import router as notifications_router
@@ -18,6 +19,7 @@ __all__ = [
     "matching_router",
     "connections_router",
     "chat_router",
+    "communities_router",
     "notifications_router",
     "reports_router",
     "admin_router",

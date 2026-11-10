@@ -36,33 +36,71 @@ def to_conversation_response(
     db: Session, conv: Conversation, current_user: User
 ) -> ConversationResponse:
     """Chuyển đổi Conversation ORM thành ConversationResponse Pydantic schema."""
-    # Tìm thành viên còn lại (partner)
-    partner_member = None
-    for m in conv.members:
-        if m.user_id != current_user.id:
-            partner_member = m
-            break
+    is_group = bool(getattr(conv, "is_group", False))
+    group_title = getattr(conv, "title", None)
+    community_id = getattr(conv, "community_id", None)
 
-    # Nếu không tìm thấy trong quan hệ đã tải, truy vấn DB
-    if not partner_member:
-        partner_member = (
-            db.query(ConversationMember)
-            .filter(
-                ConversationMember.conversation_id == conv.id,
-                ConversationMember.user_id != current_user.id,
+    if is_group:
+        # Nếu là nhóm chat cộng đồng, thông tin đối phương đại diện bằng tên nhóm
+        from ..models.community import Community
+        comm = db.query(Community).filter(Community.id == community_id).first() if community_id else None
+        display_name = f"[Nhóm] {comm.name if comm else (group_title or 'Cộng đồng')}"
+        partner_dto = ConversationPartnerResponse(
+            id=community_id or 0,
+            username=f"community_{community_id or conv.id}",
+            display_name=display_name,
+            avatar_url=None,
+            current_status="Nhóm thảo luận cộng đồng",
+            is_online=True,
+            last_seen=None,
+            is_group=True,
+        )
+        is_blocked = False
+        blocked_by_me = False
+    else:
+        # Tìm thành viên còn lại (partner) cho cuộc gọi 1-1
+        partner_member = None
+        for m in conv.members:
+            if m.user_id != current_user.id:
+                partner_member = m
+                break
+
+        # Nếu không tìm thấy trong quan hệ đã tải, truy vấn DB
+        if not partner_member:
+            partner_member = (
+                db.query(ConversationMember)
+                .filter(
+                    ConversationMember.conversation_id == conv.id,
+                    ConversationMember.user_id != current_user.id,
+                )
+                .first()
             )
-            .first()
+
+        partner_user = partner_member.user if partner_member else None
+        if not partner_user and partner_member:
+            partner_user = db.query(User).filter(User.id == partner_member.user_id).first()
+
+        partner_dto = (
+            to_partner_response(partner_user)
+            if partner_user
+            else ConversationPartnerResponse(id=0, username="unknown", display_name="Người dùng")
         )
 
-    partner_user = partner_member.user if partner_member else None
-    if not partner_user and partner_member:
-        partner_user = db.query(User).filter(User.id == partner_member.user_id).first()
-
-    partner_dto = (
-        to_partner_response(partner_user)
-        if partner_user
-        else ConversationPartnerResponse(id=0, username="unknown", display_name="Người dùng")
-    )
+        # Kiểm tra trạng thái chặn giữa 2 bên
+        is_blocked = False
+        blocked_by_me = False
+        if partner_user:
+            block_entry = (
+                db.query(Block)
+                .filter(
+                    ((Block.blocker_id == current_user.id) & (Block.blocked_id == partner_user.id))
+                    | ((Block.blocker_id == partner_user.id) & (Block.blocked_id == current_user.id))
+                )
+                .first()
+            )
+            if block_entry:
+                is_blocked = True
+                blocked_by_me = (block_entry.blocker_id == current_user.id)
 
     # Tin nhắn cuối cùng
     last_msg = (
@@ -83,22 +121,6 @@ def to_conversation_response(
         .count()
     )
 
-    # Kiểm tra trạng thái chặn giữa 2 bên
-    is_blocked = False
-    blocked_by_me = False
-    if partner_user:
-        block_entry = (
-            db.query(Block)
-            .filter(
-                ((Block.blocker_id == current_user.id) & (Block.blocked_id == partner_user.id))
-                | ((Block.blocker_id == partner_user.id) & (Block.blocked_id == current_user.id))
-            )
-            .first()
-        )
-        if block_entry:
-            is_blocked = True
-            blocked_by_me = (block_entry.blocker_id == current_user.id)
-
     return ConversationResponse(
         id=conv.id,
         created_at=conv.created_at,
@@ -107,6 +129,9 @@ def to_conversation_response(
         unread_count=unread_count,
         is_blocked=is_blocked,
         blocked_by_me=blocked_by_me,
+        is_group=is_group,
+        title=group_title,
+        community_id=community_id,
     )
 
 

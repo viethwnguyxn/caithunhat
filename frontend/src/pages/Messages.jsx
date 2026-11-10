@@ -159,7 +159,7 @@ export default function Messages() {
     const initChat = async () => {
       const convList = await loadConversations()
       const searchParams = new URLSearchParams(location.search)
-      const queryConvId = location.state?.conversationId || searchParams.get('conversationId')
+      const queryConvId = location.state?.conversationId || searchParams.get('conversationId') || searchParams.get('conv')
       const queryUserId = location.state?.userId || searchParams.get('userId') || searchParams.get('user')
       const queryCall = searchParams.get('call')
 
@@ -522,22 +522,37 @@ export default function Messages() {
                           )}
 
                           <div className="relative shrink-0">
-                            <Avatar
-                              src={p.avatar_url}
-                              alt={p.username}
-                              className="w-11 h-11 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
-                            />
-                            <OnlineStatusDot
-                              isOnline={p.is_online}
-                              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#11151c]"
-                            />
+                            {c.is_group ? (
+                              <div className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/40 flex items-center justify-center text-xl shadow-[0_0_10px_rgba(0,255,136,0.15)]">
+                                👥
+                              </div>
+                            ) : (
+                              <>
+                                <Avatar
+                                  src={p.avatar_url}
+                                  alt={p.username}
+                                  className="w-11 h-11 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
+                                />
+                                <OnlineStatusDot
+                                  isOnline={p.is_online}
+                                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#11151c]"
+                                />
+                              </>
+                            )}
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-xs md:text-sm font-bold text-[#f1ffef] truncate group-hover:text-[#00ff88] transition-colors">
-                                {p.display_name || p.username}
-                              </span>
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs md:text-sm font-bold text-[#f1ffef] truncate group-hover:text-[#00ff88] transition-colors">
+                                  {p.display_name || p.username}
+                                </span>
+                                {c.is_group && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shrink-0">
+                                    Nhóm
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[10px] font-mono text-[#849585]">
                                 {formatTimeAgo(c.last_message?.created_at || c.updated_at)}
                               </span>
@@ -611,29 +626,38 @@ export default function Messages() {
 
                     {/* Calling & Menu Controls */}
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startCall(partner, activeConversation.id, 'audio')
-                        }
-                        className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#00ff88] border border-[#00ff88]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(0,255,136,0.15)]"
-                        title="Gọi thoại WebRTC HD"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">call</span>
-                        <span className="hidden sm:inline">Gọi thoại</span>
-                      </button>
+                      {!activeConversation.is_group ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startCall(partner, activeConversation.id, 'audio')
+                            }
+                            className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#00ff88] border border-[#00ff88]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(0,255,136,0.15)]"
+                            title="Gọi thoại WebRTC HD"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">call</span>
+                            <span className="hidden sm:inline">Gọi thoại</span>
+                          </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startCall(partner, activeConversation.id, 'video')
-                        }
-                        className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#44fb8a] border border-[#44fb8a]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(68,251,138,0.15)]"
-                        title="Gọi Video WebRTC HD"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">videocam</span>
-                        <span className="hidden sm:inline">Video Call</span>
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startCall(partner, activeConversation.id, 'video')
+                            }
+                            className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#44fb8a] border border-[#44fb8a]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(68,251,138,0.15)]"
+                            title="Gọi Video WebRTC HD"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">videocam</span>
+                            <span className="hidden sm:inline">Video Call</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="px-3 py-1.5 rounded-xl bg-[#181d26] border border-[#00ff88]/30 text-[#00ff88] text-xs font-mono flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse"></span>
+                          <span>Nhóm thảo luận cộng đồng</span>
+                        </div>
+                      )}
 
                       {/* Dropdown Menu */}
                       <div className="relative">

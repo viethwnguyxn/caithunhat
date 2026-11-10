@@ -30,7 +30,7 @@ class CallEventCreate(BaseModel):
 
 
 class ConversationPartnerResponse(BaseModel):
-    """Thông tin của đối phương trong cuộc hội thoại 1-1."""
+    """Thông tin của đối phương trong cuộc hội thoại 1-1 hoặc thông tin Nhóm chat."""
     id: int
     username: str
     display_name: str | None = None
@@ -38,6 +38,7 @@ class ConversationPartnerResponse(BaseModel):
     current_status: str | None = None
     is_online: bool = False
     last_seen: datetime | None = None
+    is_group: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -51,6 +52,9 @@ class ConversationResponse(BaseModel):
     unread_count: int = 0
     is_blocked: bool = False
     blocked_by_me: bool = False
+    is_group: bool = False
+    title: str | None = None
+    community_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
