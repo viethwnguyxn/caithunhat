@@ -169,12 +169,17 @@ export default function Discover() {
   const filteredGroups = useMemo(() => {
     const keyword = groupSearch.trim().toLocaleLowerCase()
     if (!keyword) return COMMUNITY_DIRECTORY
-    return COMMUNITY_DIRECTORY.filter((group) =>
-      [group.name, group.category, group.description, ...group.tags]
+    return COMMUNITY_DIRECTORY.filter((group) => {
+      const tagsArr = Array.isArray(group.tags)
+        ? group.tags
+        : typeof group.tags === 'string'
+        ? group.tags.split(',').map((t) => t.trim()).filter(Boolean)
+        : []
+      return [group.name, group.category, group.description, ...tagsArr]
         .join(' ')
         .toLocaleLowerCase()
         .includes(keyword)
-    )
+    })
   }, [groupSearch])
 
   const selectedGroup = COMMUNITY_DIRECTORY.find((group) => group.id === selectedGroupId)
@@ -310,7 +315,12 @@ export default function Discover() {
                     Chủ đề đang thảo luận: {selectedGroup.activeTopic}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedGroup.tags.map((tag) => (
+                    {(Array.isArray(selectedGroup.tags)
+                      ? selectedGroup.tags
+                      : typeof selectedGroup.tags === 'string'
+                      ? selectedGroup.tags.split(',').map((t) => t.trim()).filter(Boolean)
+                      : []
+                    ).map((tag) => (
                       <span key={tag} className="rounded-full bg-[#08090a] px-2.5 py-1 text-xs text-[#94a3b8]">
                         #{tag}
                       </span>

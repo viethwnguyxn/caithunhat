@@ -736,7 +736,9 @@ export default function Communities() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {communities.map((group) => {
-                      const tagsList = group.tags
+                      const tagsList = Array.isArray(group.tags)
+                        ? group.tags
+                        : typeof group.tags === 'string'
                         ? group.tags.split(',').map((t) => t.trim()).filter(Boolean)
                         : []
 
