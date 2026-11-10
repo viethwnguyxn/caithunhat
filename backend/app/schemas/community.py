@@ -8,6 +8,7 @@ class CommunityBase(BaseModel):
     description: str = Field(..., min_length=5, description="Mô tả cộng đồng")
     category: str = Field(..., max_length=50, description="Chủ đề / Danh mục")
     icon: str = Field(default="👥", max_length=50, description="Icon emoji đại diện")
+    avatar_url: str | None = Field(default=None, description="Ảnh đại diện nhóm / cộng đồng")
     tags: str | None = Field(default=None, max_length=255, description="Các thẻ tag cách nhau bằng dấu phẩy")
 
 

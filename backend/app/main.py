@@ -302,6 +302,17 @@ def migrate_community_schema():
                     conn.execute(
                         text("ALTER TABLE posts ADD COLUMN community_id INTEGER")
                     )
+
+        if inspect(engine).has_table("communities"):
+            comm_cols = {
+                column["name"]
+                for column in inspect(engine).get_columns("communities")
+            }
+            with engine.begin() as conn:
+                if "avatar_url" not in comm_cols:
+                    conn.execute(
+                        text("ALTER TABLE communities ADD COLUMN avatar_url TEXT")
+                    )
     except Exception as e:
         logger.warning("Lỗi migrate_community_schema (bỏ qua nếu đã tồn tại): %s", e)
 

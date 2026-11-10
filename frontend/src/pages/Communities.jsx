@@ -509,7 +509,11 @@ export default function Communities() {
                         onClick={() => setFeedFilter(`group:${selectedGroupFilter.id}`)}
                         className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]"
                       >
-                        <span>{selectedGroupFilter.icon || '👥'}</span>
+                        {selectedGroupFilter.avatar_url ? (
+                          <img src={selectedGroupFilter.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <span>{selectedGroupFilter.icon || '👥'}</span>
+                        )}
                         <span>{selectedGroupFilter.name}</span>
                       </button>
                     )}
@@ -527,7 +531,11 @@ export default function Communities() {
                         }`}
                         title={`Xem bài viết trong nhóm ${grp.name}`}
                       >
-                        <span>{grp.icon || '👥'}</span>
+                        {grp.avatar_url ? (
+                          <img src={grp.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <span>{grp.icon || '👥'}</span>
+                        )}
                         <span>{grp.name}</span>
                       </button>
                     ))}
@@ -718,9 +726,17 @@ export default function Communities() {
                 {selectedGroupFilter && (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#11151c] border border-[#00ff88]/30 shadow-[0_0_15px_rgba(0,255,136,0.1)] text-xs animate-fadeIn">
                     <div className="flex items-center gap-2.5 text-[#f1ffef]">
-                      <span className="text-2xl p-1 rounded-lg bg-[#181d26] border border-[#1a232e]">
-                        {selectedGroupFilter.icon || '👥'}
-                      </span>
+                      {selectedGroupFilter.avatar_url ? (
+                        <img
+                          src={selectedGroupFilter.avatar_url}
+                          alt=""
+                          className="w-10 h-10 rounded-xl object-cover border border-[#1a232e]"
+                        />
+                      ) : (
+                        <span className="text-2xl p-1 rounded-lg bg-[#181d26] border border-[#1a232e]">
+                          {selectedGroupFilter.icon || '👥'}
+                        </span>
+                      )}
                       <div>
                         <div className="font-bold text-sm text-[#f1ffef] flex items-center gap-2">
                           <span>{selectedGroupFilter.name}</span>
@@ -817,8 +833,12 @@ export default function Communities() {
                           {post.community_id && (() => {
                             const comm = communities.find((c) => c.id === post.community_id)
                             return comm ? (
-                              <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 flex items-center gap-1 font-semibold">
-                                <span>{comm.icon || '👥'}</span>
+                              <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 flex items-center gap-1.5 font-semibold">
+                                {comm.avatar_url ? (
+                                  <img src={comm.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
+                                ) : (
+                                  <span>{comm.icon || '👥'}</span>
+                                )}
                                 <span>{comm.name}</span>
                               </span>
                             ) : null
@@ -1013,9 +1033,17 @@ export default function Communities() {
                         >
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
-                              <span className="text-3xl p-2.5 rounded-xl bg-[#181d26] border border-[#1a232e]">
-                                {group.icon || '👥'}
-                              </span>
+                              {group.avatar_url ? (
+                                <img
+                                  src={group.avatar_url}
+                                  alt=""
+                                  className="w-14 h-14 rounded-2xl object-cover border border-[#1a232e] shadow-md"
+                                />
+                              ) : (
+                                <span className="text-3xl p-2.5 rounded-xl bg-[#181d26] border border-[#1a232e]">
+                                  {group.icon || '👥'}
+                                </span>
+                              )}
                               <div className="flex items-center gap-2">
                                 <span className="px-2.5 py-0.5 rounded-full bg-[#08090a] text-[#4edea3] text-[11px] font-mono border border-[#4edea3]/20">
                                   {(group.members_count || group.membersCount || 1).toLocaleString()} thành viên

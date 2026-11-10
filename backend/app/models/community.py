@@ -18,6 +18,7 @@ class Community(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     icon: Mapped[str] = mapped_column(String(50), default="👥", nullable=False)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[str | None] = mapped_column(String(255), nullable=True)  # Chuỗi thẻ tag, vd: "Python,React,AI"
     creator_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
