@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from ..models.community import CommunityMember
+from ..models.community import Community, CommunityMember
 from ..models.post import Post, PostComment, PostLike
 from ..models.profile import Profile
 from ..models.user import User
@@ -118,7 +118,14 @@ def get_posts(
     query = db.query(Post).order_by(Post.created_at.desc())
 
     if community_id is not None:
-        query = query.filter(Post.community_id == community_id)
+        comm = db.query(Community).filter(Community.id == community_id).first()
+        if comm:
+            query = query.filter(
+                (Post.community_id == community_id)
+                | ((Post.community_id.is_(None)) & (Post.category == comm.category))
+            )
+        else:
+            query = query.filter(Post.community_id == community_id)
     elif joined_only and current_user_id:
         joined_comm_ids = [
             m[0]

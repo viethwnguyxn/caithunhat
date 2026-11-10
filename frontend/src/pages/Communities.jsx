@@ -71,6 +71,16 @@ export default function Communities() {
   // State cho Bảng tin
   const [posts, setPosts] = useState([])
   const [loadingPosts, setLoadingPosts] = useState(true)
+  const [previewImage, setPreviewImage] = useState(null)
+
+  // Nhóm đang được chọn lọc ở Feed (nếu có)
+  const selectedGroupFilter = useMemo(() => {
+    if (feedFilter.startsWith('group:')) {
+      const gId = parseInt(feedFilter.replace('group:', ''), 10)
+      return communities.find((c) => c.id === gId) || null
+    }
+    return null
+  }, [feedFilter, communities])
 
   // State cho Tạo bài viết
   const [newContent, setNewContent] = useState('')
@@ -142,6 +152,17 @@ export default function Communities() {
       loadPosts()
     }
   }, [activeTab, feedFilter])
+
+  // Đóng xem ảnh bằng phím Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setPreviewImage(null)
+    }
+    if (previewImage) {
+      window.addEventListener('keydown', handleKeyDown)
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewImage])
 
   // 3. Xử lý Tạo cộng đồng mới
   const handleCreateCommunity = async (payload) => {
@@ -408,115 +429,129 @@ export default function Communities() {
               </button>
             </div>
 
-            {/* Horizontal Scrollable Category / Feed Filter Pills */}
-            <div className="w-full flex items-center justify-start md:justify-center overflow-x-auto pb-2 gap-2 no-scrollbar">
-              {activeTab === 'feed' ? (
-                <>
-                  {/* Pill: Tất cả bài viết */}
-                  <button
-                    type="button"
-                    onClick={() => setFeedFilter('all')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                      feedFilter === 'all'
-                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                    }`}
-                  >
-                    🌍 Tất cả bài viết
-                  </button>
-
-                  {/* Pill: Nhóm của tôi (Đã tham gia) */}
-                  <button
-                    type="button"
-                    onClick={() => setFeedFilter('joined')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                      feedFilter === 'joined'
-                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                    }`}
-                  >
-                    <span>⭐ Nhóm của tôi ({myJoinedCommunities.length})</span>
-                  </button>
-
-                  {/* Các nhóm đã tham gia */}
-                  {myJoinedCommunities.map((grp) => (
+            {/* Horizontal Scrollable Category / Feed Filter Pills (Đã sửa triệt để lỗi cuộn tràn toạ độ âm) */}
+            <div className="w-full overflow-x-auto pb-3 px-2 no-scrollbar">
+              <div className="flex items-center gap-2 min-w-max mx-auto justify-start sm:justify-center">
+                {activeTab === 'feed' ? (
+                  <>
+                    {/* Pill: Tất cả bài viết */}
                     <button
-                      key={`feed-grp-${grp.id}`}
                       type="button"
-                      onClick={() => setFeedFilter(`group:${grp.id}`)}
-                      className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                        feedFilter === `group:${grp.id}`
-                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                      }`}
-                      title={`Xem bài viết trong nhóm ${grp.name}`}
-                    >
-                      <span>{grp.icon || '👥'}</span>
-                      <span>{grp.name}</span>
-                    </button>
-                  ))}
-
-                  {/* Lọc bài viết theo Chủ đề */}
-                  {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
-                    <button
-                      key={`feed-cat-${cat}`}
-                      type="button"
-                      onClick={() => setFeedFilter(cat)}
+                      onClick={() => setFeedFilter('all')}
                       className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                        feedFilter === cat
-                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                        feedFilter === 'all'
+                          ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                           : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                       }`}
                     >
-                      {cat}
+                      🌍 Tất cả
                     </button>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {/* Tab Nhóm: Tất cả */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory('Tất cả')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                      selectedCategory === 'Tất cả'
-                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                    }`}
-                  >
-                    Tất cả ({communities.length})
-                  </button>
 
-                  {/* Tab Nhóm: Đã tham gia */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory('joined')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                      selectedCategory === 'joined'
-                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                    }`}
-                  >
-                    <span>⭐ Đã tham gia ({myJoinedCommunities.length})</span>
-                  </button>
-
-                  {/* Tab Nhóm: Lọc theo từng Chủ đề */}
-                  {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                    {/* Pill: Nhóm của tôi (Đã tham gia) */}
                     <button
-                      key={`grp-cat-${cat}`}
                       type="button"
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                        selectedCategory === cat
-                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                      onClick={() => setFeedFilter('joined')}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                        feedFilter === 'joined'
+                          ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                           : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                       }`}
                     >
-                      {cat}
+                      <span>⭐ Nhóm của tôi ({myJoinedCommunities.length})</span>
                     </button>
-                  ))}
-                </>
-              )}
+
+                    {/* Nếu đang lọc theo nhóm mà nhóm đó chưa bấm tham gia */}
+                    {selectedGroupFilter && !myJoinedCommunities.some((c) => c.id === selectedGroupFilter.id) && (
+                      <button
+                        type="button"
+                        onClick={() => setFeedFilter(`group:${selectedGroupFilter.id}`)}
+                        className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]"
+                      >
+                        <span>{selectedGroupFilter.icon || '👥'}</span>
+                        <span>{selectedGroupFilter.name}</span>
+                      </button>
+                    )}
+
+                    {/* Các nhóm đã tham gia */}
+                    {myJoinedCommunities.map((grp) => (
+                      <button
+                        key={`feed-grp-${grp.id}`}
+                        type="button"
+                        onClick={() => setFeedFilter(`group:${grp.id}`)}
+                        className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                          feedFilter === `group:${grp.id}`
+                            ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                            : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                        }`}
+                        title={`Xem bài viết trong nhóm ${grp.name}`}
+                      >
+                        <span>{grp.icon || '👥'}</span>
+                        <span>{grp.name}</span>
+                      </button>
+                    ))}
+
+                    {/* Lọc bài viết theo Chủ đề */}
+                    {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                      <button
+                        key={`feed-cat-${cat}`}
+                        type="button"
+                        onClick={() => setFeedFilter(cat)}
+                        className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                          feedFilter === cat
+                            ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                            : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                        }`}
+                      >
+                        🏷️ {cat}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {/* Tab Nhóm: Tất cả */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategory('Tất cả')}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                        selectedCategory === 'Tất cả'
+                          ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                      }`}
+                    >
+                      Tất cả ({communities.length})
+                    </button>
+
+                    {/* Tab Nhóm: Đã tham gia */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategory('joined')}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                        selectedCategory === 'joined'
+                          ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                      }`}
+                    >
+                      <span>⭐ Đã tham gia ({myJoinedCommunities.length})</span>
+                    </button>
+
+                    {/* Tab Nhóm: Lọc theo từng Chủ đề */}
+                    {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                      <button
+                        key={`grp-cat-${cat}`}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                          selectedCategory === cat
+                            ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                            : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                        }`}
+                      >
+                        🏷️ {cat}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -637,6 +672,36 @@ export default function Communities() {
                   </div>
                 </div>
 
+                {/* Banner khi đang lọc xem bài của một Nhóm cụ thể */}
+                {selectedGroupFilter && (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#11151c] border border-[#00ff88]/30 shadow-[0_0_15px_rgba(0,255,136,0.1)] text-xs animate-fadeIn">
+                    <div className="flex items-center gap-2.5 text-[#f1ffef]">
+                      <span className="text-2xl p-1 rounded-lg bg-[#181d26] border border-[#1a232e]">
+                        {selectedGroupFilter.icon || '👥'}
+                      </span>
+                      <div>
+                        <div className="font-bold text-sm text-[#f1ffef] flex items-center gap-2">
+                          <span>{selectedGroupFilter.name}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30">
+                            🏷️ {selectedGroupFilter.category}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#849585] mt-0.5">
+                          Đang lọc các bài viết thuộc nhóm này ({posts.length} bài)
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFeedFilter('all')}
+                      className="px-3 py-1.5 rounded-xl bg-[#181d26] hover:bg-[#202734] text-[#00ff88] border border-[#00ff88]/30 font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                      <span>Xem tất cả bài</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Feed Posts List */}
                 {loadingPosts ? (
                   <div className="py-20 text-center text-xs font-mono text-[#849585]">
@@ -728,14 +793,22 @@ export default function Communities() {
                           {post.content}
                         </p>
 
-                        {/* Image */}
+                        {/* Image: Giữ đúng tỷ lệ gốc và cho phép nhấn vào để phóng to */}
                         {post.image_url && (
-                          <div className="w-full rounded-xl overflow-hidden max-h-96 border border-[#1a232e]">
+                          <div
+                            className="w-full rounded-xl overflow-hidden border border-[#1a232e] bg-[#08090a] cursor-pointer group/img relative"
+                            onClick={() => setPreviewImage(post.image_url)}
+                            title="Nhấn để phóng to ảnh xem chi tiết"
+                          >
                             <img
                               src={post.image_url}
                               alt="Post attachment"
-                              className="w-full h-full object-cover"
+                              className="w-full h-auto max-h-[550px] object-contain mx-auto group-hover/img:scale-[1.01] transition-transform duration-200"
                             />
+                            <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-[#00ff88] text-[11px] font-mono flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+                              <span className="material-symbols-outlined text-[14px]">zoom_in</span>
+                              <span>Phóng to</span>
+                            </div>
                           </div>
                         )}
 
@@ -844,11 +917,20 @@ export default function Communities() {
                     )
                   })
                 ) : (
-                  <div className="py-20 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] text-[#849585] space-y-2">
+                  <div className="py-20 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] text-[#849585] space-y-2 p-6">
                     <span className="material-symbols-outlined text-[36px] text-[#00ff88]">
                       feed
                     </span>
-                    <p className="text-sm">Chưa có bài viết nào trong chủ đề này.</p>
+                    <p className="text-sm">
+                      {selectedGroupFilter
+                        ? `Nhóm "${selectedGroupFilter.name}" chưa có bài viết nào.`
+                        : 'Chưa có bài viết nào trong mục này.'}
+                    </p>
+                    {selectedGroupFilter && (
+                      <p className="text-xs text-[#849585]">
+                        Hãy dùng khung đăng bài phía trên để là người đầu tiên chia sẻ vào nhóm nhé!
+                      </p>
+                    )}
                   </div>
                 )}
               </>
@@ -940,7 +1022,7 @@ export default function Communities() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedCategory(group.category)
+                                  setFeedFilter(`group:${group.id}`)
                                   setActiveTab('feed')
                                 }}
                                 className="h-9 rounded-xl text-xs font-semibold bg-[#11151c] text-[#b9cbb9] hover:text-[#f1ffef] hover:bg-[#181d26] border border-[#1a232e] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -1085,6 +1167,33 @@ export default function Communities() {
             </div>
           </aside>
         </div>
+
+        {/* Lightbox Modal Phóng To Ảnh Chi Tiết */}
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fadeIn"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div
+              className="relative max-w-5xl max-h-[92vh] flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-10 right-0 md:-right-10 w-9 h-9 rounded-full bg-[#181d26] border border-[#1a232e] text-[#f1ffef] hover:text-[#00ff88] flex items-center justify-center transition-colors cursor-pointer"
+                title="Đóng (Escape)"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+              <img
+                src={previewImage}
+                alt="Enlarged preview"
+                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-[#1a232e]"
+              />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
