@@ -29,13 +29,55 @@ function formatTimeAgo(dateString) {
 }
 
 export default function Communities() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
 
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'groups' ? 'groups' : 'feed')
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tất cả')
-  const [feedFilter, setFeedFilter] = useState('all') // 'all' | 'joined' | categoryName | `group:${groupId}`
+  // Khởi tạo trạng thái từ URL Search Params (giúp khi reload F5 vẫn giữ nguyên nhóm / bộ lọc)
+  const initialTab = searchParams.get('tab') === 'groups' ? 'groups' : 'feed'
+  const initialFeedFilter = useMemo(() => {
+    const groupId = searchParams.get('group_id')
+    if (groupId) return `group:${groupId}`
+    const filter = searchParams.get('filter')
+    if (filter) return filter
+    const cat = searchParams.get('category')
+    if (cat && cat !== 'Tất cả' && cat !== 'all') return cat
+    return 'all'
+  }, [])
+
+  const initialSelectedCategory = useMemo(() => {
+    const cat = searchParams.get('category')
+    if (cat) return cat
+    if (searchParams.get('filter') === 'joined') return 'joined'
+    return 'Tất cả'
+  }, [])
+
+  const [activeTab, setActiveTab] = useState(initialTab)
+  const [selectedCategory, setSelectedCategory] = useState(initialSelectedCategory)
+  const [feedFilter, setFeedFilter] = useState(initialFeedFilter) // 'all' | 'joined' | categoryName | `group:${groupId}`
   const [toastMessage, setToastMessage] = useState('')
+
+  // Đồng bộ trạng thái hiện tại lên URL để thanh URL không bị kẹt và F5 không bị reset về tất cả
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (activeTab === 'groups') {
+      params.set('tab', 'groups')
+      if (selectedCategory === 'joined') {
+        params.set('filter', 'joined')
+      } else if (selectedCategory && selectedCategory !== 'Tất cả') {
+        params.set('category', selectedCategory)
+      }
+    } else {
+      params.set('tab', 'feed')
+      if (feedFilter.startsWith('group:')) {
+        params.set('group_id', feedFilter.replace('group:', ''))
+      } else if (feedFilter === 'joined') {
+        params.set('filter', 'joined')
+      } else if (feedFilter && feedFilter !== 'all' && feedFilter !== 'Tất cả') {
+        params.set('category', feedFilter)
+      }
+    }
+    setSearchParams(params, { replace: true })
+  }, [activeTab, feedFilter, selectedCategory, setSearchParams])
 
   // State cho Danh sách Cộng đồng (Backend API)
   const [communities, setCommunities] = useState([])

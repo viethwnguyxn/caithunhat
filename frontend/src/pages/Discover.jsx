@@ -6,6 +6,7 @@ import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import { getMatches } from '../services/matchingService'
+import communityService from '../services/communityService'
 import { COMMUNITY_DIRECTORY } from '../data/communities'
 import {
   sendConnectionRequest,
@@ -63,6 +64,25 @@ export default function Discover() {
   )
   const [groupSearch, setGroupSearch] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState(null)
+  const [discoverCommunities, setDiscoverCommunities] = useState([])
+
+  // Tải danh sách cộng đồng thật từ database
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const data = await communityService.getCommunities(null)
+        if (data && data.length > 0) {
+          setDiscoverCommunities(data)
+        } else {
+          setDiscoverCommunities(COMMUNITY_DIRECTORY)
+        }
+      } catch (err) {
+        console.warn('Lỗi tải cộng đồng tại Discover, dùng fallback:', err)
+        setDiscoverCommunities(COMMUNITY_DIRECTORY)
+      }
+    }
+    fetchCommunities()
+  }, [])
 
   // Modal xem chi tiết profile
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
@@ -166,10 +186,12 @@ export default function Discover() {
     })
   }, [matches, connectionStatuses, selectedAge, selectedStatus, selectedConnType, searchKeyword])
 
+  const allGroups = discoverCommunities.length > 0 ? discoverCommunities : COMMUNITY_DIRECTORY
+
   const filteredGroups = useMemo(() => {
     const keyword = groupSearch.trim().toLocaleLowerCase()
-    if (!keyword) return COMMUNITY_DIRECTORY
-    return COMMUNITY_DIRECTORY.filter((group) => {
+    if (!keyword) return allGroups
+    return allGroups.filter((group) => {
       const tagsArr = Array.isArray(group.tags)
         ? group.tags
         : typeof group.tags === 'string'
@@ -180,9 +202,9 @@ export default function Discover() {
         .toLocaleLowerCase()
         .includes(keyword)
     })
-  }, [groupSearch])
+  }, [groupSearch, allGroups])
 
-  const selectedGroup = COMMUNITY_DIRECTORY.find((group) => group.id === selectedGroupId)
+  const selectedGroup = allGroups.find((group) => group.id === selectedGroupId)
 
   const handleResetFilters = () => {
     setSelectedAge('Tất cả độ tuổi')
@@ -327,7 +349,7 @@ export default function Discover() {
                     ))}
                   </div>
                   <Link
-                    to={`/communities?tab=feed&category=${encodeURIComponent(selectedGroup.feedCategory)}`}
+                    to={`/communities?tab=feed&group_id=${selectedGroup.id}`}
                     className="inline-flex items-center gap-2 rounded-lg bg-[#00ff88] px-4 py-2 text-xs font-bold text-[#08090a]"
                   >
                     Xem bài viết trong cộng đồng
@@ -544,11 +566,11 @@ export default function Discover() {
                         {/* Header: Avatar, Name, % Match Badge */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="relative shrink-0">
+                            <div className="relative shrink-0 w-12 h-12 sm:w-14 sm:h-14">
                               <Avatar
                                 src={u.avatar_url}
                                 alt={u.display_name || u.username}
-                                className="w-13 h-13 rounded-xl object-cover border border-[#1a232e] bg-[#0d1117]"
+                                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-[#1a232e] bg-[#0d1117]"
                               />
                               <OnlineStatusDot
                                 isOnline={u.is_online}
