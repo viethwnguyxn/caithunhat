@@ -29,8 +29,18 @@ export default function Home() {
   const [interactionErrors, setInteractionErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('Phù hợp với bạn')
+  const [previewImage, setPreviewImage] = useState(null)
   const displayName = profile?.display_name || user?.display_name || user?.username || 'Bạn'
   const avatar = profile?.avatar_url || user?.avatar_url
+
+  useEffect(() => {
+    if (!previewImage) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setPreviewImage(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewImage])
 
   useEffect(() => {
     let alive = true
@@ -207,17 +217,58 @@ export default function Home() {
               </div>
               <p>{content}</p>
               {postImage && (
-                <img
-                  src={postImage}
-                  alt="Ảnh trong bài viết"
+                <div
+                  onClick={() => setPreviewImage(postImage)}
+                  title="Nhấn để phóng to ảnh xem chi tiết"
                   style={{
                     width: '100%',
-                    maxHeight: 420,
-                    objectFit: 'cover',
+                    maxHeight: 520,
                     borderRadius: 12,
+                    overflow: 'hidden',
                     marginBottom: 14,
+                    backgroundColor: '#08090a',
+                    border: '1px solid #1a232e',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                />
+                >
+                  <img
+                    src={postImage}
+                    alt="Ảnh trong bài viết"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 520,
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                      display: 'block',
+                      margin: '0 auto',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 10,
+                      right: 10,
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      backdropFilter: 'blur(4px)',
+                      color: '#00ff88',
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <span>🔍 Phóng to</span>
+                  </div>
+                </div>
               )}
               <div className="lp-feed-actions">
                 <button
@@ -345,5 +396,72 @@ export default function Home() {
 
       <aside className="lp-home-right"><section className="lp-panel"><div className="lp-section-label" style={{marginTop:0}}>Tổng quan của bạn</div><div className="lp-stat"><span>Bạn bè kết nối</span><strong>{friendsCount}</strong></div><div className="lp-stat"><span>Tin nhắn chưa đọc</span><strong>{unreadMsgCount}</strong></div><div className="lp-stat"><span>Khảo sát</span><strong>{survey ? 'Hoàn tất' : 'Chưa làm'}</strong></div></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Gợi ý không gian</div>{[['🎨','Nghệ thuật & Sáng tạo','Chia sẻ cảm hứng'],['🎧','Âm nhạc & Lofi','Tìm người cùng gu'],['🌱','Phát triển bản thân','Cùng tiến bộ mỗi ngày']].map(([icon,title,desc])=><div className="lp-community-row" key={title}><span className="lp-community-icon">{icon}</span><div><b>{title}</b><small>{desc}</small></div></div>)}<Link to="/discover?tab=groups" className="lp-chip">Xem tất cả cộng đồng →</Link></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Câu hỏi hôm nay</div><p style={{fontSize:14,lineHeight:1.7}}>Điều nhỏ bé nào gần đây khiến bạn cảm thấy biết ơn?</p><span className="lp-muted">Một lời nhắc để bắt đầu cuộc trò chuyện.</span></section></aside>
     </div>
+
+    {/* Lightbox Modal Phóng To Ảnh Chi Tiết */}
+    {previewImage && (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          backdropFilter: 'blur(8px)',
+          padding: 16,
+        }}
+        onClick={() => setPreviewImage(null)}
+      >
+        <div
+          style={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            style={{
+              position: 'absolute',
+              top: -42,
+              right: 0,
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              backgroundColor: '#181d26',
+              border: '1px solid #1a232e',
+              color: '#f1ffef',
+              cursor: 'pointer',
+              fontSize: 18,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'color 0.2s',
+            }}
+            title="Đóng (Escape)"
+          >
+            ✕
+          </button>
+          <img
+            src={previewImage}
+            alt="Ảnh phóng to"
+            style={{
+              maxHeight: '85vh',
+              maxWidth: '100%',
+              objectFit: 'contain',
+              borderRadius: 16,
+              boxShadow: '0 0 50px rgba(0, 0, 0, 0.9)',
+              border: '1px solid #1a232e',
+            }}
+          />
+        </div>
+      </div>
+    )}
   </div>
 }
