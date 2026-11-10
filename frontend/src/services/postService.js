@@ -2,9 +2,10 @@ import api from './api'
 
 export const postService = {
   // Tạo bài viết / khoảnh khắc mới
-  createPost: async ({ category, content, image_url, mood }) => {
+  createPost: async ({ category, community_id, content, image_url, mood }) => {
     const response = await api.post('/api/posts', {
       category,
+      community_id: community_id || null,
       content,
       image_url: image_url || null,
       mood: mood || null,
@@ -13,8 +14,14 @@ export const postService = {
   },
 
   // Lấy danh sách bảng tin cộng đồng
-  getFeed: async ({ category = '', limit = 50, offset = 0 } = {}) => {
+  getFeed: async ({ category = '', joined_only = false, community_id = null, limit = 50, offset = 0 } = {}) => {
     const params = { limit, offset }
+    if (joined_only) {
+      params.joined_only = true
+    }
+    if (community_id) {
+      params.community_id = community_id
+    }
     if (category && category !== 'Tất cả' && category !== 'all') {
       params.category = category
     }

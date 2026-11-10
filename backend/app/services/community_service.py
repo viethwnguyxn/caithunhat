@@ -105,13 +105,32 @@ def _build_community_response(
     )
 
 
-def seed_default_communities(db: Session, admin_user_id: int):
-    """Khởi tạo 6 cộng đồng chuẩn ban đầu nếu database chưa có cộng đồng nào."""
-    count = db.query(Community).count()
-    if count > 0:
-        return
+def seed_default_communities(db: Session, admin_user_id: int | None = None):
+    """
+    Đảm bảo 6 cộng đồng chuẩn ban đầu luôn luôn có mặt trong database.
+    Nếu cộng đồng nào chưa có, tự động tạo mới kèm nhóm chat riêng và tin nhắn chào mừng.
+    """
+    if not admin_user_id:
+        admin_user = (
+            db.query(User)
+            .filter((User.role == "admin") | (User.username == "admin"))
+            .first()
+        )
+        if not admin_user:
+            admin_user = db.query(User).first()
+        if admin_user:
+            admin_user_id = admin_user.id
+        else:
+            return
 
+    has_new = False
     for item in DEFAULT_COMMUNITIES_DATA:
+        # Kiểm tra xem cộng đồng chuẩn này đã có trong database chưa
+        existing = db.query(Community).filter(Community.name == item["name"]).first()
+        if existing:
+            continue
+
+        has_new = True
         # Tạo nhóm chat riêng cho cộng đồng
         conv = Conversation(is_group=True, title=item["name"])
         db.add(conv)
@@ -132,7 +151,7 @@ def seed_default_communities(db: Session, admin_user_id: int):
         # Cập nhật community_id vào conversation
         conv.community_id = comm.id
 
-        # Admin tham gia cộng đồng và nhóm chat
+        # Cho Admin tham gia cộng đồng và nhóm chat
         comm_mem = CommunityMember(
             community_id=comm.id, user_id=admin_user_id, role="admin"
         )
@@ -149,13 +168,20 @@ def seed_default_communities(db: Session, admin_user_id: int):
         )
         db.add(welcome_msg)
 
-    db.commit()
+    if has_new:
+        db.commit()
 
 
 def get_communities(
     db: Session, current_user: User, category: str | None = None
 ) -> list[CommunityResponse]:
     """Lấy danh sách tất cả các cộng đồng."""
+    # Đảm bảo 6 cộng đồng chuẩn luôn tồn tại trong Database
+    try:
+        seed_default_communities(db, current_user.id)
+    except Exception:
+        pass
+
     query = db.query(Community)
     if category and category != "Tất cả":
         query = query.filter(Community.category == category)

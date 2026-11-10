@@ -11,12 +11,14 @@ const PRESET_CATEGORIES = [
   'Game & Esports',
   'Học tập & Sự nghiệp',
   'Đời sống & Sở thích',
+  'Khác (Tự điền chủ đề mới...)',
 ]
 
 export default function CreateCommunityModal({ isOpen, onClose, onCreated }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(PRESET_CATEGORIES[0])
+  const [customCategory, setCustomCategory] = useState('')
   const [icon, setIcon] = useState('🚀')
   const [tags, setTags] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -43,6 +45,19 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }) {
       return
     }
 
+    let finalCategory = category
+    if (category === 'Khác (Tự điền chủ đề mới...)') {
+      if (!customCategory.trim()) {
+        setError('Vui lòng tự nhập tên chủ đề mới')
+        return
+      }
+      if (customCategory.trim().length < 2) {
+        setError('Tên chủ đề tối thiểu 2 ký tự')
+        return
+      }
+      finalCategory = customCategory.trim()
+    }
+
     setIsSubmitting(true)
     setError('')
 
@@ -50,7 +65,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }) {
       await onCreated({
         name: name.trim(),
         description: description.trim(),
-        category,
+        category: finalCategory,
         icon,
         tags: tags.trim() || null,
       })
@@ -155,6 +170,21 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }) {
                 </option>
               ))}
             </select>
+
+            {/* Ô tự điền chủ đề mới nếu chọn Khác */}
+            {category === 'Khác (Tự điền chủ đề mới...)' && (
+              <div className="mt-2.5">
+                <input
+                  type="text"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Nhập tên chủ đề mới (Vd: Nấu ăn & Ẩm thực, Du lịch, Thú cưng...)"
+                  maxLength={50}
+                  className="w-full h-11 px-4 rounded-xl bg-[#08090a] border border-[#00ff88]/50 text-sm text-[#f1ffef] placeholder:text-[#849585] focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-all"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
 
           {/* Mô tả */}

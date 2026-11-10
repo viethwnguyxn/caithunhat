@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Avatar from '../components/Avatar'
@@ -34,6 +34,7 @@ export default function Communities() {
 
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'groups' ? 'groups' : 'feed')
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tất cả')
+  const [feedFilter, setFeedFilter] = useState('all') // 'all' | 'joined' | categoryName | `group:${groupId}`
   const [toastMessage, setToastMessage] = useState('')
 
   // State cho Danh sách Cộng đồng (Backend API)
@@ -41,6 +42,31 @@ export default function Communities() {
   const [loadingCommunities, setLoadingCommunities] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [chatCommunity, setChatCommunity] = useState(null)
+
+  // Danh sách các danh mục / chủ đề động (kết hợp các chủ đề chuẩn và các chủ đề do user tự tạo)
+  const allCategories = useMemo(() => {
+    const cats = new Set(COMMUNITY_CATEGORIES.filter((c) => c !== 'Tất cả'))
+    communities.forEach((c) => {
+      if (c.category) cats.add(c.category)
+    })
+    return ['Tất cả', ...Array.from(cats)]
+  }, [communities])
+
+  // Danh sách các nhóm mà người dùng hiện tại đã tham gia
+  const myJoinedCommunities = useMemo(() => {
+    return communities.filter((c) => c.is_joined)
+  }, [communities])
+
+  // Danh sách nhóm hiển thị ở tab "Nhóm cộng đồng"
+  const displayedCommunities = useMemo(() => {
+    if (selectedCategory === 'joined') {
+      return communities.filter((c) => c.is_joined)
+    }
+    if (selectedCategory !== 'Tất cả') {
+      return communities.filter((c) => c.category === selectedCategory)
+    }
+    return communities
+  }, [communities, selectedCategory])
 
   // State cho Bảng tin
   const [posts, setPosts] = useState([])
@@ -65,25 +91,12 @@ export default function Communities() {
     setTimeout(() => setToastMessage(''), 3500)
   }
 
-  // 1. Tải danh sách cộng đồng từ Backend
+  // 1. Tải danh sách cộng đồng từ Backend (luôn lấy toàn bộ để state communities luôn đủ dữ liệu)
   const loadCommunities = async () => {
     setLoadingCommunities(true)
     try {
-      const data = await communityService.getCommunities(
-        selectedCategory === 'Tất cả' ? null : selectedCategory
-      )
-      if (data && data.length > 0) {
-        setCommunities(data)
-      } else {
-        // Fallback danh sách mặc định nếu chưa có
-        setCommunities(
-          COMMUNITY_DIRECTORY.map((c) => ({
-            ...c,
-            members_count: c.membersCount,
-            is_joined: false,
-          }))
-        )
-      }
+      const data = await communityService.getCommunities(null)
+      setCommunities(data || [])
     } catch (err) {
       console.warn('Lỗi khi tải cộng đồng từ API, dùng danh sách fallback:', err)
       setCommunities(
@@ -98,14 +111,19 @@ export default function Communities() {
     }
   }
 
-  // 2. Tải bảng tin bài viết
+  // 2. Tải bảng tin bài viết theo bộ lọc feedFilter
   const loadPosts = async () => {
     setLoadingPosts(true)
     try {
-      const data = await postService.getFeed({
-        category: selectedCategory === 'Tất cả' ? '' : selectedCategory,
-        limit: 50,
-      })
+      const params = { limit: 50 }
+      if (feedFilter === 'joined') {
+        params.joined_only = true
+      } else if (feedFilter.startsWith('group:')) {
+        params.community_id = parseInt(feedFilter.replace('group:', ''), 10)
+      } else if (feedFilter !== 'all' && feedFilter !== 'Tất cả') {
+        params.category = feedFilter
+      }
+      const data = await postService.getFeed(params)
       setPosts(data || [])
     } catch (err) {
       console.error('Lỗi khi tải bảng tin cộng đồng:', err)
@@ -117,13 +135,13 @@ export default function Communities() {
 
   useEffect(() => {
     loadCommunities()
-  }, [selectedCategory])
+  }, [])
 
   useEffect(() => {
     if (activeTab === 'feed') {
       loadPosts()
     }
-  }, [activeTab, selectedCategory])
+  }, [activeTab, feedFilter])
 
   // 3. Xử lý Tạo cộng đồng mới
   const handleCreateCommunity = async (payload) => {
@@ -191,10 +209,19 @@ export default function Communities() {
       return
     }
 
+    let postCategory = newCategory
+    let postCommunityId = null
+    if (newCategory.startsWith('grp:')) {
+      const parts = newCategory.split(':')
+      postCommunityId = parseInt(parts[1], 10)
+      postCategory = parts[2] || 'Cộng đồng'
+    }
+
     setIsSubmitting(true)
     try {
       const created = await postService.createPost({
-        category: newCategory,
+        category: postCategory,
+        community_id: postCommunityId,
         content: newContent.trim(),
         mood: newMood,
         image_url: newImageUrl.trim() || null,
@@ -366,7 +393,7 @@ export default function Communities() {
                   }`}
                 >
                   <span className="material-symbols-outlined text-[18px]">group_work</span>
-                  <span>👥 Nhóm chủ đề ({communities.length})</span>
+                  <span>👥 Nhóm cộng đồng ({communities.length})</span>
                 </button>
               </div>
 
@@ -381,22 +408,115 @@ export default function Communities() {
               </button>
             </div>
 
-            {/* Horizontal Scrollable Category Pills */}
+            {/* Horizontal Scrollable Category / Feed Filter Pills */}
             <div className="w-full flex items-center justify-start md:justify-center overflow-x-auto pb-2 gap-2 no-scrollbar">
-              {COMMUNITY_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
-                      : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {activeTab === 'feed' ? (
+                <>
+                  {/* Pill: Tất cả bài viết */}
+                  <button
+                    type="button"
+                    onClick={() => setFeedFilter('all')}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                      feedFilter === 'all'
+                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                    }`}
+                  >
+                    🌍 Tất cả bài viết
+                  </button>
+
+                  {/* Pill: Nhóm của tôi (Đã tham gia) */}
+                  <button
+                    type="button"
+                    onClick={() => setFeedFilter('joined')}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                      feedFilter === 'joined'
+                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                    }`}
+                  >
+                    <span>⭐ Nhóm của tôi ({myJoinedCommunities.length})</span>
+                  </button>
+
+                  {/* Các nhóm đã tham gia */}
+                  {myJoinedCommunities.map((grp) => (
+                    <button
+                      key={`feed-grp-${grp.id}`}
+                      type="button"
+                      onClick={() => setFeedFilter(`group:${grp.id}`)}
+                      className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                        feedFilter === `group:${grp.id}`
+                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                      }`}
+                      title={`Xem bài viết trong nhóm ${grp.name}`}
+                    >
+                      <span>{grp.icon || '👥'}</span>
+                      <span>{grp.name}</span>
+                    </button>
+                  ))}
+
+                  {/* Lọc bài viết theo Chủ đề */}
+                  {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                    <button
+                      key={`feed-cat-${cat}`}
+                      type="button"
+                      onClick={() => setFeedFilter(cat)}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                        feedFilter === cat
+                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Tab Nhóm: Tất cả */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('Tất cả')}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                      selectedCategory === 'Tất cả'
+                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                    }`}
+                  >
+                    Tất cả ({communities.length})
+                  </button>
+
+                  {/* Tab Nhóm: Đã tham gia */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('joined')}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                      selectedCategory === 'joined'
+                        ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                        : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                    }`}
+                  >
+                    <span>⭐ Đã tham gia ({myJoinedCommunities.length})</span>
+                  </button>
+
+                  {/* Tab Nhóm: Lọc theo từng Chủ đề */}
+                  {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                    <button
+                      key={`grp-cat-${cat}`}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                        selectedCategory === cat
+                          ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.22)] font-bold'
+                          : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -452,17 +572,28 @@ export default function Communities() {
 
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1a232e]">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Category select */}
+                          {/* Category / Group select */}
                           <select
                             value={newCategory}
                             onChange={(e) => setNewCategory(e.target.value)}
-                            className="h-8 px-3 rounded-lg bg-[#08090a] border border-[#1a232e] text-xs text-[#f1ffef] focus:outline-none cursor-pointer"
+                            className="h-8 px-3 rounded-lg bg-[#08090a] border border-[#1a232e] text-xs text-[#f1ffef] focus:outline-none cursor-pointer max-w-[220px]"
                           >
-                            {COMMUNITY_CATEGORIES.filter((c) => c !== 'Tất cả').map((cat) => (
-                              <option key={cat} value={cat}>
-                                🏷️ {cat}
-                              </option>
-                            ))}
+                            <optgroup label="Chủ đề bài viết">
+                              {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
+                                <option key={cat} value={cat}>
+                                  🏷️ {cat}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {myJoinedCommunities.length > 0 && (
+                              <optgroup label="Đăng vào Nhóm của bạn">
+                                {myJoinedCommunities.map((grp) => (
+                                  <option key={`post-grp-${grp.id}`} value={`grp:${grp.id}:${grp.category}`}>
+                                    {grp.icon || '👥'} {grp.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
 
                           {/* Mood select */}
@@ -570,15 +701,24 @@ export default function Communities() {
                         </div>
 
                         {/* Badges */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {post.mood && (
                             <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#181d26] text-[#00ff88] border border-[#00ff88]/20">
                               {post.mood}
                             </span>
                           )}
+                          {post.community_id && (() => {
+                            const comm = communities.find((c) => c.id === post.community_id)
+                            return comm ? (
+                              <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 flex items-center gap-1 font-semibold">
+                                <span>{comm.icon || '👥'}</span>
+                                <span>{comm.name}</span>
+                              </span>
+                            ) : null
+                          })()}
                           {post.category && (
                             <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#08090a] text-[#4edea3] border border-[#1a232e]">
-                              {post.category}
+                              🏷️ {post.category}
                             </span>
                           )}
                         </div>
@@ -717,7 +857,7 @@ export default function Communities() {
               <>
                 <div className="flex items-center justify-between pb-2">
                   <h3 className="text-sm font-mono text-[#849585]">
-                    Hiển thị <span className="text-[#00ff88] font-bold">{communities.length}</span> cộng đồng
+                    Hiển thị <span className="text-[#00ff88] font-bold">{displayedCommunities.length}</span> cộng đồng
                   </h3>
                   <button
                     type="button"
@@ -733,9 +873,9 @@ export default function Communities() {
                   <div className="py-20 text-center text-xs font-mono text-[#849585]">
                     <span className="animate-pulse">Đang tải danh sách cộng đồng...</span>
                   </div>
-                ) : (
+                ) : displayedCommunities.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {communities.map((group) => {
+                    {displayedCommunities.map((group) => {
                       const tagsList = Array.isArray(group.tags)
                         ? group.tags
                         : typeof group.tags === 'string'
@@ -829,6 +969,30 @@ export default function Communities() {
                         </div>
                       )
                     })}
+                  </div>
+                ) : (
+                  <div className="py-20 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] text-[#849585] space-y-3 p-8">
+                    <span className="material-symbols-outlined text-[42px] text-[#00ff88]">
+                      diversity_3
+                    </span>
+                    <h4 className="text-base font-bold text-[#f1ffef]">
+                      {selectedCategory === 'joined'
+                        ? 'Bạn chưa tham gia nhóm nào'
+                        : `Chưa có cộng đồng nào thuộc chủ đề "${selectedCategory}"`}
+                    </h4>
+                    <p className="text-xs text-[#849585] max-w-md mx-auto leading-relaxed">
+                      {selectedCategory === 'joined'
+                        ? 'Hãy duyệt qua các nhóm trong danh mục và bấm "Tham gia nhóm" để cùng thảo luận realtime!'
+                        : 'Hãy là người tiên phong tạo cộng đồng đầu tiên cho chủ đề này!'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="mt-2 px-5 py-2 rounded-xl bg-[#00ff88] text-[#00210c] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:scale-105 transition-all cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                      <span>Tạo cộng đồng ngay</span>
+                    </button>
                   </div>
                 )}
               </>
