@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   clearAiHistory,
@@ -9,6 +10,9 @@ import {
 
 export default function ElPulgaChatWidget() {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -21,9 +25,9 @@ export default function ElPulgaChatWidget() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Tự động tắt tooltip sau 8 giây
+  // Ẩn tooltip sau 25 giây hoặc khi người dùng đã chủ động tương tác
   useEffect(() => {
-    const timer = setTimeout(() => setTooltipVisible(false), 8000)
+    const timer = setTimeout(() => setTooltipVisible(false), 25000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -70,7 +74,11 @@ export default function ElPulgaChatWidget() {
     }
   }, [isOpen])
 
+  // Nếu người dùng chưa đăng nhập hoặc đang ở trang /messages với El Pulga thì không hiện widget nổi
   if (!user) return null
+  const isAlreadyInMessagesWithAi =
+    location.pathname === '/messages' && location.search.includes('chat=el-pulga')
+  if (isAlreadyInMessagesWithAi) return null
 
   const handleSend = async (textToSend) => {
     const text = (textToSend || input).trim()
@@ -97,7 +105,8 @@ export default function ElPulgaChatWidget() {
     } catch (err) {
       const errorMsg = {
         role: 'assistant',
-        content: 'El Pulga đang gặp chút trục trặc kết nối hoặc tạm thời bận. Bạn hãy thử lại sau ít giây nhé!',
+        content:
+          'El Pulga đang gặp chút trục trặc kết nối hoặc tạm thời bận. Bạn hãy thử lại sau ít giây nhé!',
         created_at: new Date().toISOString(),
         isError: true,
       }
@@ -115,7 +124,12 @@ export default function ElPulgaChatWidget() {
   }
 
   const handleClearChat = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa lịch sử trò chuyện với El Pulga để bắt đầu lại?')) return
+    if (
+      !window.confirm(
+        'Bạn có chắc muốn xóa toàn bộ lịch sử trò chuyện với El Pulga để bắt đầu lại?'
+      )
+    )
+      return
     try {
       await clearAiHistory()
       setMessages([])
@@ -124,11 +138,19 @@ export default function ElPulgaChatWidget() {
     }
   }
 
+  const handleExpandToMessages = () => {
+    setIsOpen(false)
+    navigate('/messages?chat=el-pulga')
+  }
+
   return (
-    <aside aria-label="Trợ lý tâm lý El Pulga" className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <aside
+      aria-label="Trợ lý tâm lý El Pulga"
+      className="fixed bottom-6 right-6 z-50 flex flex-col items-end"
+    >
       {/* CỬA SỔ CHAT EL PULGA */}
       {isOpen && (
-        <div className="w-[370px] sm:w-[420px] h-[600px] max-h-[82vh] bg-[#131b15]/95 backdrop-blur-2xl border border-[#2f4234] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.65)] flex flex-col overflow-hidden mb-4 animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="w-[375px] sm:w-[425px] h-[610px] max-h-[84vh] bg-[#131b15]/95 backdrop-blur-2xl border border-[#2f4234] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.65)] flex flex-col overflow-hidden mb-4 animate-in fade-in slide-in-from-bottom-6 duration-300">
           {/* Header */}
           <div className="p-4 bg-gradient-to-r from-[#18261d] to-[#121c15] border-b border-[#29392d] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -144,16 +166,25 @@ export default function ElPulgaChatWidget() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-[#f0f6f1] text-[15px] leading-tight">El Pulga</h3>
                   <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#273a2c] text-[#a4ef7b] rounded-full border border-[#3b5542]">
-                    AI Companion
+                    AI Tâm lý
                   </span>
                 </div>
                 <p className="text-[11px] text-[#93a797] leading-tight mt-0.5">
-                  Lắng nghe & thấu cảm tâm lý
+                  Lắng nghe & thấu cảm từ khảo sát
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-1">
+              {/* Nút mở rộng vào trang Tin nhắn */}
+              <button
+                onClick={handleExpandToMessages}
+                title="Mở rộng sang trang Tin nhắn đầy đủ"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#8e9f92] hover:text-[#c5f36a] hover:bg-[#202d24] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">open_in_full</span>
+              </button>
+              {/* Nút xóa lịch sử */}
               <button
                 onClick={handleClearChat}
                 title="Làm mới cuộc trò chuyện"
@@ -161,6 +192,7 @@ export default function ElPulgaChatWidget() {
               >
                 <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
               </button>
+              {/* Nút thu nhỏ */}
               <button
                 onClick={() => setIsOpen(false)}
                 title="Thu nhỏ"
@@ -249,10 +281,19 @@ export default function ElPulgaChatWidget() {
                   <span className="material-symbols-outlined text-sm font-bold">psychology</span>
                 </div>
                 <div className="px-4 py-3 bg-[#1b251f] border border-[#2b3a2f] rounded-2xl rounded-tl-sm flex items-center gap-1.5 text-xs text-[#9eb2a3]">
-                  <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="ml-1 text-[11px] text-[#8aa090]">El Pulga đang lắng nghe...</span>
+                  <span
+                    className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
+                  <span className="ml-1 text-[11px] text-[#8aa090]">El Pulga đang suy ngẫm...</span>
                 </div>
               </div>
             )}
@@ -295,46 +336,73 @@ export default function ElPulgaChatWidget() {
         </div>
       )}
 
-      {/* NÚT BẤM NỔI (FAB) */}
-      <div className="relative group">
-        {/* Tooltip mời trò chuyện */}
+      {/* GỢI Ý MỜI DÙNG AI (RÕ RÀNG, BẮT MẮT, AI CŨNG NHẬN RA) */}
+      <div className="flex flex-col items-end">
         {tooltipVisible && !isOpen && (
-          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-[#1b2720] border border-[#374e3d] text-[#e3f0e5] text-xs px-3.5 py-2 rounded-2xl shadow-xl whitespace-nowrap flex items-center gap-2 animate-in fade-in slide-in-from-right-3 duration-300">
-            <span className="w-2 h-2 rounded-full bg-[#4edea3] animate-ping" />
-            <span>Tâm sự cùng <strong>El Pulga</strong> nhé?</span>
+          <div
+            onClick={() => {
+              setIsOpen(true)
+              setTooltipVisible(false)
+            }}
+            role="button"
+            tabIndex={0}
+            className="group/tooltip cursor-pointer mb-3 mr-1 bg-gradient-to-r from-[#17251c] to-[#141f17] hover:from-[#1c2e22] hover:to-[#17261d] border border-[#3c5643] hover:border-[#4edea3] text-[#e3f0e5] p-3 rounded-2xl shadow-[0_12px_35px_rgba(0,0,0,0.6)] flex items-center gap-3 transition-all duration-300 transform hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-3 max-w-[310px]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shrink-0 shadow-md">
+              <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[#f5fbf6]">El Pulga</span>
+                <span className="text-[9px] px-1.5 py-0.2 bg-[#2d4734] text-[#a9f582] rounded-full font-bold border border-[#3e6047]">
+                  AI Tâm lý
+                </span>
+              </div>
+              <p className="text-[11px] text-[#9bb0a0] leading-snug mt-0.5 truncate group-hover/tooltip:text-[#d0e5d4]">
+                Lắng nghe & thấu cảm từ khảo sát
+              </p>
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setTooltipVisible(false)
               }}
-              className="text-[#879b8c] hover:text-white ml-1 text-sm font-bold"
+              className="w-6 h-6 rounded-lg text-[#879b8c] hover:text-white hover:bg-[#25382b] flex items-center justify-center shrink-0 transition-colors"
+              title="Đóng gợi ý"
             >
-              ×
+              <span className="material-symbols-outlined text-sm">close</span>
             </button>
           </div>
         )}
 
-        <button
-          onClick={() => {
-            setIsOpen((prev) => !prev)
-            setTooltipVisible(false)
-          }}
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgba(78,222,163,0.3)] transition-all duration-300 transform hover:scale-105 active:scale-95 ${
-            isOpen
-              ? 'bg-[#202e24] text-[#eff6f0] border border-[#3b5341]'
-              : 'bg-gradient-to-tr from-[#3fa876] via-[#65d388] to-[#c5f36a] text-[#0d1a12]'
-          }`}
-          title="Mở trợ lý tâm lý El Pulga"
-        >
-          {isOpen ? (
-            <span className="material-symbols-outlined text-2xl">close</span>
-          ) : (
-            <div className="relative flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl font-bold">psychology</span>
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#4edea3] border-2 border-[#131b15] rounded-full animate-pulse" />
-            </div>
-          )}
-        </button>
+        {/* NÚT BẤM NỔI (FAB) VỚI HUY HIỆU AI NỔI BẬT */}
+        <div className="relative group">
+          <button
+            onClick={() => {
+              setIsOpen((prev) => !prev)
+              setTooltipVisible(false)
+            }}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgba(78,222,163,0.35)] transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+              isOpen
+                ? 'bg-[#202e24] text-[#eff6f0] border border-[#3b5341]'
+                : 'bg-gradient-to-tr from-[#3fa876] via-[#65d388] to-[#c5f36a] text-[#0d1a12]'
+            }`}
+            title="Mở trợ lý tâm lý El Pulga"
+          >
+            {isOpen ? (
+              <span className="material-symbols-outlined text-2xl">close</span>
+            ) : (
+              <div className="relative flex items-center justify-center">
+                <span className="material-symbols-outlined text-3xl font-bold">psychology</span>
+                {/* Huy hiệu AI phát sáng */}
+                <span className="absolute -top-3.5 -left-3.5 px-1.5 py-0.5 bg-[#101712] text-[#c5f36a] border border-[#4edea3] rounded-full text-[9px] font-extrabold tracking-wider shadow">
+                  AI
+                </span>
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#4edea3] border-2 border-[#131b15] rounded-full animate-pulse" />
+              </div>
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   )

@@ -16,6 +16,12 @@ import { reportService } from '../services/reportService'
 import { markConversationNotificationsAsRead } from '../services/notificationService'
 import { getPublicProfile } from '../services/profileService'
 import { useCall } from '../contexts/CallContext'
+import {
+  clearAiHistory,
+  getAiHistory,
+  getAiQuickPrompts,
+  sendAiMessage,
+} from '../services/aiService'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -60,6 +66,7 @@ export default function Messages() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [inputText, setInputText] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [aiQuickPrompts, setAiQuickPrompts] = useState([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false)
@@ -159,6 +166,20 @@ export default function Messages() {
     const initChat = async () => {
       const convList = await loadConversations()
       const searchParams = new URLSearchParams(location.search)
+      const queryChat = searchParams.get('chat')
+      if (queryChat === 'el-pulga') {
+        setActiveConversation({
+          id: 'el-pulga',
+          isAi: true,
+          partner: {
+            display_name: 'El Pulga',
+            username: 'el_pulga',
+            bio: 'Trợ lý tâm lý & bạn tâm giao trên La Pulga',
+            is_online: true,
+          },
+        })
+        return
+      }
       const queryConvId = location.state?.conversationId || searchParams.get('conversationId') || searchParams.get('conv')
       const queryUserId = location.state?.userId || searchParams.get('userId') || searchParams.get('user')
       const queryCall = searchParams.get('call')
@@ -215,6 +236,32 @@ export default function Messages() {
     const token = localStorage.getItem('access_token')
     setLoadingMessages(true)
     setMessages([])
+
+    if (activeConversation.isAi) {
+      Promise.all([
+        getAiHistory().catch(() => ({ messages: [] })),
+        getAiQuickPrompts().catch(() => ({ prompts: [] })),
+      ])
+        .then(([historyRes, promptsRes]) => {
+          if (isMounted) {
+            setMessages(
+              (historyRes.messages || []).map((m, idx) => ({
+                id: `ai-${idx}`,
+                sender_id: m.role === 'user' ? user?.id : 0,
+                content: m.content,
+                created_at: m.created_at,
+              }))
+            )
+            setAiQuickPrompts(promptsRes.prompts || [])
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoadingMessages(false)
+        })
+      return () => {
+        isMounted = false
+      }
+    }
 
     if (!token) {
       setLoadingMessages(false)
@@ -350,6 +397,33 @@ export default function Messages() {
     }
     const content = inputText.trim()
     if (!content || !activeConversation || isSending) return
+
+    if (activeConversation.isAi) {
+      setIsSending(true)
+      setInputText('')
+      const tempUserMsg = {
+        id: `ai-temp-${Date.now()}`,
+        sender_id: user?.id,
+        content: content,
+        created_at: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, tempUserMsg])
+      try {
+        const res = await sendAiMessage(content)
+        const botMsg = {
+          id: `ai-bot-${Date.now()}`,
+          sender_id: 0,
+          content: res.reply,
+          created_at: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, botMsg])
+      } catch (err) {
+        showToast('El Pulga đang tạm thời bận, vui lòng thử lại sau ít giây.')
+      } finally {
+        setIsSending(false)
+      }
+      return
+    }
 
     setIsSending(true)
     const ws = socketRef.current
@@ -496,6 +570,51 @@ export default function Messages() {
 
                 {/* Conversations Scrollable Area */}
                 <div className="flex-1 overflow-y-auto space-y-1 p-2">
+                  {/* Pin El Pulga AI Assistant */}
+                  <div
+                    onClick={() => {
+                      setActiveConversation({
+                        id: 'el-pulga',
+                        isAi: true,
+                        partner: {
+                          display_name: 'El Pulga',
+                          username: 'el_pulga',
+                          bio: 'Trợ lý tâm lý & bạn tâm giao trên La Pulga',
+                          is_online: true,
+                        },
+                      })
+                      setIsMobileListOpen(false)
+                    }}
+                    className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all mb-2 border ${
+                      activeConversation?.id === 'el-pulga'
+                        ? 'bg-[#18291f] border-[#4edea3]/50 shadow-[0_0_15px_rgba(78,222,163,0.15)] text-[#eff6f0]'
+                        : 'bg-[#121c15]/60 hover:bg-[#16231a] border-[#293d2f] text-[#c9d9cc]'
+                    }`}
+                  >
+                    {activeConversation?.id === 'el-pulga' && (
+                      <div className="absolute left-0 top-2 bottom-2 w-1 bg-[#4edea3] rounded-r-full shadow-[0_0_10px_#4edea3]" />
+                    )}
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-sm">
+                        <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#4edea3] border-2 border-[#11151c] rounded-full animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-[#f0f6f1] truncate">El Pulga</span>
+                          <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-[#2a4432] text-[#a4ef7b] rounded-full border border-[#3d5e45]">
+                            AI Tâm lý
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-[#8da090] truncate mt-0.5">
+                        Trợ lý tâm lý • Sẵn sàng lắng nghe
+                      </p>
+                    </div>
+                  </div>
+
                   {loadingConversations ? (
                     <div className="py-10 text-center text-[#849585] text-xs font-mono">
                       Đang tải hội thoại...
@@ -586,47 +705,83 @@ export default function Messages() {
                         <span className="material-symbols-outlined text-[18px]">menu</span>
                       </button>
 
-                      <div
-                        className="relative cursor-pointer"
-                        onClick={handleOpenPartnerProfile}
-                        title="Xem hồ sơ chi tiết"
-                      >
-                        <Avatar
-                          src={partnerAvatar}
-                          alt={partner?.username}
-                          className="w-10 h-10 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
-                        />
-                        <OnlineStatusDot
-                          isOnline={partner?.is_online}
-                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[#11151c]"
-                        />
-                      </div>
+                      {activeConversation.isAi ? (
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-sm">
+                            <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+                          </div>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#4edea3] border-2 border-[#11151c] rounded-full animate-pulse" />
+                        </div>
+                      ) : (
+                        <div
+                          className="relative cursor-pointer"
+                          onClick={handleOpenPartnerProfile}
+                          title="Xem hồ sơ chi tiết"
+                        >
+                          <Avatar
+                            src={partnerAvatar}
+                            alt={partner?.username}
+                            className="w-10 h-10 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
+                          />
+                          <OnlineStatusDot
+                            isOnline={partner?.is_online}
+                            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[#11151c]"
+                          />
+                        </div>
+                      )}
 
-                      <div onClick={handleOpenPartnerProfile} className="cursor-pointer">
+                      <div onClick={activeConversation.isAi ? undefined : handleOpenPartnerProfile} className={activeConversation.isAi ? '' : 'cursor-pointer'}>
                         <div className="flex items-center gap-1.5">
                           <h3 className="text-sm font-bold text-[#f1ffef] hover:text-[#00ff88] transition-colors">
-                            {partner?.display_name || partner?.username}
+                            {activeConversation.isAi ? 'El Pulga' : partner?.display_name || partner?.username}
                           </h3>
-                          <span
-                            className="material-symbols-outlined text-[#00ff88] text-[16px]"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
-                          >
-                            verified
-                          </span>
+                          {activeConversation.isAi ? (
+                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#273a2c] text-[#a4ef7b] rounded-full border border-[#3b5542]">
+                              AI Companion
+                            </span>
+                          ) : (
+                            <span
+                              className="material-symbols-outlined text-[#00ff88] text-[16px]"
+                              style={{ fontVariationSettings: "'FILL' 1" }}
+                            >
+                              verified
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#849585]">
-                          <span>@{partner?.username}</span>
-                          <span>•</span>
-                          <span className={partner?.is_online ? 'text-[#00ff88]' : 'text-[#849585]'}>
-                            {partner?.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
-                          </span>
+                          {activeConversation.isAi ? (
+                            <span className="text-[#4edea3]">Luôn sẵn sàng lắng nghe & thấu cảm</span>
+                          ) : (
+                            <>
+                              <span>@{partner?.username}</span>
+                              <span>•</span>
+                              <span className={partner?.is_online ? 'text-[#00ff88]' : 'text-[#849585]'}>
+                                {partner?.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Calling & Menu Controls */}
                     <div className="flex items-center gap-2">
-                      {!activeConversation.is_group ? (
+                      {activeConversation.isAi ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm('Bạn có chắc muốn xóa lịch sử trò chuyện với El Pulga?')) {
+                              await clearAiHistory()
+                              setMessages([])
+                            }
+                          }}
+                          className="h-9 px-3 rounded-xl bg-[#18231c] hover:bg-[#203126] text-[#c5f36a] border border-[#3b5542] flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer"
+                          title="Làm mới cuộc trò chuyện với El Pulga"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                          <span className="hidden sm:inline">Làm mới</span>
+                        </button>
+                      ) : !activeConversation.is_group ? (
                         <>
                           <button
                             type="button"
@@ -731,21 +886,29 @@ export default function Messages() {
                               isMe ? 'ml-auto flex-row-reverse' : ''
                             }`}
                           >
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold ${
-                                isMe
-                                  ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_10px_#00ff88]'
-                                  : 'bg-[#181d26] text-[#00ff88] border border-[#00ff88]/30'
-                              }`}
-                            >
-                              {isMe ? 'ME' : partner?.username?.slice(0, 2).toUpperCase() || 'U'}
-                            </div>
+                            {activeConversation.isAi && !isMe ? (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] text-[#0d1a12] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                <span className="material-symbols-outlined text-sm font-bold">psychology</span>
+                              </div>
+                            ) : (
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold ${
+                                  isMe
+                                    ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_10px_#00ff88]'
+                                    : 'bg-[#181d26] text-[#00ff88] border border-[#00ff88]/30'
+                                }`}
+                              >
+                                {isMe ? 'ME' : partner?.username?.slice(0, 2).toUpperCase() || 'U'}
+                              </div>
+                            )}
 
                             <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
                               <div
                                 className={`p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed max-w-md whitespace-pre-wrap break-words ${
                                   isMe
                                     ? 'bg-[#181d26] text-[#f1ffef] border border-[#00ff88]/30 rounded-tr-sm shadow-[0_0_12px_rgba(0,255,136,0.1)]'
+                                    : activeConversation.isAi
+                                    ? 'bg-[#18261e] text-[#dcebe0] border border-[#2b3d30] rounded-tl-sm'
                                     : 'bg-[#11151c] text-[#e3e2e3] border border-[#1a232e] rounded-tl-sm'
                                 }`}
                               >
@@ -763,9 +926,57 @@ export default function Messages() {
                           </div>
                         )
                       })
+                    ) : activeConversation.isAi ? (
+                      <div className="py-12 px-4 max-w-lg mx-auto text-center space-y-4">
+                        <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-xl shadow-[#3fa876]/20">
+                          <span className="material-symbols-outlined text-3xl font-bold">psychology</span>
+                        </div>
+                        <div>
+                          <h4 className="text-base font-bold text-[#eff6f0]">El Pulga luôn ở đây lắng nghe bạn</h4>
+                          <p className="text-xs text-[#9eb2a2] mt-1 leading-relaxed">
+                            Mọi chia sẻ đều được bảo mật tuyệt đối. Bạn có thể thoải mái tâm sự bất kỳ điều gì trong lòng.
+                          </p>
+                        </div>
+                        {aiQuickPrompts.length > 0 && (
+                          <div className="space-y-2 text-left pt-2">
+                            <p className="text-[11px] font-semibold text-[#8ca090] uppercase tracking-wider text-center">
+                              Gợi ý mở lời:
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {aiQuickPrompts.map((prompt, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setInputText(prompt)
+                                    inputRef.current?.focus()
+                                  }}
+                                  className="text-left text-xs text-[#d2e0d5] bg-[#16241b] hover:bg-[#1f3326] px-3.5 py-2.5 rounded-xl border border-[#2b3e30] flex items-center justify-between transition-all"
+                                >
+                                  <span>{prompt}</span>
+                                  <span className="material-symbols-outlined text-sm text-[#8ca090]">arrow_forward</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="py-16 text-center text-xs text-[#849585] font-mono">
                         Bắt đầu cuộc trò chuyện với {partner?.display_name || partner?.username}!
+                      </div>
+                    )}
+                    {/* Hiệu ứng đang gõ của AI */}
+                    {activeConversation.isAi && isSending && (
+                      <div className="flex items-center gap-2.5 max-w-2xl">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] text-[#0d1a12] flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-sm font-bold">psychology</span>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-[#142018] border border-[#2b3e30] flex items-center gap-2 text-xs text-[#a2b5a5]">
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <span className="ml-1 text-[11px]">El Pulga đang suy ngẫm...</span>
+                        </div>
                       </div>
                     )}
                     <div ref={messagesEndRef} />
