@@ -268,37 +268,40 @@ migrate_profile_schema()
 
 
 def migrate_community_schema():
-    if not inspect(engine).has_table("conversations"):
-        return
+    try:
+        if not inspect(engine).has_table("conversations"):
+            return
 
-    columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("conversations")
-    }
-    with engine.begin() as conn:
-        if "is_group" not in columns:
-            conn.execute(
-                text("ALTER TABLE conversations ADD COLUMN is_group BOOLEAN NOT NULL DEFAULT 0")
-            )
-        if "title" not in columns:
-            conn.execute(
-                text("ALTER TABLE conversations ADD COLUMN title VARCHAR(100)")
-            )
-        if "community_id" not in columns:
-            conn.execute(
-                text("ALTER TABLE conversations ADD COLUMN community_id INTEGER")
-            )
-
-    if inspect(engine).has_table("posts"):
-        post_cols = {
+        columns = {
             column["name"]
-            for column in inspect(engine).get_columns("posts")
+            for column in inspect(engine).get_columns("conversations")
         }
         with engine.begin() as conn:
-            if "community_id" not in post_cols:
+            if "is_group" not in columns:
                 conn.execute(
-                    text("ALTER TABLE posts ADD COLUMN community_id INTEGER")
+                    text("ALTER TABLE conversations ADD COLUMN is_group BOOLEAN NOT NULL DEFAULT FALSE")
                 )
+            if "title" not in columns:
+                conn.execute(
+                    text("ALTER TABLE conversations ADD COLUMN title VARCHAR(100)")
+                )
+            if "community_id" not in columns:
+                conn.execute(
+                    text("ALTER TABLE conversations ADD COLUMN community_id INTEGER")
+                )
+
+        if inspect(engine).has_table("posts"):
+            post_cols = {
+                column["name"]
+                for column in inspect(engine).get_columns("posts")
+            }
+            with engine.begin() as conn:
+                if "community_id" not in post_cols:
+                    conn.execute(
+                        text("ALTER TABLE posts ADD COLUMN community_id INTEGER")
+                    )
+    except Exception as e:
+        logger.warning("Lỗi migrate_community_schema (bỏ qua nếu đã tồn tại): %s", e)
 
 
 migrate_community_schema()
