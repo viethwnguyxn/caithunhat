@@ -14,6 +14,7 @@ import Connections from './pages/Connections'
 import Messages from './pages/Messages'
 import AdminDashboard from './pages/AdminDashboard'
 import Settings from './pages/Settings'
+import ElPulgaChatWidget from './components/ElPulgaChatWidget'
 
 function App() {
   return (
@@ -90,6 +91,7 @@ function App() {
               }
             />
           </Routes>
+          <ElPulgaChatWidget />
         </CallProvider>
       </BrowserRouter>
     </AuthProvider>

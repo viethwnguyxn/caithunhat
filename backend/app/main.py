@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from .core.security import hash_password
 from .db.database import Base, SessionLocal, engine, get_db
 from .models import (
+    AIChatMessage,
     Block,
     Community,
     CommunityMember,
@@ -25,6 +26,7 @@ from .models import (
 )  # Đăng ký models vào Base.metadata
 from .routers import (
     admin_router,
+    ai_chat_router,
     auth_router,
     chat_router,
     communities_router,
@@ -390,6 +392,7 @@ app.include_router(notifications_router)
 app.include_router(reports_router)
 app.include_router(admin_router)
 app.include_router(posts_router)
+app.include_router(ai_chat_router)
 
 
 @app.get("/api/health")

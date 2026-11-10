@@ -1,5 +1,6 @@
 from .block import Block
 from .chat import Conversation, ConversationMember, Message
+from .ai_chat import AIChatMessage
 from .community import Community, CommunityMember
 from .connection import Connection
 from .notification import Notification
@@ -17,6 +18,7 @@ __all__ = [
     "Conversation",
     "ConversationMember",
     "Message",
+    "AIChatMessage",
     "Community",
     "CommunityMember",
     "Notification",

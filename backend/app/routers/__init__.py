@@ -1,4 +1,5 @@
 from .admin import router as admin_router
+from .ai_chat import router as ai_chat_router
 from .auth import router as auth_router
 from .chat import router as chat_router
 from .communities import router as communities_router
@@ -23,5 +24,6 @@ __all__ = [
     "notifications_router",
     "reports_router",
     "admin_router",
+    "ai_chat_router",
     "posts_router",
 ]
