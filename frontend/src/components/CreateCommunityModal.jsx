@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import brandMark from '../assets/lapulga-mark.svg'
 
 const PRESET_COMMUNITY_AVATARS = [
   {
@@ -204,9 +205,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }) {
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
               ) : (
-                <span className="w-full h-full flex items-center justify-center text-2xl">
-                  {icon || '👥'}
-                </span>
+                <img src={brandMark} alt="Preview" className="w-full h-full object-contain p-2" />
               )}
             </div>
             <div>

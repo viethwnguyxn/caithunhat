@@ -492,11 +492,11 @@ export default function CallModal({
           </p>
           {errorMessage && <p role="alert">{errorMessage}</p>}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
-            <button type="button" onClick={handleRejectCall} style={buttonStyle('#ef4444')} title="Từ chối cuộc gọi">
-              ✕
+            <button type="button" onClick={handleRejectCall} style={{ ...buttonStyle('#ef4444'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} title="Từ chối cuộc gọi">
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>call_end</span>
             </button>
-            <button type="button" onClick={handleAcceptCall} style={buttonStyle('#10b981')} title="Trả lời cuộc gọi">
-              📞
+            <button type="button" onClick={handleAcceptCall} style={{ ...buttonStyle('#10b981'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} title="Trả lời cuộc gọi">
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>call</span>
             </button>
           </div>
         </section>
@@ -606,28 +606,32 @@ export default function CallModal({
             <button
               type="button"
               onClick={toggleMute}
-              style={buttonStyle(isMuted ? '#ef4444' : 'rgba(255,255,255,.15)')}
+              style={{ ...buttonStyle(isMuted ? '#ef4444' : 'rgba(255,255,255,.15)'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
-              {isMuted ? '🔇' : '🎙️'}
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                {isMuted ? 'mic_off' : 'mic'}
+              </span>
             </button>
             {isVideoCall && (
               <button
                 type="button"
                 onClick={toggleCamera}
-                style={buttonStyle(isCameraOff ? '#ef4444' : 'rgba(255,255,255,.15)')}
+                style={{ ...buttonStyle(isCameraOff ? '#ef4444' : 'rgba(255,255,255,.15)'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                 title={isCameraOff ? 'Bật camera' : 'Tắt camera'}
               >
-                {isCameraOff ? '🚫' : '📷'}
+                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                  {isCameraOff ? 'videocam_off' : 'videocam'}
+                </span>
               </button>
             )}
             <button
               type="button"
               onClick={() => handleEndCall('user_hangup')}
-              style={buttonStyle('#ef4444')}
+              style={{ ...buttonStyle('#ef4444'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               title="Kết thúc cuộc gọi"
             >
-              📞
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>call_end</span>
             </button>
           </footer>
         </section>

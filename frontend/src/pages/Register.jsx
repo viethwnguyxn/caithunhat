@@ -86,18 +86,18 @@ export default function Register() {
           <span className="lp-auth-kicker lp-auth-register-kicker">BẮT ĐẦU HÀNH TRÌNH</span>
           <h2>Tạo tài khoản</h2>
           <p className="lp-auth-intro">Gia nhập La Pulga và tìm thấy những kết nối đồng điệu.</p>
-          {error && <div className="alert alert-error">⚠️ {error}</div>}
-          {success && <div className="alert alert-success">✓ Đăng ký thành công! Đang mở khảo sát...</div>}
+          {error && <div className="alert alert-error"><span className="material-symbols-outlined text-[16px] align-middle mr-1">warning</span>{error}</div>}
+          {success && <div className="alert alert-success"><span className="material-symbols-outlined text-[16px] align-middle mr-1">check_circle</span>Đăng ký thành công! Đang mở khảo sát...</div>}
           <form onSubmit={handleSubmit} className="lp-auth-form">
             <div className="form-group"><label htmlFor="reg-username">Tên đăng nhập</label><input id="reg-username" type="text" name="username" placeholder="vd: hoang_nam" value={form.username} onChange={handleChange} minLength={3} maxLength={30} disabled={loading || success} autoComplete="username" /></div>
             <div className="form-group"><label htmlFor="reg-email">Email</label><input id="reg-email" type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} disabled={loading || success} autoComplete="email" /></div>
-            <div className="form-group"><label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label><div className="password-input-wrapper"><input id="reg-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Ít nhất 8 ký tự" value={form.password} onChange={handleChange} disabled={loading || success} autoComplete="new-password" /><button type="button" className="password-toggle-btn" onClick={() => setShowPassword(!showPassword)} tabIndex="-1" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? '👁️' : '🔒'}</button></div></div>
-            <button type="submit" className="lp-auth-submit" disabled={loading || success}>{loading ? 'Đang xử lý...' : 'Tạo tài khoản miễn phí'} <span>→</span></button>
+            <div className="form-group"><label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label><div className="password-input-wrapper"><input id="reg-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Ít nhất 8 ký tự" value={form.password} onChange={handleChange} disabled={loading || success} autoComplete="new-password" /><button type="button" className="password-toggle-btn inline-flex items-center justify-center" onClick={() => setShowPassword(!showPassword)} tabIndex="-1" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><span className="material-symbols-outlined text-[18px]">{showPassword ? 'visibility_off' : 'visibility'}</span></button></div></div>
+            <button type="submit" className="lp-auth-submit inline-flex items-center justify-center gap-2" disabled={loading || success}>{loading ? 'Đang xử lý...' : 'Tạo tài khoản miễn phí'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span></button>
           </form>
           <div className="lp-auth-divider"><span>hoặc tiếp tục với</span></div>
           <GoogleLoginButton onError={(msg) => setError(msg)} />
           <p className="lp-auth-footer">Đã có tài khoản? <Link to="/login" state={{ authTransition: 'register-to-login' }}>Đăng nhập</Link></p>
-          <Link to="/" className="lp-auth-back">← Quay lại trang chủ</Link>
+          <Link to="/" className="lp-auth-back inline-flex items-center justify-center gap-1"><span className="material-symbols-outlined text-[16px]">arrow_back</span>Quay lại trang chủ</Link>
         </div>
       </section>
     </main>

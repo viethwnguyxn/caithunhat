@@ -19,6 +19,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Lập trình viên & Tech Creators",
         "category": "Công nghệ & Lập trình",
         "icon": "💻",
+        "avatar_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&h=300&fit=crop&q=80",
         "description": "Dành cho những bạn đam mê coding, xây dựng sản phẩm AI, công nghệ, chia sẻ kinh nghiệm học thuật và dự án nguồn mở.",
         "tags": "Python,React,AI / ML,WebRTC,FastAPI",
     },
@@ -26,6 +27,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Sách & Phát triển bản thân",
         "category": "Sách & Tư duy",
         "icon": "📚",
+        "avatar_url": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=300&h=300&fit=crop&q=80",
         "description": "Nơi cùng nhau chia sẻ những cuốn sách hay, đúc kết tư duy tích cực, xây dựng kỷ luật và thói quen tốt mỗi ngày.",
         "tags": "Đọc sách,Tư duy,Thói quen,Tâm lý học,DeepWork",
     },
@@ -33,6 +35,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Nghệ thuật & Sáng tạo",
         "category": "Nghệ thuật & Sáng tạo",
         "icon": "🎨",
+        "avatar_url": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&h=300&fit=crop&q=80",
         "description": "Không gian ấm cúng dành cho những tâm hồn yêu vẽ, nhiếp ảnh, âm nhạc, thiết kế đồ họa và sáng tác nội dung.",
         "tags": "Hội họa,Nhiếp ảnh,Thiết kế,Âm nhạc,Sáng tạo",
     },
@@ -40,6 +43,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Sức khỏe, Thể thao & Running",
         "category": "Thể thao & Sức khỏe",
         "icon": "🏃",
+        "avatar_url": "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=300&h=300&fit=crop&q=80",
         "description": "Cùng nhau rèn luyện thể lực, chia sẻ lộ trình chạy bộ, tập gym, yoga và xây dựng lối sống lành mạnh, giàu năng lượng.",
         "tags": "Chạy bộ,Gym & Fitness,Yoga,Dinh dưỡng,Marathon",
     },
@@ -47,6 +51,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Freelance & Khởi nghiệp",
         "category": "Freelance & Khởi nghiệp",
         "icon": "☕",
+        "avatar_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300&h=300&fit=crop&q=80",
         "description": "Mạng lưới gắn kết cho những người làm việc tự do hoặc khởi nghiệp, tìm bạn đồng hành tại quán cafe và chia sẻ dự án.",
         "tags": "Freelance,Remote Work,Co-working,Khởi nghiệp,Cà phê",
     },
@@ -54,6 +59,7 @@ DEFAULT_COMMUNITIES_DATA = [
         "name": "Game & Esports Gaming",
         "category": "Game & Esports",
         "icon": "🎮",
+        "avatar_url": "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=300&h=300&fit=crop&q=80",
         "description": "Không gian thảo luận chiến thuật, tìm đồng đội leo rank và chia sẻ đam mê game đa nền tảng.",
         "tags": "Esports,Steam,Indie Games,Co-op,Discord",
     },
@@ -129,6 +135,9 @@ def seed_default_communities(db: Session, admin_user_id: int | None = None):
         # Kiểm tra xem cộng đồng chuẩn này đã có trong database chưa
         existing = db.query(Community).filter(Community.name == item["name"]).first()
         if existing:
+            if not existing.avatar_url and item.get("avatar_url"):
+                existing.avatar_url = item["avatar_url"]
+                has_new = True
             continue
 
         has_new = True
@@ -141,6 +150,7 @@ def seed_default_communities(db: Session, admin_user_id: int | None = None):
             name=item["name"],
             category=item["category"],
             icon=item["icon"],
+            avatar_url=item.get("avatar_url"),
             description=item["description"],
             tags=item["tags"],
             creator_id=admin_user_id,

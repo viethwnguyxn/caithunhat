@@ -6,41 +6,41 @@ import { getSurvey, submitSurvey } from '../services/surveyService'
 const AGE_GROUPS = ['Dưới 18', '18-22', '23-26', '27-35', '36-50', 'Trên 50']
 
 const STATUS_OPTIONS = [
-  { label: 'Sinh viên', desc: 'Đang theo học đại học hoặc cao đẳng', icon: '🎓' },
-  { label: 'Đang đi làm', desc: 'Nhân viên công sở hoặc doanh nghiệp', icon: '💼' },
-  { label: 'Freelancer', desc: 'Làm việc tự do, remote worker', icon: '☕' },
-  { label: 'Đang tìm việc / Gap year', desc: 'Nghỉ ngơi, học thêm hoặc đổi ngành', icon: '🧭' },
-  { label: 'Khác', desc: 'Các tình trạng công việc khác', icon: '⚡' },
+  { label: 'Sinh viên', desc: 'Đang theo học đại học hoặc cao đẳng', icon: 'school' },
+  { label: 'Đang đi làm', desc: 'Nhân viên công sở hoặc doanh nghiệp', icon: 'work' },
+  { label: 'Freelancer', desc: 'Làm việc tự do, remote worker', icon: 'local_cafe' },
+  { label: 'Đang tìm việc / Gap year', desc: 'Nghỉ ngơi, học thêm hoặc đổi ngành', icon: 'explore' },
+  { label: 'Khác', desc: 'Các tình trạng công việc khác', icon: 'bolt' },
 ]
 
 const SITUATION_OPTIONS = [
-  { label: 'Vừa chuyển đến môi trường mới', desc: 'Chuyển trường, đổi công ty hoặc đến thành phố mới', icon: '🎒' },
-  { label: 'Bắt đầu cuộc sống tự lập', desc: 'Vừa đi làm, ở riêng hoặc chuyển ra sống tự do', icon: '🏢' },
-  { label: 'Gặp áp lực công việc hoặc học tập', desc: 'Cần tìm người chia sẻ giải tỏa căng thẳng', icon: '⚡' },
-  { label: 'Đang tìm kiếm định hướng tương lai', desc: 'Cần người đồng hành cùng chung mục tiêu phát triển', icon: '🧭' },
-  { label: 'Cuộc sống ổn định nhưng muốn kết nối sâu sắc hơn', desc: 'Mở rộng mạng lưới bạn bè chất lượng', icon: '🌱' },
+  { label: 'Vừa chuyển đến môi trường mới', desc: 'Chuyển trường, đổi công ty hoặc đến thành phố mới', icon: 'luggage' },
+  { label: 'Bắt đầu cuộc sống tự lập', desc: 'Vừa đi làm, ở riêng hoặc chuyển ra sống tự do', icon: 'apartment' },
+  { label: 'Gặp áp lực công việc hoặc học tập', desc: 'Cần tìm người chia sẻ giải tỏa căng thẳng', icon: 'bolt' },
+  { label: 'Đang tìm kiếm định hướng tương lai', desc: 'Cần người đồng hành cùng chung mục tiêu phát triển', icon: 'explore' },
+  { label: 'Cuộc sống ổn định nhưng muốn kết nối sâu sắc hơn', desc: 'Mở rộng mạng lưới bạn bè chất lượng', icon: 'spa' },
 ]
 
 const FEELING_OPTIONS = [
-  { label: 'Thỉnh thoảng thấy cô đơn', icon: '🌧️' },
-  { label: 'Hy vọng & Hướng về phía trước', icon: '✨' },
-  { label: 'Căng thẳng, quá tải', icon: '🔥' },
-  { label: 'Mong muốn được lắng nghe', icon: '💬' },
-  { label: 'Tò mò, hào hứng khám phá', icon: '🚀' },
+  { label: 'Thỉnh thoảng thấy cô đơn', icon: 'cloudy' },
+  { label: 'Hy vọng & Hướng về phía trước', icon: 'auto_awesome' },
+  { label: 'Căng thẳng, quá tải', icon: 'local_fire_department' },
+  { label: 'Mong muốn được lắng nghe', icon: 'chat_bubble' },
+  { label: 'Tò mò, hào hứng khám phá', icon: 'rocket_launch' },
 ]
 
 const GOAL_OPTIONS = [
-  { label: 'Tìm bạn tâm giao, đồng điệu', icon: '🤝' },
-  { label: 'Cùng học tập, phát triển kỹ năng', icon: '📚' },
-  { label: 'Chia sẻ câu chuyện & sở thích', icon: '☕' },
-  { label: 'Tìm người cùng vượt qua khó khăn', icon: '🛡️' },
+  { label: 'Tìm bạn tâm giao, đồng điệu', icon: 'handshake' },
+  { label: 'Cùng học tập, phát triển kỹ năng', icon: 'menu_book' },
+  { label: 'Chia sẻ câu chuyện & sở thích', icon: 'local_cafe' },
+  { label: 'Tìm người cùng vượt qua khó khăn', icon: 'shield' },
 ]
 
 const EXPECTATION_OPTIONS = [
-  { label: 'Lắng nghe chân thành, không phán xét', icon: '🤍' },
-  { label: 'Sự tôn trọng và giữ gìn riêng tư', icon: '🔒' },
-  { label: 'Năng lượng tích cực, ấm áp', icon: '☀️' },
-  { label: 'Gợi ý, lời khuyên hữu ích', icon: '💡' },
+  { label: 'Lắng nghe chân thành, không phán xét', icon: 'favorite' },
+  { label: 'Sự tôn trọng và giữ gìn riêng tư', icon: 'lock' },
+  { label: 'Năng lượng tích cực, ấm áp', icon: 'wb_sunny' },
+  { label: 'Gợi ý, lời khuyên hữu ích', icon: 'lightbulb' },
 ]
 
 const TOPIC_OPTIONS = [
@@ -364,7 +364,9 @@ export default function Survey() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-2xl">{st.icon}</span>
+                              <span className="w-10 h-10 rounded-xl bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">{st.icon}</span>
+                              </span>
                               <div>
                                 <h4
                                   className={`text-sm font-semibold ${
@@ -427,7 +429,9 @@ export default function Survey() {
                             }`}
                           >
                             <div className="flex items-start justify-between">
-                              <span className="text-2xl">{opt.icon}</span>
+                              <span className="w-10 h-10 rounded-xl bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">{opt.icon}</span>
+                              </span>
                               <div
                                 className={`w-5 h-5 rounded-full flex items-center justify-center ${
                                   isSelected
@@ -478,7 +482,7 @@ export default function Survey() {
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <span>{f.icon}</span>
+                              <span className="material-symbols-outlined text-[18px] text-[#00ff88]">{f.icon}</span>
                               <span>{f.label}</span>
                             </div>
                             {isSelected && (
@@ -524,7 +528,9 @@ export default function Survey() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-xl">{g.icon}</span>
+                              <span className="w-9 h-9 rounded-lg bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[18px]">{g.icon}</span>
+                              </span>
                               <span
                                 className={`text-sm ${
                                   isSelected ? 'text-[#00ff88] font-bold' : 'text-[#f1ffef]'
@@ -562,7 +568,7 @@ export default function Survey() {
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <span>{exp.icon}</span>
+                              <span className="material-symbols-outlined text-[18px] text-[#00ff88]">{exp.icon}</span>
                               <span>{exp.label}</span>
                             </div>
                             {isSelected && (
@@ -795,9 +801,10 @@ export default function Survey() {
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="px-5 py-2.5 rounded-xl bg-[#181d26] text-[#b9cbb9] hover:bg-[#1f2021] hover:text-[#f1ffef] font-semibold text-xs font-mono transition-all cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-[#181d26] text-[#b9cbb9] hover:bg-[#1f2021] hover:text-[#f1ffef] font-semibold text-xs font-mono transition-all cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    ← Quay lại
+                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                    <span>Quay lại</span>
                   </button>
                 ) : (
                   <div></div>

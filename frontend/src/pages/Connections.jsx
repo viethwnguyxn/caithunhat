@@ -98,7 +98,7 @@ export default function Connections() {
         { ...conn, status: 'accepted', updated_at: new Date().toISOString() },
         ...prev,
       ])
-      showToast(`Đã trở thành bạn bè với ${conn.user.display_name || conn.user.username}! 🎉`)
+      showToast(`Đã trở thành bạn bè với ${conn.user.display_name || conn.user.username}!`)
     } catch (err) {
       console.error('Lỗi khi chấp nhận kết nối:', err)
       showToast(err.response?.data?.detail || 'Không thể chấp nhận lời mời.')

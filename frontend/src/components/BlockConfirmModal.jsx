@@ -74,7 +74,7 @@ export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
             cursor: 'pointer',
           }}
         >
-          ✕
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -92,7 +92,9 @@ export default function BlockConfirmModal({ targetUser, onClose, onSuccess }) {
               margin: '0 auto 12px auto',
             }}
           >
-            🚫
+            <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#dc2626' }}>
+              block
+            </span>
           </div>
           <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 6px 0', color: '#1a1a2e' }}>
             Xác nhận chặn người dùng?

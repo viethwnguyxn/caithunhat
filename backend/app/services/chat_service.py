@@ -49,7 +49,7 @@ def to_conversation_response(
             id=community_id or 0,
             username=f"community_{community_id or conv.id}",
             display_name=display_name,
-            avatar_url=None,
+            avatar_url=getattr(comm, "avatar_url", None) if comm else None,
             current_status="Nhóm thảo luận cộng đồng",
             is_online=True,
             last_seen=None,

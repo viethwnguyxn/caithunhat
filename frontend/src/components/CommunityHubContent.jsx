@@ -7,7 +7,8 @@ import CommunityChatModal from './CommunityChatModal'
 import { useAuth } from '../contexts/AuthContext'
 import postService from '../services/postService'
 import communityService from '../services/communityService'
-import { COMMUNITY_CATEGORIES, COMMUNITY_DIRECTORY } from '../data/communities'
+import { COMMUNITY_CATEGORIES, COMMUNITY_DIRECTORY, getCommunityAvatarUrl } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
 
 const MOODS = ['😊 Vui vẻ', '☕ Thư giãn', '🌧️ Cần chia sẻ', '🚀 Quyết tâm', '✨ Truyền cảm hứng']
 
@@ -334,7 +335,7 @@ export default function CommunityHubContent({ embedded = false }) {
   // 3. Xử lý Tạo cộng đồng mới
   const handleCreateCommunity = async (payload) => {
     const created = await communityService.createCommunity(payload)
-    showToast(`Đã tạo thành công cộng đồng "${created.name}" kèm nhóm chat riêng! 🎉`)
+    showToast(`Đã tạo thành công cộng đồng "${created.name}" kèm nhóm chat riêng!`)
     await loadCommunities()
     setActiveTab('groups')
   }
@@ -361,7 +362,7 @@ export default function CommunityHubContent({ embedded = false }) {
               : c
           )
         )
-        showToast(`Đã tham gia nhóm ${group.name} thành công! 🌟`)
+        showToast(`Đã tham gia nhóm ${group.name} thành công!`)
       }
     } catch (err) {
       console.error('Lỗi khi tham gia/rời nhóm:', err)
@@ -435,7 +436,7 @@ export default function CommunityHubContent({ embedded = false }) {
       }
       setNewContent('')
       handleClearPostImage()
-      showToast('Đã đăng bài viết lên cộng đồng! 🎉')
+      showToast('Đã đăng bài viết lên cộng đồng!')
     } catch (err) {
       console.error('Lỗi khi đăng bài viết:', err)
       showToast(err.response?.data?.detail || 'Lỗi khi đăng bài viết')
@@ -496,7 +497,7 @@ export default function CommunityHubContent({ embedded = false }) {
         prev.map((p) => (p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p))
       )
       setCommentInputs((prev) => ({ ...prev, [postId]: '' }))
-      showToast('Đã đăng bình luận! 💬')
+      showToast('Đã đăng bình luận!')
     } catch (err) {
       console.error('Lỗi khi đăng bình luận:', err)
       showToast('Không thể gửi bình luận, vui lòng thử lại.')
@@ -591,7 +592,7 @@ export default function CommunityHubContent({ embedded = false }) {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">dynamic_feed</span>
-                <span>📰 Bảng tin (Feed)</span>
+                <span>Bảng tin (Feed)</span>
               </button>
 
               <button
@@ -604,7 +605,7 @@ export default function CommunityHubContent({ embedded = false }) {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">group_work</span>
-                <span>👥 Nhóm cộng đồng ({communities.length})</span>
+                <span>Nhóm cộng đồng ({communities.length})</span>
               </button>
             </div>
 
@@ -628,13 +629,14 @@ export default function CommunityHubContent({ embedded = false }) {
                   <button
                     type="button"
                     onClick={() => setFeedFilter('all')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
                       feedFilter === 'all'
                         ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                         : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                     }`}
                   >
-                    🌍 Tất cả
+                    <span className="material-symbols-outlined text-[15px]">public</span>
+                    <span>Tất cả</span>
                   </button>
 
                   {/* Pill: Nhóm của tôi (Đã tham gia) */}
@@ -647,7 +649,8 @@ export default function CommunityHubContent({ embedded = false }) {
                         : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                     }`}
                   >
-                    <span>⭐ Nhóm của tôi ({myJoinedCommunities.length})</span>
+                    <span className="material-symbols-outlined text-[15px]">star</span>
+                    <span>Nhóm của tôi ({myJoinedCommunities.length})</span>
                   </button>
 
                   {/* Nếu đang lọc theo nhóm mà nhóm đó chưa bấm tham gia */}
@@ -657,11 +660,14 @@ export default function CommunityHubContent({ embedded = false }) {
                       onClick={() => setFeedFilter(`group:${selectedGroupFilter.id}`)}
                       className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]"
                     >
-                      {selectedGroupFilter.avatar_url ? (
-                        <img src={selectedGroupFilter.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <span>{selectedGroupFilter.icon || '👥'}</span>
-                      )}
+                      <img
+                        src={getCommunityAvatarUrl(selectedGroupFilter)}
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.src = brandMark
+                        }}
+                        className="w-4 h-4 rounded-full object-cover shrink-0"
+                      />
                       <span>{selectedGroupFilter.name}</span>
                     </button>
                   )}
@@ -679,11 +685,14 @@ export default function CommunityHubContent({ embedded = false }) {
                       }`}
                       title={`Xem bài viết trong nhóm ${grp.name}`}
                     >
-                      {grp.avatar_url ? (
-                        <img src={grp.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <span>{grp.icon || '👥'}</span>
-                      )}
+                      <img
+                        src={getCommunityAvatarUrl(grp)}
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.src = brandMark
+                        }}
+                        className="w-4 h-4 rounded-full object-cover shrink-0"
+                      />
                       <span>{grp.name}</span>
                     </button>
                   ))}
@@ -694,13 +703,14 @@ export default function CommunityHubContent({ embedded = false }) {
                       key={`feed-cat-${cat}`}
                       type="button"
                       onClick={() => setFeedFilter(cat)}
-                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
                         feedFilter === cat
                           ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                           : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                       }`}
                     >
-                      🏷️ {cat}
+                      <span className="material-symbols-outlined text-[14px]">sell</span>
+                      <span>{cat}</span>
                     </button>
                   ))}
                 </>
@@ -710,13 +720,14 @@ export default function CommunityHubContent({ embedded = false }) {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('Tất cả')}
-                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
                       selectedCategory === 'Tất cả'
                         ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                         : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                     }`}
                   >
-                    Tất cả ({communities.length})
+                    <span className="material-symbols-outlined text-[15px]">public</span>
+                    <span>Tất cả ({communities.length})</span>
                   </button>
 
                   {/* Tab Nhóm: Đã tham gia */}
@@ -729,7 +740,8 @@ export default function CommunityHubContent({ embedded = false }) {
                         : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                     }`}
                   >
-                    <span>⭐ Đã tham gia ({myJoinedCommunities.length})</span>
+                    <span className="material-symbols-outlined text-[15px]">star</span>
+                    <span>Đã tham gia ({myJoinedCommunities.length})</span>
                   </button>
 
                   {/* Tab Nhóm: Lọc theo từng Chủ đề */}
@@ -738,13 +750,14 @@ export default function CommunityHubContent({ embedded = false }) {
                       key={`grp-cat-${cat}`}
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
-                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
                         selectedCategory === cat
                           ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_15px_rgba(0,255,136,0.4)]'
                           : 'bg-[#11151c] text-[#b9cbb9] hover:bg-[#181d26] hover:text-[#f1ffef] border border-[#1a232e]'
                       }`}
                     >
-                      🏷️ {cat}
+                      <span className="material-symbols-outlined text-[14px]">sell</span>
+                      <span>{cat}</span>
                     </button>
                   ))}
                 </>
@@ -817,7 +830,10 @@ export default function CommunityHubContent({ embedded = false }) {
                         />
                         {uploadedImageName && (
                           <div className="mt-1.5 px-1 flex items-center justify-between text-[11px] font-mono text-[#00ff88]">
-                            <span className="truncate">📁 {uploadedImageName}</span>
+                            <span className="truncate inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">image</span>
+                              {uploadedImageName}
+                            </span>
                             <span className="shrink-0 ml-2">Đã tải lên</span>
                           </div>
                         )}
@@ -829,15 +845,14 @@ export default function CommunityHubContent({ embedded = false }) {
                         {selectedGroupFilter ? (
                           /* Khi đang ở trong hội nhóm cụ thể -> bỏ 2 dropdown chọn nhóm & cảm xúc cho gọn */
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/25 text-[11px] font-mono text-[#00ff88]">
-                            {selectedGroupFilter.avatar_url ? (
-                              <img
-                                src={selectedGroupFilter.avatar_url}
-                                alt=""
-                                className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <span>{selectedGroupFilter.icon || '👥'}</span>
-                            )}
+                            <img
+                              src={getCommunityAvatarUrl(selectedGroupFilter)}
+                              alt=""
+                              onError={(e) => {
+                                e.currentTarget.src = brandMark
+                              }}
+                              className="w-4 h-4 rounded-full object-cover shrink-0"
+                            />
                             <span className="truncate max-w-[170px] font-semibold">
                               Đăng vào {selectedGroupFilter.name}
                             </span>
@@ -853,7 +868,7 @@ export default function CommunityHubContent({ embedded = false }) {
                               <optgroup label="Chủ đề bài viết">
                                 {allCategories.filter((c) => c !== 'Tất cả').map((cat) => (
                                   <option key={cat} value={cat}>
-                                    🏷️ {cat}
+                                    {cat}
                                   </option>
                                 ))}
                               </optgroup>
@@ -861,7 +876,7 @@ export default function CommunityHubContent({ embedded = false }) {
                                 <optgroup label="Đăng vào Nhóm của bạn">
                                   {myJoinedCommunities.map((grp) => (
                                     <option key={`post-grp-${grp.id}`} value={`grp:${grp.id}:${grp.category}`}>
-                                      {grp.icon || '👥'} {grp.name}
+                                      {grp.name}
                                     </option>
                                   ))}
                                 </optgroup>
@@ -949,22 +964,20 @@ export default function CommunityHubContent({ embedded = false }) {
               {selectedGroupFilter && (
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#11151c] border border-[#00ff88]/30 shadow-[0_0_15px_rgba(0,255,136,0.1)] text-xs animate-fadeIn">
                   <div className="flex items-center gap-2.5 text-[#f1ffef]">
-                    {selectedGroupFilter.avatar_url ? (
-                      <img
-                        src={selectedGroupFilter.avatar_url}
-                        alt=""
-                        className="w-10 h-10 rounded-xl object-cover border border-[#1a232e]"
-                      />
-                    ) : (
-                      <span className="text-2xl p-1 rounded-lg bg-[#181d26] border border-[#1a232e]">
-                        {selectedGroupFilter.icon || '👥'}
-                      </span>
-                    )}
+                    <img
+                      src={getCommunityAvatarUrl(selectedGroupFilter)}
+                      alt={selectedGroupFilter.name}
+                      onError={(e) => {
+                        e.currentTarget.src = brandMark
+                      }}
+                      className="w-10 h-10 rounded-xl object-cover border border-[#1a232e] shrink-0"
+                    />
                     <div>
                       <div className="font-bold text-sm text-[#f1ffef] flex items-center gap-2">
                         <span>{selectedGroupFilter.name}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30">
-                          🏷️ {selectedGroupFilter.category}
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">sell</span>
+                          {selectedGroupFilter.category}
                         </span>
                       </div>
                       <p className="text-[11px] text-[#849585] mt-0.5">
@@ -1057,18 +1070,22 @@ export default function CommunityHubContent({ embedded = false }) {
                           const comm = communities.find((c) => c.id === post.community_id)
                           return comm ? (
                             <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 flex items-center gap-1.5 font-semibold">
-                              {comm.avatar_url ? (
-                                <img src={comm.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <span>{comm.icon || '👥'}</span>
-                              )}
+                              <img
+                                src={getCommunityAvatarUrl(comm)}
+                                alt=""
+                                onError={(e) => {
+                                  e.currentTarget.src = brandMark
+                                }}
+                                className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                              />
                               <span>{comm.name}</span>
                             </span>
                           ) : null
                         })()}
                         {post.category && (
-                          <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#08090a] text-[#4edea3] border border-[#1a232e]">
-                            🏷️ {post.category}
+                          <span className="px-2.5 py-0.5 rounded-md text-xs font-mono bg-[#08090a] text-[#4edea3] border border-[#1a232e] inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">sell</span>
+                            {post.category}
                           </span>
                         )}
                       </div>
@@ -1256,17 +1273,14 @@ export default function CommunityHubContent({ embedded = false }) {
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between">
-                            {group.avatar_url ? (
-                              <img
-                                src={group.avatar_url}
-                                alt=""
-                                className="w-14 h-14 rounded-2xl object-cover border border-[#1a232e] shadow-md"
-                              />
-                            ) : (
-                              <span className="text-3xl p-2.5 rounded-xl bg-[#181d26] border border-[#1a232e]">
-                                {group.icon || '👥'}
-                              </span>
-                            )}
+                            <img
+                              src={getCommunityAvatarUrl(group)}
+                              alt={group.name}
+                              onError={(e) => {
+                                e.currentTarget.src = brandMark
+                              }}
+                              className="w-14 h-14 rounded-2xl object-cover border border-[#1a232e] shadow-md bg-[#181d26]"
+                            />
                             <div className="flex items-center gap-2">
                               <span className="px-2.5 py-0.5 rounded-full bg-[#08090a] text-[#4edea3] text-[11px] font-mono border border-[#4edea3]/20">
                                 {(group.members_count || group.membersCount || 1).toLocaleString()} thành viên
@@ -1308,7 +1322,7 @@ export default function CommunityHubContent({ embedded = false }) {
                               title="Mở nhóm chat thảo luận realtime"
                             >
                               <span className="material-symbols-outlined text-[16px]">forum</span>
-                              <span>💬 Chat nhóm</span>
+                              <span>Chat nhóm</span>
                             </button>
 
                             {/* Nút Xem bài viết */}
@@ -1380,9 +1394,11 @@ export default function CommunityHubContent({ embedded = false }) {
           <div className="w-full rounded-2xl bg-[#11151c] border border-[#1a232e] p-5 shadow-md">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative">
-                <div className="w-12 h-12 rounded-xl bg-[#181d26] border border-[#00ff88]/40 flex items-center justify-center text-lg text-[#00ff88] font-bold font-mono">
-                  {user?.username?.substring(0, 2).toUpperCase() || 'KD'}
-                </div>
+                <Avatar
+                  src={user?.avatar_url}
+                  alt={user?.display_name || user?.username || 'Avatar của bạn'}
+                  className="w-12 h-12 rounded-xl object-cover bg-[#181d26] border border-[#00ff88]/40"
+                />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
               </div>
               <div>

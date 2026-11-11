@@ -354,8 +354,9 @@ export default function AdminUserProfileModal({
               Đây là tài khoản admin đang đăng nhập.
             </span>
           ) : connectionStatus === 'accepted' ? (
-            <span style={{ color: '#059669', fontSize: '13px', fontWeight: 700 }}>
-              ✓ Đã là bạn bè
+            <span style={{ color: '#059669', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+              Đã là bạn bè
             </span>
           ) : connectionStatus === 'pending_sent' ? (
             <span style={{ color: '#b45309', fontSize: '13px', fontWeight: 700 }}>
@@ -399,10 +400,14 @@ export default function AdminUserProfileModal({
                 backgroundColor: sending || !profile ? '#a78bca' : '#7c5cbf',
                 fontSize: '13px',
                 fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 cursor: sending || !profile ? 'not-allowed' : 'pointer',
               }}
             >
-              {sending ? 'Đang gửi...' : '＋ Gửi lời mời kết bạn'}
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>person_add</span>
+              {sending ? 'Đang gửi...' : 'Gửi lời mời kết bạn'}
             </button>
           ) : null}
           <button

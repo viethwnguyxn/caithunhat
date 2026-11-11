@@ -8,6 +8,8 @@ import { getSurvey } from '../services/surveyService'
 import { getMyConnections } from '../services/connectionService'
 import { getConversations } from '../services/chatService'
 import postService from '../services/postService'
+import { CATEGORY_AVATAR_MAP } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
 import '../styles/lapulga.css'
 
 const unwrapList = (value) => Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : Array.isArray(value?.posts) ? value.posts : Array.isArray(value?.data) ? value.data : []
@@ -30,8 +32,22 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('Phù hợp với bạn')
   const [previewImage, setPreviewImage] = useState(null)
+  const [toastMessage, setToastMessage] = useState('')
   const displayName = profile?.display_name || user?.display_name || user?.username || 'Bạn'
   const avatar = profile?.avatar_url || user?.avatar_url
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? '' : curr))
+    }, 2600)
+  }
+
+  const handleSharePost = (postId) => {
+    const shareUrl = `${window.location.origin}/communities?tab=feed#post-${postId}`
+    navigator.clipboard?.writeText(shareUrl).catch(() => {})
+    showToast('Đã sao chép liên kết bài viết!')
+  }
 
   useEffect(() => {
     if (!previewImage) return
@@ -189,12 +205,20 @@ export default function Home() {
   }
 
   return <div className="lp-home app-green-theme"><Navbar />
+    {toastMessage && (
+      <div className="fixed top-24 right-6 z-50">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00ff88]/50 bg-[#11151c]/95 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] backdrop-blur-md">
+          <span className="material-symbols-outlined text-[20px]">check_circle</span>
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      </div>
+    )}
     <div className="lp-home-grid">
       <main className="lp-home-center">
-        <section className="lp-hero"><small>LA PULGA · KHÔNG GIAN ĐỒNG ĐIỆU</small><h1>Chào {displayName}, hôm nay bạn cảm thấy thế nào?</h1><p>Một nơi để chia sẻ câu chuyện thật, gặp gỡ những người cùng cảm xúc và tìm thấy sự thấu hiểu.</p><div className="lp-hero-actions"><Link to="/discover">Khám phá kết nối mới　→</Link>{!loading && !survey && <Link to="/survey" className="lp-survey-cta">Làm khảo sát　→</Link>}</div></section>
-        <div className="lp-feed-card lp-create-card" style={{padding:16}}><div className="lp-feed-head"><Avatar src={avatar} alt="Avatar của bạn"/><div style={{flex:1}}><b>Chia sẻ điều bạn đang nghĩ, {displayName}?</b><small>Bài viết của bạn có thể giúp ai đó cảm thấy được thấu hiểu.</small></div></div><Link to="/communities?tab=feed" className="lp-filter lp-create-post">＋　Tạo bài viết / chia sẻ khoảnh khắc</Link></div>
+        <section className="lp-hero"><small>LA PULGA · KHÔNG GIAN ĐỒNG ĐIỆU</small><h1>Chào {displayName}, hôm nay bạn cảm thấy thế nào?</h1><p>Một nơi để chia sẻ câu chuyện thật, gặp gỡ những người cùng cảm xúc và tìm thấy sự thấu hiểu.</p><div className="lp-hero-actions"><Link to="/discover" className="inline-flex items-center gap-1.5">Khám phá kết nối mới <span className="material-symbols-outlined text-[16px]">arrow_forward</span></Link>{!loading && !survey && <Link to="/survey" className="lp-survey-cta inline-flex items-center gap-1.5">Làm khảo sát <span className="material-symbols-outlined text-[16px]">arrow_forward</span></Link>}</div></section>
+        <div className="lp-feed-card lp-create-card" style={{padding:16}}><div className="lp-feed-head"><Avatar src={avatar} alt="Avatar của bạn"/><div style={{flex:1}}><b>Chia sẻ điều bạn đang nghĩ, {displayName}?</b><small>Bài viết của bạn có thể giúp ai đó cảm thấy được thấu hiểu.</small></div></div><Link to="/communities?tab=feed" className="lp-filter lp-create-post inline-flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[18px]">add</span><span>Tạo bài viết / chia sẻ khoảnh khắc</span></Link></div>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'22px 2px 12px',gap:12}}><div><div className="lp-section-label" style={{margin:0}}>Cộng đồng La Pulga</div><h2 style={{fontSize:20,marginTop:5}}>Bảng tin mới nhất</h2></div><select className="lp-feed-filter" value={filter} onChange={(e)=>setFilter(e.target.value)}><option>Phù hợp với bạn</option><option>Bạn bè kết nối</option><option>Cùng tâm trạng & hoàn cảnh</option><option>Tất cả bài viết</option></select></div>
-        {loading ? <div className="lp-feed-card lp-home-empty">Đang tải bảng tin...</div> : visiblePosts.length === 0 ? <div className="lp-feed-card lp-home-empty">{posts.length === 0 ? 'Chưa có bài viết nào. Hãy khám phá cộng đồng hoặc kết nối với mọi người nhé.' : 'Chưa có bài viết phù hợp với bộ lọc này.'}<div style={{marginTop:14}}><Link className="lp-chip" to="/discover">Khám phá mọi người →</Link></div></div> : visiblePosts.map((post, index) => {
+        {loading ? <div className="lp-feed-card lp-home-empty">Đang tải bảng tin...</div> : visiblePosts.length === 0 ? <div className="lp-feed-card lp-home-empty">{posts.length === 0 ? 'Chưa có bài viết nào. Hãy khám phá cộng đồng hoặc kết nối với mọi người nhé.' : 'Chưa có bài viết phù hợp với bộ lọc này.'}<div style={{marginTop:14}}><Link className="lp-chip inline-flex items-center gap-1.5" to="/discover">Khám phá mọi người <span className="material-symbols-outlined text-[15px]">arrow_forward</span></Link></div></div> : visiblePosts.map((post, index) => {
           const author = post.author || post.user || {}
           const name = author.display_name || author.username || post.author_name || 'Thành viên La Pulga'
           const content = post.content || post.body || post.text || ''
@@ -266,7 +290,10 @@ export default function Home() {
                       pointerEvents: 'none',
                     }}
                   >
-                    <span>🔍 Phóng to</span>
+                    <span>
+                      <span className="material-symbols-outlined text-[14px] align-middle mr-1">zoom_in</span>
+                      Phóng to
+                    </span>
                   </div>
                 </div>
               )}
@@ -277,18 +304,35 @@ export default function Home() {
                   onClick={() => handleLike(post)}
                   className={`lp-like-button ${post.is_liked_by_me ? 'is-liked' : ''}`}
                   aria-pressed={Boolean(post.is_liked_by_me)}
+                  title="Thích bài viết"
                 >
-                  {post.is_liked_by_me ? '♥' : '♡'}　{post.likes_count ?? 0} Thích
+                  <span
+                    className="material-symbols-outlined text-[18px]"
+                    style={{
+                      fontVariationSettings: post.is_liked_by_me ? "'FILL' 1" : "'FILL' 0",
+                    }}
+                  >
+                    favorite
+                  </span>
+                  <span>{post.likes_count ?? 0}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleToggleComments(postId)}
                   aria-expanded={Boolean(expandedComments[postId])}
                   aria-controls={`home-comments-${postId}`}
+                  title="Bình luận"
                 >
-                  ▢　{post.comments_count ?? 0} Bình luận
+                  <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                  <span>{post.comments_count ?? 0}</span>
                 </button>
-                <span>↗　Chia sẻ</span>
+                <button
+                  type="button"
+                  onClick={() => handleSharePost(postId)}
+                  title="Chia sẻ liên kết"
+                >
+                  <span className="material-symbols-outlined text-[18px]">share</span>
+                </button>
               </div>
 
               {interactionErrors[postId] && (
@@ -394,7 +438,11 @@ export default function Home() {
         })}
       </main>
 
-      <aside className="lp-home-right"><section className="lp-panel"><div className="lp-section-label" style={{marginTop:0}}>Tổng quan của bạn</div><div className="lp-stat"><span>Bạn bè kết nối</span><strong>{friendsCount}</strong></div><div className="lp-stat"><span>Tin nhắn chưa đọc</span><strong>{unreadMsgCount}</strong></div><div className="lp-stat"><span>Khảo sát</span><strong>{survey ? 'Hoàn tất' : 'Chưa làm'}</strong></div></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Gợi ý không gian</div>{[['🎨','Nghệ thuật & Sáng tạo','Chia sẻ cảm hứng'],['🎧','Âm nhạc & Lofi','Tìm người cùng gu'],['🌱','Phát triển bản thân','Cùng tiến bộ mỗi ngày']].map(([icon,title,desc])=><div className="lp-community-row" key={title}><span className="lp-community-icon">{icon}</span><div><b>{title}</b><small>{desc}</small></div></div>)}<Link to="/discover?tab=groups" className="lp-chip">Xem tất cả cộng đồng →</Link></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Câu hỏi hôm nay</div><p style={{fontSize:14,lineHeight:1.7}}>Điều nhỏ bé nào gần đây khiến bạn cảm thấy biết ơn?</p><span className="lp-muted">Một lời nhắc để bắt đầu cuộc trò chuyện.</span></section></aside>
+      <aside className="lp-home-right"><section className="lp-panel"><div className="lp-section-label" style={{marginTop:0}}>Tổng quan của bạn</div><div className="lp-stat"><span>Bạn bè kết nối</span><strong>{friendsCount}</strong></div><div className="lp-stat"><span>Tin nhắn chưa đọc</span><strong>{unreadMsgCount}</strong></div><div className="lp-stat"><span>Khảo sát</span><strong>{survey ? 'Hoàn tất' : 'Chưa làm'}</strong></div></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Gợi ý không gian</div>{[
+        [CATEGORY_AVATAR_MAP['Nghệ thuật & Sáng tạo'],'Nghệ thuật & Sáng tạo','Chia sẻ cảm hứng'],
+        [CATEGORY_AVATAR_MAP['Âm nhạc & Chill'],'Âm nhạc & Lofi','Tìm người cùng gu'],
+        [CATEGORY_AVATAR_MAP['Phát triển bản thân'],'Phát triển bản thân','Cùng tiến bộ mỗi ngày'],
+      ].map(([imgUrl,title,desc])=><Link to={`/discover?tab=groups&category=${encodeURIComponent(title)}`} className="lp-community-row hover:opacity-90 transition-opacity" key={title} style={{textDecoration:'none',color:'inherit'}}><img src={imgUrl} alt={title} onError={(e) => { e.currentTarget.src = brandMark }} style={{width:38,height:38,borderRadius:10,objectFit:'cover',flexShrink:0,border:'1px solid #1a232e'}} /><div><b>{title}</b><small>{desc}</small></div></Link>)}<Link to="/discover?tab=groups" className="lp-chip inline-flex items-center gap-1">Xem tất cả cộng đồng <span className="material-symbols-outlined text-[15px]">arrow_forward</span></Link></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Câu hỏi hôm nay</div><p style={{fontSize:14,lineHeight:1.7}}>Điều nhỏ bé nào gần đây khiến bạn cảm thấy biết ơn?</p><span className="lp-muted">Một lời nhắc để bắt đầu cuộc trò chuyện.</span></section></aside>
     </div>
 
     {/* Lightbox Modal Phóng To Ảnh Chi Tiết */}
@@ -446,7 +494,7 @@ export default function Home() {
             }}
             title="Đóng (Escape)"
           >
-            ✕
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
           <img
             src={previewImage}

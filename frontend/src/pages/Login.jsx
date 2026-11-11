@@ -63,7 +63,7 @@ export default function Login() {
             <span className="lp-login-welcome">Chào mừng bạn trở lại</span>
             <p className="lp-login-subtitle">Đăng nhập để tiếp tục kết nối với cộng đồng của bạn.</p>
 
-            {error && <div className="alert alert-error" role="alert">⚠ {error}</div>}
+            {error && <div className="alert alert-error" role="alert"><span className="material-symbols-outlined text-[16px] align-middle mr-1">warning</span>{error}</div>}
 
             <div className="lp-login-google"><GoogleLoginButton onError={(msg) => setError(msg)} /></div>
             <div className="lp-login-or"><span>HOẶC ĐĂNG NHẬP VỚI EMAIL</span></div>
@@ -71,14 +71,14 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="lp-login-form">
               <div className="lp-login-field">
                 <label htmlFor="login-account">Email hoặc Tên người dùng</label>
-                <div className="lp-login-input-wrap"><span aria-hidden="true">@</span><input id="login-account" type="text" name="account" placeholder="tenban@lapulga.vn" value={form.account} onChange={handleChange} disabled={loading} autoComplete="username" spellCheck={false} autoCorrect="off" autoCapitalize="none" /></div>
+                <div className="lp-login-input-wrap"><span className="material-symbols-outlined text-[18px]" aria-hidden="true">mail</span><input id="login-account" type="text" name="account" placeholder="tenban@lapulga.vn" value={form.account} onChange={handleChange} disabled={loading} autoComplete="username" spellCheck={false} autoCorrect="off" autoCapitalize="none" /></div>
               </div>
               <div className="lp-login-field">
                 <div className="lp-login-label-row"><label htmlFor="login-password">Mật khẩu</label><span className="lp-login-forgot">Quên mật khẩu?</span></div>
-                <div className="lp-login-input-wrap"><span aria-hidden="true">♙</span><input id="login-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Nhập mật khẩu an toàn" value={form.password} onChange={handleChange} disabled={loading} autoComplete="current-password" /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? 'Ẩ·' : '◎'}</button></div>
+                <div className="lp-login-input-wrap"><span className="material-symbols-outlined text-[18px]" aria-hidden="true">lock</span><input id="login-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Nhập mật khẩu an toàn" value={form.password} onChange={handleChange} disabled={loading} autoComplete="current-password" /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><span className="material-symbols-outlined text-[18px]">{showPassword ? 'visibility_off' : 'visibility'}</span></button></div>
               </div>
               <label className="lp-login-remember"><input type="checkbox" /> <span>Ghi nhớ đăng nhập 30 ngày</span></label>
-              <button type="submit" className="lp-login-submit" disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <span>→</span></button>
+              <button type="submit" className="lp-login-submit inline-flex items-center justify-center gap-2" disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span></button>
             </form>
 
             <p className="lp-login-signup">Chưa có tài khoản? <Link to="/register" state={{ authTransition: 'login-to-register' }}>Đăng ký ngay</Link></p>

@@ -161,7 +161,7 @@ export default function Profile() {
 
       await updateProfile(payload)
       setProfileData({ ...modalForm, avatar_url: saveAvatar })
-      showToast('success', 'Đã lưu thay đổi hồ sơ thành công! 🎉')
+      showToast('success', 'Đã lưu thay đổi hồ sơ thành công!')
       closeEditModal()
     } catch (err) {
       console.error('Lỗi khi lưu profile:', err)
@@ -424,7 +424,8 @@ export default function Profile() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1f2021] text-[#f1ffef] text-xs font-medium">
-                      <span>🏢</span> {surveyData.life_situation || 'Cuộc sống tự lập'}
+                      <span className="material-symbols-outlined text-[15px] text-[#00ff88]">apartment</span>
+                      {surveyData.life_situation || 'Cuộc sống tự lập'}
                     </span>
                     {surveyData.recent_feelings && surveyData.recent_feelings.length > 0 && (
                       <>
@@ -434,7 +435,8 @@ export default function Profile() {
                             key={idx}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#08090a] text-[#44fb8a] text-xs"
                           >
-                            <span>✨</span> {feeling}
+                            <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                            {feeling}
                           </span>
                         ))}
                       </>

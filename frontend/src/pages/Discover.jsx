@@ -200,7 +200,7 @@ export default function Discover() {
     try {
       await sendConnectionRequest(targetUserId)
       setConnectionStatuses((prev) => ({ ...prev, [targetUserId]: 'pending_sent' }))
-      setConnectToast('Đã gửi lời mời kết nối thành công! ⚡')
+      setConnectToast('Đã gửi lời mời kết nối thành công!')
     } catch (err) {
       console.error('Lỗi kết nối:', err)
       setConnectToast(err.response?.data?.detail || 'Không thể gửi kết nối.')
@@ -217,7 +217,7 @@ export default function Discover() {
     try {
       await acceptConnection(connId)
       setConnectionStatuses((prev) => ({ ...prev, [targetUserId]: 'accepted' }))
-      setConnectToast('Đã trở thành bạn bè! Bây giờ bạn có thể trò chuyện. 🎉')
+      setConnectToast('Đã trở thành bạn bè! Bây giờ bạn có thể trò chuyện.')
     } catch (err) {
       console.error('Lỗi chấp nhận kết nối:', err)
       setConnectToast(err.response?.data?.detail || 'Không thể chấp nhận lời mời.')
@@ -266,7 +266,7 @@ export default function Discover() {
           {/* Toast thông báo */}
           {connectToast && (
             <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#11151c] text-[#00ff88] border border-[#00ff88]/40 px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(0,255,136,0.3)] animate-fadeIn text-sm font-semibold backdrop-blur-md">
-              <span>⚡</span>
+              <span className="material-symbols-outlined text-[18px]">bolt</span>
               <span>{connectToast}</span>
             </div>
           )}
@@ -289,8 +289,8 @@ export default function Discover() {
           {!hasSurvey && (
             <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11151c] to-[#0d1117] border border-[#00ff88]/40 shadow-[0_0_25px_rgba(0,255,136,0.15)] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#00ff88]/20 flex items-center justify-center text-[#00ff88] text-xl shrink-0">
-                  ⚡
+                <div className="w-10 h-10 rounded-xl bg-[#00ff88]/20 flex items-center justify-center text-[#00ff88] shrink-0">
+                  <span className="material-symbols-outlined text-[22px]">bolt</span>
                 </div>
                 <div>
                   <h3 className="font-bold text-[#f8fafc] text-sm">
@@ -304,9 +304,10 @@ export default function Discover() {
               </div>
               <Link
                 to="/survey"
-                className="px-4 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.4)] hover:bg-[#00e67a] transition-all shrink-0"
+                className="px-4 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.4)] hover:bg-[#00e67a] transition-all shrink-0 inline-flex items-center gap-1"
               >
-                Làm khảo sát ngay →
+                <span>Làm khảo sát ngay</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
             </div>
           )}
@@ -624,7 +625,7 @@ export default function Discover() {
                 onClick={() => setSelectedUserForProfile(null)}
                 className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#0d1117] border border-[#1a232e] text-[#94a3b8] hover:text-[#f8fafc] flex items-center justify-center transition-colors"
               >
-                ✕
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
 
               {/* User Header */}
@@ -711,9 +712,10 @@ export default function Discover() {
                       {selectedUserForProfile.user.goals.map((g) => (
                         <span
                           key={g}
-                          className="px-2.5 py-1 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 text-xs text-[#00ff88]"
+                          className="px-2.5 py-1 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 text-xs text-[#00ff88] inline-flex items-center gap-1"
                         >
-                          🎯 {g}
+                          <span className="material-symbols-outlined text-[14px]">track_changes</span>
+                          {g}
                         </span>
                       ))}
                     </div>
@@ -768,11 +770,12 @@ export default function Discover() {
                         handleConnect(selectedUserForProfile.user.id)
                       }}
                       disabled={sendingConnectId === selectedUserForProfile.user.id}
-                      className="px-5 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:bg-[#00e67a]"
+                      className="px-5 py-2 rounded-xl bg-[#00ff88] text-[#08090a] font-bold text-xs shadow-[0_0_15px_rgba(0,255,136,0.3)] hover:bg-[#00e67a] inline-flex items-center gap-1.5"
                     >
+                      <span className="material-symbols-outlined text-[16px]">person_add</span>
                       {sendingConnectId === selectedUserForProfile.user.id
                         ? 'Đang gửi...'
-                        : 'Gửi kết nối 🤝'}
+                        : 'Gửi kết nối'}
                     </button>
                   )}
                 </div>

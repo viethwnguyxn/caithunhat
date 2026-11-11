@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getMessages, sendMessage } from '../services/chatService'
+import { getCommunityAvatarUrl } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
 
 function formatTime(dateString) {
   if (!dateString) return ''
@@ -131,9 +133,14 @@ export default function CommunityChatModal({ isOpen, onClose, community }) {
         {/* Header Nhóm Chat */}
         <div className="p-4 px-5 border-b border-[#1a232e] bg-[#11151c] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/30 flex items-center justify-center text-2xl shadow-[0_0_12px_rgba(0,255,136,0.15)]">
-              {community.icon || '👥'}
-            </span>
+            <img
+              src={getCommunityAvatarUrl(community)}
+              alt={community.name}
+              onError={(e) => {
+                e.currentTarget.src = brandMark
+              }}
+              className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/30 object-cover shadow-[0_0_12px_rgba(0,255,136,0.15)] shrink-0"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-[#f1ffef] line-clamp-1">
@@ -187,8 +194,15 @@ export default function CommunityChatModal({ isOpen, onClose, community }) {
               <span className="animate-pulse">Đang tải lịch sử trò chuyện...</span>
             </div>
           ) : messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center text-[#849585] space-y-2">
-              <span className="text-4xl">{community.icon || '💬'}</span>
+            <div className="h-full flex flex-col items-center justify-center text-center text-[#849585] space-y-2.5">
+              <img
+                src={getCommunityAvatarUrl(community)}
+                alt={community.name}
+                onError={(e) => {
+                  e.currentTarget.src = brandMark
+                }}
+                className="w-14 h-14 rounded-2xl object-cover border border-[#00ff88]/30 bg-[#181d26]"
+              />
               <p className="text-sm font-semibold text-[#f1ffef]">Chưa có tin nhắn nào</p>
               <p className="text-xs max-w-sm text-[#849585]">
                 Hãy là người đầu tiên bắt đầu cuộc trò chuyện trong nhóm {community.name}!

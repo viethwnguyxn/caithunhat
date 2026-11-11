@@ -48,11 +48,13 @@ export default function Landing() {
             và tạo nên những mối quan hệ ý nghĩa.
           </p>
           <div className="lp-landing-actions">
-            <Link to="/register" className="lp-button lp-button-large">
-              Tham gia ngay <span aria-hidden="true">→</span>
+            <Link to="/register" className="lp-button lp-button-large inline-flex items-center gap-2">
+              Tham gia ngay <span className="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_forward</span>
             </Link>
             <a href="#features" className="lp-learn-link">
-              <span className="lp-play-icon" aria-hidden="true">▶</span>
+              <span className="lp-play-icon inline-flex items-center justify-center" aria-hidden="true">
+                <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+              </span>
               Tìm hiểu thêm
             </a>
           </div>

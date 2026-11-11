@@ -22,6 +22,8 @@ import {
   getAiQuickPrompts,
   sendAiMessage,
 } from '../services/aiService'
+import { getCommunityAvatarUrl } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -642,9 +644,14 @@ export default function Messages() {
 
                           <div className="relative shrink-0">
                             {c.is_group ? (
-                              <div className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/40 flex items-center justify-center text-xl shadow-[0_0_10px_rgba(0,255,136,0.15)]">
-                                👥
-                              </div>
+                              <img
+                                src={getCommunityAvatarUrl({ name: p.display_name, avatar_url: p.avatar_url })}
+                                alt={p.display_name || 'Nhóm cộng đồng'}
+                                onError={(e) => {
+                                  e.currentTarget.src = brandMark
+                                }}
+                                className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/40 object-cover shadow-[0_0_10px_rgba(0,255,136,0.15)]"
+                              />
                             ) : (
                               <>
                                 <Avatar
@@ -719,7 +726,14 @@ export default function Messages() {
                           title="Xem hồ sơ chi tiết"
                         >
                           <Avatar
-                            src={partnerAvatar}
+                            src={
+                              activeConversation.is_group
+                                ? getCommunityAvatarUrl({
+                                    name: partner?.display_name,
+                                    avatar_url: partnerAvatar,
+                                  })
+                                : partnerAvatar
+                            }
                             alt={partner?.username}
                             className="w-10 h-10 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
                           />

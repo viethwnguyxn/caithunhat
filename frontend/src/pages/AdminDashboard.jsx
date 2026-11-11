@@ -189,7 +189,9 @@ export default function AdminDashboard() {
         <Navbar />
         <div style={{ maxWidth: '520px', margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
           <div className="card" style={{ padding: '40px 24px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
+            <div style={{ marginBottom: '16px', color: '#dc2626' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>block</span>
+            </div>
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
               Truy cập bị từ chối
             </h2>
@@ -219,7 +221,7 @@ export default function AdminDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '22px' }}>⚙️</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#7c5cbf' }}>admin_panel_settings</span>
               <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
                 Hệ thống Quản trị viên (Admin)
               </h1>
@@ -243,7 +245,8 @@ export default function AdminDashboard() {
               fontWeight: 700,
             }}
           >
-            <span>👑 Quyền: Administrator</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>verified_user</span>
+            <span>Quyền: Administrator</span>
           </div>
         </div>
 
@@ -257,8 +260,8 @@ export default function AdminDashboard() {
           }}
         >
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#f5f0ff', color: '#7c5cbf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              👥
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#f5f0ff', color: '#7c5cbf', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>group</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -271,8 +274,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🟢
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>check_circle</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -285,8 +288,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🔒
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>lock</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -299,8 +302,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🚩
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>flag</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -346,7 +349,8 @@ export default function AdminDashboard() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>👥 Quản lý Người dùng</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>group</span>
+            <span>Quản lý Người dùng</span>
             <span
               style={{
                 backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
@@ -380,7 +384,8 @@ export default function AdminDashboard() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>🚩 Báo cáo Vi phạm</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>flag</span>
+            <span>Báo cáo Vi phạm</span>
             {(stats?.pending_reports ?? 0) > 0 && (
               <span
                 style={{
@@ -514,9 +519,13 @@ export default function AdminDashboard() {
                                   color: '#7c5cbf',
                                   fontSize: '11px',
                                   fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                👑 Admin
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>shield_person</span>
+                                Admin
                               </span>
                             ) : (
                               <span
@@ -543,9 +552,13 @@ export default function AdminDashboard() {
                                   color: '#059669',
                                   fontSize: '11px',
                                   fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                ✓ Hoạt động
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                                Hoạt động
                               </span>
                             ) : (
                               <span
@@ -556,9 +569,13 @@ export default function AdminDashboard() {
                                   color: '#dc2626',
                                   fontSize: '11px',
                                   fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                🔒 Bị khóa
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>lock</span>
+                                Bị khóa
                               </span>
                             )}
                           </td>
@@ -629,10 +646,10 @@ export default function AdminDashboard() {
             {/* Lọc theo trạng thái báo cáo */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {[
-                { key: 'pending', label: '⏳ Chờ xử lý' },
-                { key: 'resolved', label: '✓ Đã xử lý vi phạm' },
-                { key: 'dismissed', label: '✕ Đã bác bỏ' },
-                { key: 'all', label: 'Tất cả đơn' },
+                { key: 'pending', label: 'Chờ xử lý', icon: 'hourglass_empty' },
+                { key: 'resolved', label: 'Đã xử lý vi phạm', icon: 'check_circle' },
+                { key: 'dismissed', label: 'Đã bác bỏ', icon: 'close' },
+                { key: 'all', label: 'Tất cả đơn', icon: null },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -647,9 +664,13 @@ export default function AdminDashboard() {
                     color: reportStatusFilter === tab.key ? '#7c5cbf' : '#4b5563',
                     fontSize: '13px',
                     fontWeight: reportStatusFilter === tab.key ? 700 : 500,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     cursor: 'pointer',
                   }}
                 >
+                  {tab.icon && <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>}
                   {tab.label}
                 </button>
               ))}
@@ -661,7 +682,9 @@ export default function AdminDashboard() {
               </div>
             ) : reports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
+                <div style={{ marginBottom: '8px', color: '#7c5cbf' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>verified</span>
+                </div>
                 <p style={{ margin: 0 }}>Không có đơn báo cáo vi phạm nào trong danh mục này.</p>
               </div>
             ) : (
@@ -694,9 +717,13 @@ export default function AdminDashboard() {
                               color: '#b91c1c',
                               fontSize: '12px',
                               fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                           >
-                            🚩 {r.reason}
+                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>flag</span>
+                            {r.reason}
                           </span>
                           <span style={{ fontSize: '12px', color: '#9ca3af' }}>
                             Đơn #{r.id} • {new Date(r.created_at).toLocaleString('vi-VN')}
@@ -705,18 +732,21 @@ export default function AdminDashboard() {
 
                         <div>
                           {isPending && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600 }}>
-                              ⏳ Chờ xử lý
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>hourglass_empty</span>
+                              Chờ xử lý
                             </span>
                           )}
                           {isResolved && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600 }}>
-                              ✓ Đã xử lý vi phạm
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                              Đã xử lý vi phạm
                             </span>
                           )}
                           {isDismissed && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600 }}>
-                              ✕ Đã bác bỏ
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+                              Đã bác bỏ
                             </span>
                           )}
                         </div>

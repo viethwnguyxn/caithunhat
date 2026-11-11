@@ -89,11 +89,13 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
             cursor: 'pointer',
           }}
         >
-          ✕
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <span style={{ fontSize: '24px' }}>🚩</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#dc2626' }}>
+            flag
+          </span>
           <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#1a1a2e' }}>
             Báo cáo vi phạm
           </h3>
