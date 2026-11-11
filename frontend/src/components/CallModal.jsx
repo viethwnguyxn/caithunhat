@@ -47,6 +47,16 @@ export default function CallModal({
     setCallStatus(status)
   }
 
+  const markConnected = () => {
+    if (finalizedRef.current || statusRef.current === 'connected') return
+    updateStatus('connected')
+    stopRinging()
+    if (ringTimeoutRef.current) {
+      clearTimeout(ringTimeoutRef.current)
+      ringTimeoutRef.current = null
+    }
+  }
+
   const stopRinging = () => {
     if (ringIntervalRef.current) {
       clearInterval(ringIntervalRef.current)
@@ -194,6 +204,10 @@ export default function CallModal({
       })
       call.on('addremotetrack', (track) => {
         attachVideoTrack(track, remoteVideoRef.current, false)
+        // Trên StringeeCall2, bên người nghe không nhận signalingstate code 3 nên đồng bộ khi media đến
+        if (statusRef.current === 'connecting') {
+          markConnected()
+        }
       })
       call.on('removelocaltrack', (track) => {
         mediaTracksRef.current.delete(track)
@@ -212,6 +226,9 @@ export default function CallModal({
       remoteStreamRef.current = stream
       stopRinging()
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      if (statusRef.current === 'connecting') {
+        markConnected()
+      }
 
       if (remoteMediaRef.current) {
         remoteMediaRef.current.srcObject = stream
@@ -224,9 +241,7 @@ export default function CallModal({
     call.on('signalingstate', (state) => {
       console.info('Stringee signalingstate:', state)
       if (state?.code === 3) {
-        updateStatus('connected')
-        stopRinging()
-        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+        markConnected()
       } else if (state?.code === 5) {
         endingReasonRef.current = 'busy'
         setErrorMessage('Đối phương đang bận hoặc đã từ chối cuộc gọi.')
@@ -243,6 +258,12 @@ export default function CallModal({
     })
     call.on('mediastate', (state) => {
       console.info('Stringee mediastate:', state)
+      if (
+        statusRef.current === 'connecting' &&
+        (state?.code === 1 || state?.isConnected === true)
+      ) {
+        markConnected()
+      }
     })
     call.on('error', (info) => {
       console.error('Stringee call error:', info)
@@ -363,7 +384,11 @@ export default function CallModal({
     }
     updateStatus('connecting')
     call.answer((result) => {
-      if (result?.r !== 0) {
+      if (result?.r === 0) {
+        // Stringee SDK chỉ bắn signalingstate code 3 (Answered) cho phía người gọi,
+        // phía người nghe chuyển sang connected ngay khi answer thành công.
+        markConnected()
+      } else {
         const message = result?.message || 'Không thể trả lời cuộc gọi.'
         console.error('Stringee answer thất bại:', result)
         setErrorMessage(message)
