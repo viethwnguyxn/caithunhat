@@ -1,509 +1,515 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Check, HeartHandshake, Leaf, MessageCircle, Sparkles, Zap } from 'lucide-react'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfile } from '../services/profileService'
 import { getSurvey } from '../services/surveyService'
 import { getMyConnections } from '../services/connectionService'
 import { getConversations } from '../services/chatService'
+import postService from '../services/postService'
+import { CATEGORY_AVATAR_MAP } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
+import '../styles/lapulga.css'
+
+const unwrapList = (value) => Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : Array.isArray(value?.posts) ? value.posts : Array.isArray(value?.data) ? value.data : []
 
 export default function Home() {
   const { user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [survey, setSurvey] = useState(null)
   const [friendsCount, setFriendsCount] = useState(0)
+  const [connectedUserIds, setConnectedUserIds] = useState([])
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+  const [posts, setPosts] = useState([])
+  const [expandedComments, setExpandedComments] = useState({})
+  const [commentsMap, setCommentsMap] = useState({})
+  const [commentInputs, setCommentInputs] = useState({})
+  const [commentsLoading, setCommentsLoading] = useState({})
+  const [submittingComment, setSubmittingComment] = useState({})
+  const [likingPosts, setLikingPosts] = useState({})
+  const [interactionErrors, setInteractionErrors] = useState({})
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('Phù hợp với bạn')
+  const [previewImage, setPreviewImage] = useState(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const displayName = profile?.display_name || user?.display_name || user?.username || 'Bạn'
+  const avatar = profile?.avatar_url || user?.avatar_url
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? '' : curr))
+    }, 2600)
+  }
+
+  const handleSharePost = (postId) => {
+    const shareUrl = `${window.location.origin}/communities?tab=feed#post-${postId}`
+    navigator.clipboard?.writeText(shareUrl).catch(() => {})
+    showToast('Đã sao chép liên kết bài viết!')
+  }
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [profileData, surveyData, conns, convs] = await Promise.all([
-          getProfile().catch(() => null),
-          getSurvey().catch(() => null),
-          getMyConnections().catch(() => []),
-          getConversations().catch(() => []),
-        ])
-        setProfile(profileData)
-        setSurvey(surveyData)
-        setFriendsCount(conns?.length || 0)
+    if (!previewImage) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setPreviewImage(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewImage])
 
-        // Tính tổng tin nhắn chưa đọc
-        const unreadTotal = (convs || []).reduce((acc, c) => acc + (c.unread_count || 0), 0)
-        setUnreadMsgCount(unreadTotal)
-      } catch (err) {
-        console.error('Lỗi khi tải thông tin Dashboard:', err)
-      } finally {
-        setLoading(false)
-      }
+  useEffect(() => {
+    let alive = true
+    async function loadData() {
+      const [profileData, surveyData, connections, conversations, feed] = await Promise.all([
+        getProfile().catch(() => null), getSurvey().catch(() => null),
+        getMyConnections().catch(() => []), getConversations().catch(() => []),
+        postService.getFeed({ limit: 30 }).catch((error) => { console.warn('Không tải được bảng tin:', error); return [] }),
+      ])
+      if (!alive) return
+      setProfile(profileData)
+      setSurvey(surveyData)
+      setFriendsCount(Array.isArray(connections) ? connections.length : 0)
+      setConnectedUserIds(
+        Array.isArray(connections)
+          ? connections.map((connection) => connection.user?.id).filter(Boolean)
+          : []
+      )
+      setUnreadMsgCount((Array.isArray(conversations) ? conversations : []).reduce((sum, item) => sum + (item?.unread_count || 0), 0))
+      setPosts(unwrapList(feed))
+      setLoading(false)
     }
     loadData()
+    return () => { alive = false }
   }, [])
 
-  const displayName = profile?.display_name || user?.username || 'Bạn'
+  const visiblePosts = useMemo(() => {
+    const connectedIds = new Set(connectedUserIds.map(String))
+    const feelings = survey?.recent_feelings || []
+    const topics = survey?.topics || []
+    const lifeSituation = survey?.life_situation?.trim().toLocaleLowerCase()
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
-      <Navbar />
+    const matchesSurvey = (post) => {
+      const mood = (post.mood || '').toLocaleLowerCase()
+      const category = (post.category || '').toLocaleLowerCase()
+      const content = (post.content || '').toLocaleLowerCase()
+      const sameFeeling = feelings.some((feeling) => {
+        const value = feeling.toLocaleLowerCase()
+        return value.length > 2 && mood.length > 2 && (mood.includes(value) || value.includes(mood))
+      })
+      const sameTopic = topics.some((topic) => {
+        const value = topic.toLocaleLowerCase()
+        return value.length > 2 && (category.includes(value) || value.includes(category))
+      })
+      const sameSituation =
+        lifeSituation && lifeSituation.length > 2 && content.includes(lifeSituation)
+      return sameFeeling || sameTopic || sameSituation
+    }
 
-      <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '32px 16px 64px' }}>
-        {/* ========================================================= */}
-        {/* HERO WELCOME BANNER                                       */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #245745 0%, #3d705c 100%)',
-            borderRadius: '24px',
-            padding: '36px 32px',
-            color: '#ffffff',
-            marginBottom: '32px',
-            boxShadow: '0 8px 24px rgba(36, 87, 69, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '24px',
-          }}
-        >
-          <div style={{ maxWidth: '620px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                fontSize: '12px',
-                fontWeight: 600,
-                marginBottom: '14px',
-              }}
-            >
-              <span>◎ La Pulga Community</span>
-            </div>
+    return posts.filter((post) => {
+      const authorId = post.author?.id ?? post.user?.id
+      const isConnected = connectedIds.has(String(authorId))
+      const isMine = String(authorId) === String(user?.id)
+      if (filter === 'Bạn bè kết nối') return isConnected || isMine
+      if (filter === 'Cùng tâm trạng & hoàn cảnh') return matchesSurvey(post)
+      if (filter === 'Tất cả bài viết') return true
+      return isConnected || isMine || matchesSurvey(post)
+    })
+  }, [posts, connectedUserIds, survey, filter, user?.id])
 
-            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.5px' }}>
-              Chào mừng trở lại, {displayName}! <Sparkles size={16} aria-hidden="true" />
-            </h1>
+  const handleLike = async (post) => {
+    const postId = post?.id
+    if (!postId || likingPosts[postId]) return
 
-            <p style={{ fontSize: '15px', opacity: 0.92, margin: '0 0 20px 0', lineHeight: '1.6' }}>
-              <em>"Find people who understand you."</em> — Nơi bạn tìm thấy những người bạn có cùng hoàn cảnh, mục tiêu và chia sẻ những câu chuyện chân thực nhất.
-            </p>
+    setLikingPosts((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
+    try {
+      const result = await postService.toggleLike(postId)
+      setPosts((current) =>
+        current.map((item) =>
+          item.id === postId
+            ? {
+                ...item,
+                is_liked_by_me: result.liked,
+                likes_count: result.likes_count,
+              }
+            : item
+        )
+      )
+    } catch (error) {
+      console.error('Không thể thích bài viết:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể cập nhật lượt thích.',
+      }))
+    } finally {
+      setLikingPosts((current) => ({ ...current, [postId]: false }))
+    }
+  }
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <Link to="/discover">
-                <button
-                  type="button"
+  const handleToggleComments = async (postId) => {
+    if (expandedComments[postId]) {
+      setExpandedComments((current) => ({ ...current, [postId]: false }))
+      return
+    }
+
+    setExpandedComments((current) => ({ ...current, [postId]: true }))
+    if (commentsMap[postId]) return
+
+    setCommentsLoading((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
+    try {
+      const comments = await postService.getComments(postId)
+      setCommentsMap((current) => ({ ...current, [postId]: comments }))
+    } catch (error) {
+      console.error('Không thể tải bình luận:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể tải bình luận.',
+      }))
+    } finally {
+      setCommentsLoading((current) => ({ ...current, [postId]: false }))
+    }
+  }
+
+  const handleAddComment = async (event, postId) => {
+    event.preventDefault()
+    const content = commentInputs[postId]?.trim()
+    if (!content || submittingComment[postId]) return
+
+    setSubmittingComment((current) => ({ ...current, [postId]: true }))
+    setInteractionErrors((current) => ({ ...current, [postId]: '' }))
+    try {
+      const comment = await postService.addComment(postId, content)
+      setCommentsMap((current) => ({
+        ...current,
+        [postId]: [...(current[postId] || []), comment],
+      }))
+      setPosts((current) =>
+        current.map((item) =>
+          item.id === postId
+            ? { ...item, comments_count: (item.comments_count || 0) + 1 }
+            : item
+        )
+      )
+      setCommentInputs((current) => ({ ...current, [postId]: '' }))
+    } catch (error) {
+      console.error('Không thể gửi bình luận:', error)
+      setInteractionErrors((current) => ({
+        ...current,
+        [postId]: error.response?.data?.detail || 'Không thể gửi bình luận.',
+      }))
+    } finally {
+      setSubmittingComment((current) => ({ ...current, [postId]: false }))
+    }
+  }
+
+  return <div className="lp-home app-green-theme"><Navbar />
+    {toastMessage && (
+      <div className="fixed top-24 right-6 z-50">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00ff88]/50 bg-[#11151c]/95 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] backdrop-blur-md">
+          <span className="material-symbols-outlined text-[20px]">check_circle</span>
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      </div>
+    )}
+    <div className="lp-home-grid">
+      <main className="lp-home-center">
+        <section className="lp-hero"><small>LA PULGA · KHÔNG GIAN ĐỒNG ĐIỆU</small><h1>Chào {displayName}, hôm nay bạn cảm thấy thế nào?</h1><p>Một nơi để chia sẻ câu chuyện thật, gặp gỡ những người cùng cảm xúc và tìm thấy sự thấu hiểu.</p><div className="lp-hero-actions"><Link to="/discover" className="inline-flex items-center gap-1.5">Khám phá kết nối mới <span className="material-symbols-outlined text-[16px]">arrow_forward</span></Link>{!loading && !survey && <Link to="/survey" className="lp-survey-cta inline-flex items-center gap-1.5">Làm khảo sát <span className="material-symbols-outlined text-[16px]">arrow_forward</span></Link>}</div></section>
+        <div className="lp-feed-card lp-create-card" style={{padding:16}}><div className="lp-feed-head"><Avatar src={avatar} alt="Avatar của bạn"/><div style={{flex:1}}><b>Chia sẻ điều bạn đang nghĩ, {displayName}?</b><small>Bài viết của bạn có thể giúp ai đó cảm thấy được thấu hiểu.</small></div></div><Link to="/communities?tab=feed" className="lp-filter lp-create-post inline-flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[18px]">add</span><span>Tạo bài viết / chia sẻ khoảnh khắc</span></Link></div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'22px 2px 12px',gap:12}}><div><div className="lp-section-label" style={{margin:0}}>Cộng đồng La Pulga</div><h2 style={{fontSize:20,marginTop:5}}>Bảng tin mới nhất</h2></div><select className="lp-feed-filter" value={filter} onChange={(e)=>setFilter(e.target.value)}><option>Phù hợp với bạn</option><option>Bạn bè kết nối</option><option>Cùng tâm trạng & hoàn cảnh</option><option>Tất cả bài viết</option></select></div>
+        {loading ? <div className="lp-feed-card lp-home-empty">Đang tải bảng tin...</div> : visiblePosts.length === 0 ? <div className="lp-feed-card lp-home-empty">{posts.length === 0 ? 'Chưa có bài viết nào. Hãy khám phá cộng đồng hoặc kết nối với mọi người nhé.' : 'Chưa có bài viết phù hợp với bộ lọc này.'}<div style={{marginTop:14}}><Link className="lp-chip inline-flex items-center gap-1.5" to="/discover">Khám phá mọi người <span className="material-symbols-outlined text-[15px]">arrow_forward</span></Link></div></div> : visiblePosts.map((post, index) => {
+          const author = post.author || post.user || {}
+          const name = author.display_name || author.username || post.author_name || 'Thành viên La Pulga'
+          const content = post.content || post.body || post.text || ''
+          const postId = post.id || post.post_id || index
+          const postImage = post.image_url || post.image
+          return (
+            <article className="lp-feed-card" key={postId}>
+              <div className="lp-feed-head">
+                <Avatar src={author.avatar_url} alt={name} />
+                <div style={{ flex: 1 }}>
+                  <b>{name}</b>
+                  <small>
+                    {post.created_at
+                      ? new Date(post.created_at).toLocaleString('vi-VN')
+                      : 'Vừa chia sẻ'}
+                    {post.mood ? ` · ${post.mood}` : ''}
+                  </small>
+                </div>
+                <span className="lp-muted">•••</span>
+              </div>
+              <p>{content}</p>
+              {postImage && (
+                <div
+                  onClick={() => setPreviewImage(postImage)}
+                  title="Nhấn để phóng to ảnh xem chi tiết"
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    backgroundColor: '#ffffff',
-                    color: '#245745',
-                    fontSize: '14px',
-                    fontWeight: 700,
+                    width: '100%',
+                    maxHeight: 520,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    marginBottom: 14,
+                    backgroundColor: '#08090a',
+                    border: '1px solid #1a232e',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  Khám phá người đồng điệu <ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </Link>
-              {!survey && (
-                <Link to="/survey">
-                  <button
-                    type="button"
+                  <img
+                    src={postImage}
+                    alt="Ảnh trong bài viết"
                     style={{
-                      padding: '10px 20px',
-                      borderRadius: '10px',
-                      border: '1.5px solid rgba(255,255,255,0.8)',
-                      backgroundColor: 'transparent',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
+                      maxWidth: '100%',
+                      maxHeight: 520,
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                      display: 'block',
+                      margin: '0 auto',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 10,
+                      right: 10,
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      backdropFilter: 'blur(4px)',
+                      color: '#00ff88',
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      pointerEvents: 'none',
                     }}
                   >
-                    Hoàn thành Khảo sát
-                  </button>
-                </Link>
+                    <span>
+                      <span className="material-symbols-outlined text-[14px] align-middle mr-1">zoom_in</span>
+                      Phóng to
+                    </span>
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
+              <div className="lp-feed-actions">
+                <button
+                  type="button"
+                  disabled={Boolean(likingPosts[postId])}
+                  onClick={() => handleLike(post)}
+                  className={`lp-like-button ${post.is_liked_by_me ? 'is-liked' : ''}`}
+                  aria-pressed={Boolean(post.is_liked_by_me)}
+                  title="Thích bài viết"
+                >
+                  <span
+                    className="material-symbols-outlined text-[18px]"
+                    style={{
+                      fontVariationSettings: post.is_liked_by_me ? "'FILL' 1" : "'FILL' 0",
+                    }}
+                  >
+                    favorite
+                  </span>
+                  <span>{post.likes_count ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleComments(postId)}
+                  aria-expanded={Boolean(expandedComments[postId])}
+                  aria-controls={`home-comments-${postId}`}
+                  title="Bình luận"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                  <span>{post.comments_count ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSharePost(postId)}
+                  title="Chia sẻ liên kết"
+                >
+                  <span className="material-symbols-outlined text-[18px]">share</span>
+                </button>
+              </div>
 
-          {/* User Avatar Circle */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <img
-              src={
-                profile?.avatar_url ||
-                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.username || 'user')}`
-              }
-              alt={displayName}
-              style={{
-                width: '90px',
-                height: '90px',
-                borderRadius: '50%',
-                border: '3px solid rgba(255, 255, 255, 0.8)',
-                objectFit: 'cover',
-                backgroundColor: '#e1efe8',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-              }}
-            />
-            <span style={{ marginTop: '10px', fontSize: '13px', fontWeight: 600, opacity: 0.9 }}>
-              @{user?.username}
-            </span>
-          </div>
-        </div>
+              {interactionErrors[postId] && (
+                <p role="alert" style={{ color: '#fca5a5', fontSize: 12 }}>
+                  {interactionErrors[postId]}
+                </p>
+              )}
 
-        {/* ========================================================= */}
-        {/* STATS QUICK SUMMARY ROW                                   */}
-        {/* ========================================================= */}
+              {expandedComments[postId] && (
+                <section
+                  id={`home-comments-${postId}`}
+                  aria-label={`Bình luận bài viết của ${name}`}
+                  style={{ marginTop: 14 }}
+                >
+                  {commentsLoading[postId] ? (
+                    <p className="lp-muted">Đang tải bình luận...</p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 12, marginBottom: 14 }}>
+                      {(commentsMap[postId] || []).length === 0 ? (
+                        <p className="lp-muted">Chưa có bình luận nào.</p>
+                      ) : (
+                        commentsMap[postId].map((comment) => (
+                          <div
+                            key={comment.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 10,
+                            }}
+                          >
+                            <Avatar
+                              src={comment.author?.avatar_url}
+                              alt={comment.author?.display_name || comment.author?.username}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                flexShrink: 0,
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                            <div
+                              style={{
+                                flex: 1,
+                                padding: '9px 12px',
+                                borderRadius: 12,
+                                backgroundColor: 'rgba(255,255,255,.05)',
+                              }}
+                            >
+                              <b style={{ fontSize: 12 }}>
+                                {comment.author?.display_name ||
+                                  comment.author?.username ||
+                                  'Thành viên'}
+                              </b>
+                              <p style={{ margin: '4px 0 0', fontSize: 13 }}>
+                                {comment.content}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <form
+                    onSubmit={(event) => handleAddComment(event, postId)}
+                    style={{ display: 'flex', gap: 8 }}
+                  >
+                    <input
+                      type="text"
+                      value={commentInputs[postId] || ''}
+                      onChange={(event) =>
+                        setCommentInputs((current) => ({
+                          ...current,
+                          [postId]: event.target.value,
+                        }))
+                      }
+                      placeholder="Viết bình luận..."
+                      maxLength={1000}
+                      aria-label="Viết bình luận"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: '10px 12px',
+                        border: '1px solid #3b473f',
+                        borderRadius: 10,
+                        color: 'inherit',
+                        backgroundColor: 'rgba(0,0,0,.18)',
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!commentInputs[postId]?.trim() || submittingComment[postId]}
+                      className="lp-chip"
+                      style={{ border: 0, cursor: 'pointer' }}
+                    >
+                      {submittingComment[postId] ? 'Đang gửi...' : 'Gửi'}
+                    </button>
+                  </form>
+                </section>
+              )}
+            </article>
+          )
+        })}
+      </main>
+
+      <aside className="lp-home-right"><section className="lp-panel"><div className="lp-section-label" style={{marginTop:0}}>Tổng quan của bạn</div><div className="lp-stat"><span>Bạn bè kết nối</span><strong>{friendsCount}</strong></div><div className="lp-stat"><span>Tin nhắn chưa đọc</span><strong>{unreadMsgCount}</strong></div><div className="lp-stat"><span>Khảo sát</span><strong>{survey ? 'Hoàn tất' : 'Chưa làm'}</strong></div></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Gợi ý không gian</div>{[
+        [CATEGORY_AVATAR_MAP['Nghệ thuật & Sáng tạo'],'Nghệ thuật & Sáng tạo','Chia sẻ cảm hứng'],
+        [CATEGORY_AVATAR_MAP['Âm nhạc & Chill'],'Âm nhạc & Lofi','Tìm người cùng gu'],
+        [CATEGORY_AVATAR_MAP['Phát triển bản thân'],'Phát triển bản thân','Cùng tiến bộ mỗi ngày'],
+      ].map(([imgUrl,title,desc])=><Link to={`/discover?tab=groups&category=${encodeURIComponent(title)}`} className="lp-community-row hover:opacity-90 transition-opacity" key={title} style={{textDecoration:'none',color:'inherit'}}><img src={imgUrl} alt={title} onError={(e) => { e.currentTarget.src = brandMark }} style={{width:38,height:38,borderRadius:10,objectFit:'cover',flexShrink:0,border:'1px solid #1a232e'}} /><div><b>{title}</b><small>{desc}</small></div></Link>)}<Link to="/discover?tab=groups" className="lp-chip inline-flex items-center gap-1">Xem tất cả cộng đồng <span className="material-symbols-outlined text-[15px]">arrow_forward</span></Link></section><section className="lp-panel" style={{marginTop:16}}><div className="lp-section-label" style={{marginTop:0}}>Câu hỏi hôm nay</div><p style={{fontSize:14,lineHeight:1.7}}>Điều nhỏ bé nào gần đây khiến bạn cảm thấy biết ơn?</p><span className="lp-muted">Một lời nhắc để bắt đầu cuộc trò chuyện.</span></section></aside>
+    </div>
+
+    {/* Lightbox Modal Phóng To Ảnh Chi Tiết */}
+    {previewImage && (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          backdropFilter: 'blur(8px)',
+          padding: 16,
+        }}
+        onClick={() => setPreviewImage(null)}
+      >
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '16px',
-            marginBottom: '32px',
-          }}
-        >
-          {/* Survey Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Khảo sát Onboarding
-              </span>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: survey ? '#059669' : '#b45309', margin: '4px 0 0 0' }}>
-                {survey ? <><Check size={14} /> Đã hoàn thành</> : <><Zap size={14} /> Chưa làm</>}
-              </h3>
-            </div>
-            <Link
-              to="/survey"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#e1efe8',
-                color: '#245745',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              {survey ? 'Xem lại' : 'Làm ngay'}
-            </Link>
-          </div>
-
-          {/* Friends Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Bạn bè kết nối
-              </span>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', margin: '4px 0 0 0' }}>
-                {friendsCount} người
-              </h3>
-            </div>
-            <Link
-              to="/connections"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#e1efe8',
-                color: '#245745',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              Quản lý
-            </Link>
-          </div>
-
-          {/* Messages Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '18px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Tin nhắn mới
-              </span>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: unreadMsgCount > 0 ? '#ef4444' : '#1a1a2e', margin: '4px 0 0 0' }}>
-                {unreadMsgCount > 0 ? `${unreadMsgCount} chưa đọc` : '0 tin mới'}
-              </h3>
-            </div>
-            <Link
-              to="/messages"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#e1efe8',
-                color: '#245745',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              <MessageCircle size={16} aria-hidden="true" /> Mở chat
-            </Link>
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* 4 FEATURE HUB CARDS                                       */}
-        {/* ========================================================= */}
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '16px' }}>
-          <Leaf size={16} aria-hidden="true" /> Khám phá không gian cộng đồng
-        </h2>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '20px',
-            marginBottom: '36px',
-          }}
-        >
-          {/* Card 1: Khám phá */}
-          <Link
-            to="/discover"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#e1efe8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                <Sparkles size={24} aria-hidden="true" />
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Khám phá người đồng điệu
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Xem danh sách những người có điểm số tương đồng cao nhất dựa trên khảo sát và hồ sơ cá nhân của bạn.
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#245745', fontWeight: 700, fontSize: '13px' }}>
-              Khám phá ngay <ArrowRight size={14} aria-hidden="true" />
-            </span>
-          </Link>
-
-          {/* Card 2: Cộng đồng */}
-          <Link
-            to="/communities"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#fef3c7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                🌟
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Cộng đồng theo chủ đề
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Gia nhập các nhóm sở thích: Lập trình viên, Sách & Phát triển bản thân, Nghệ thuật, Thể thao, Freelancer...
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#d97706', fontWeight: 700, fontSize: '13px' }}>
-              Xem các nhóm <ArrowRight size={14} aria-hidden="true" />
-            </span>
-          </Link>
-
-          {/* Card 3: Kết nối */}
-          <Link
-            to="/connections"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#ecfdf5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                <HeartHandshake size={24} aria-hidden="true" />
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Mạng lưới bạn bè
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Quản lý các kết nối đã đồng ý, duyệt các lời mời kết nối nhận được và theo dõi lời mời đã gửi đi.
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#059669', fontWeight: 700, fontSize: '13px' }}>
-              Xem bạn bè ({friendsCount}) <ArrowRight size={14} aria-hidden="true" />
-            </span>
-          </Link>
-
-          {/* Card 4: Nhắn tin */}
-          <Link
-            to="/messages"
-            className="card-hover"
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #dce8e2',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: '#eff6ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  marginBottom: '16px',
-                }}
-              >
-                <MessageCircle size={24} aria-hidden="true" />
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                Trò chuyện Realtime
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Nhắn tin 1-1 trực tiếp qua WebSocket tốc độ cao, hiển thị tức thời, bảo mật và lưu trữ an toàn.
-              </p>
-            </div>
-            <span style={{ marginTop: '20px', color: '#2563eb', fontWeight: 700, fontSize: '13px' }}>
-              Mở hộp thư <ArrowRight size={14} aria-hidden="true" />
-            </span>
-          </Link>
-        </div>
-
-        {/* ========================================================= */}
-        {/* WARM TIPS & GUIDELINES                                    */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
-            padding: '28px',
-            border: '1px solid #dce8e2',
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '92vh',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
           }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
             style={{
-              width: '54px',
-              height: '54px',
+              position: 'absolute',
+              top: -42,
+              right: 0,
+              width: 36,
+              height: 36,
               borderRadius: '50%',
-              backgroundColor: '#e1efe8',
+              backgroundColor: '#181d26',
+              border: '1px solid #1a232e',
+              color: '#f1ffef',
+              cursor: 'pointer',
+              fontSize: 18,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '28px',
-              flexShrink: 0,
+              transition: 'color 0.2s',
             }}
+            title="Đóng (Escape)"
           >
-            💡
-          </div>
-          <div style={{ flex: 1, minWidth: '240px' }}>
-            <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px 0' }}>
-              Lời khuyên kết nối từ La Pulga
-            </h4>
-            <p style={{ fontSize: '13.5px', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
-              Một lời chào chân thành và nhắc đến điểm tương đồng mà hai bạn cùng chia sẻ trong khảo sát sẽ là khởi đầu tuyệt vời cho một tình bạn lâu dài!
-            </p>
-          </div>
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+          <img
+            src={previewImage}
+            alt="Ảnh phóng to"
+            style={{
+              maxHeight: '85vh',
+              maxWidth: '100%',
+              objectFit: 'contain',
+              borderRadius: 16,
+              boxShadow: '0 0 50px rgba(0, 0, 0, 0.9)',
+              border: '1px solid #1a232e',
+            }}
+          />
         </div>
       </div>
-    </div>
-  )
+    )}
+  </div>
 }

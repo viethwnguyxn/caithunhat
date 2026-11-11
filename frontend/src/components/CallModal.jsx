@@ -1,1148 +1,762 @@
-import { useState, useEffect, useRef } from 'react'
-import {
-  Ban,
-  Camera,
-  CameraOff,
-  Mic,
-  MicOff,
-  Phone,
-  Video,
-  X,
-} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import api from '../services/api'
+import Avatar from './Avatar'
 
-// Cấu hình Google STUN servers miễn phí cho WebRTC
-const RTC_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-  ],
-  iceCandidatePoolSize: 10,
-}
-
-// Bộ tạo âm thanh chuông gọi điện bằng Web Audio API an toàn, triệt tiêu tiếng tít khi ngắt máy
-class CallAudioSynthesizer {
-  constructor() {
-    this.ctx = null
-    this.intervalId = null
-    this.activeOscillators = new Set()
-    this.masterGain = null
-  }
-
-  ensureContext() {
-    try {
-      if (!this.ctx) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext
-        if (AudioCtx) this.ctx = new AudioCtx()
-      }
-      if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume()
-      }
-      if (this.ctx && !this.masterGain) {
-        this.masterGain = this.ctx.createGain()
-        this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime)
-        this.masterGain.connect(this.ctx.destination)
-      }
-    } catch (e) {}
-  }
-
-  // Âm chuông cuộc gọi đến (Nhạc chuông vui tai)
-  playIncomingRing() {
-    this.stop()
-    this.ensureContext()
-    if (!this.ctx || !this.masterGain) return
-
-    const playChime = () => {
-      try {
-        if (!this.ctx || !this.masterGain) return
-        const t = this.ctx.currentTime
-        const osc1 = this.ctx.createOscillator()
-        const osc2 = this.ctx.createOscillator()
-        const gain = this.ctx.createGain()
-
-        osc1.type = 'sine'
-        osc2.type = 'triangle'
-        osc1.frequency.setValueAtTime(523.25, t) // C5
-        osc1.frequency.exponentialRampToValueAtTime(659.25, t + 0.2) // E5
-        osc2.frequency.setValueAtTime(783.99, t) // G5
-
-        gain.gain.setValueAtTime(0.18, t)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
-
-        osc1.connect(gain)
-        osc2.connect(gain)
-        gain.connect(this.masterGain)
-
-        this.activeOscillators.add(osc1)
-        this.activeOscillators.add(osc2)
-
-        const cleanup = () => {
-          this.activeOscillators.delete(osc1)
-          this.activeOscillators.delete(osc2)
-          try {
-            osc1.disconnect()
-            osc2.disconnect()
-            gain.disconnect()
-          } catch (e) {}
-        }
-        osc1.onended = cleanup
-        osc2.onended = cleanup
-
-        osc1.start(t)
-        osc2.start(t)
-        osc1.stop(t + 0.5)
-        osc2.stop(t + 0.5)
-      } catch (e) {}
-    }
-
-    playChime()
-    this.intervalId = setInterval(playChime, 2000)
-  }
-
-  // Âm chuông chờ đổ máy bên phía người gọi (Ringback tone tút... tút...)
-  playOutgoingRingback() {
-    this.stop()
-    this.ensureContext()
-    if (!this.ctx || !this.masterGain) return
-
-    const playBeep = () => {
-      try {
-        if (!this.ctx || !this.masterGain) return
-        const t = this.ctx.currentTime
-        const osc = this.ctx.createOscillator()
-        const gain = this.ctx.createGain()
-
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(440, t)
-
-        gain.gain.setValueAtTime(0.08, t)
-        gain.gain.setValueAtTime(0.08, t + 1.0)
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1)
-
-        osc.connect(gain)
-        gain.connect(this.masterGain)
-
-        this.activeOscillators.add(osc)
-        osc.onended = () => {
-          this.activeOscillators.delete(osc)
-          try {
-            osc.disconnect()
-            gain.disconnect()
-          } catch (e) {}
-        }
-
-        osc.start(t)
-        osc.stop(t + 1.1)
-      } catch (e) {}
-    }
-
-    playBeep()
-    this.intervalId = setInterval(playBeep, 3500)
-  }
-
-  stop() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = null
-    }
-
-    // Dừng và ngắt kết nối NGAY LẬP TỨC toàn bộ oscillator đang phát
-    this.activeOscillators.forEach((osc) => {
-      try {
-        osc.stop()
-        osc.disconnect()
-      } catch (e) {}
-    })
-    this.activeOscillators.clear()
-
-    // Khóa master gain và ngắt kết nối khỏi destination
-    if (this.masterGain && this.ctx) {
-      try {
-        this.masterGain.gain.cancelScheduledValues(0)
-        this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime)
-        this.masterGain.disconnect()
-      } catch (e) {}
-      this.masterGain = null
-    }
-  }
-}
-
-const audioSynth = new CallAudioSynthesizer()
+const avatarFor = (partner) =>
+  partner?.avatar_url
 
 export default function CallModal({
-  callSession, // { mode: 'outgoing'|'incoming', callType: 'audio'|'video', partner, sdp, conversationId }
+  callSession,
+  callClient,
+  currentUserId,
+  callError,
   onEndCall,
-  onSendSignal,
-  onRegisterSignalListener, // Đăng ký nhận signal trực tiếp từ WebSocket (chống mất gói tin do React state batching)
 }) {
   const [callStatus, setCallStatus] = useState(
-    callSession.mode === 'outgoing' ? 'calling' : callSession.mode
-  ) // 'calling' | 'incoming' | 'connected' | 'ended'
+    callSession.mode === 'outgoing' ? 'calling' : 'incoming'
+  )
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
   const [duration, setDuration] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
+  const [localAspectRatio, setLocalAspectRatio] = useState(null)
 
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
-  const remoteAudioRef = useRef(null)
-
-  const peerConnectionRef = useRef(null)
+  const remoteMediaRef = useRef(null)
+  const callRef = useRef(null)
+  const mediaTracksRef = useRef(new Set())
   const localStreamRef = useRef(null)
   const remoteStreamRef = useRef(null)
-  const iceCandidateQueueRef = useRef([]) // Hàng đợi ICE candidate khi remote description chưa sẵn sàng
+  const ringIntervalRef = useRef(null)
+  const ringContextRef = useRef(null)
   const ringTimeoutRef = useRef(null)
+  const endCallRef = useRef(null)
+  const finalizeTimeoutRef = useRef(null)
   const durationTimerRef = useRef(null)
+  const durationRef = useRef(0)
+  const statusRef = useRef(callSession.mode === 'outgoing' ? 'calling' : 'incoming')
+  const callStartedRef = useRef(false)
+  const finalizedRef = useRef(false)
+  const endingReasonRef = useRef(null)
 
   const isVideoCall = callSession.callType === 'video'
   const partner = callSession.partner
 
-  // 1. Quản lý âm thanh chuông & Timeout 45s cuộc gọi
-  useEffect(() => {
-    if (callStatus === 'incoming') {
-      audioSynth.playIncomingRing()
-    } else if (callStatus === 'calling') {
-      audioSynth.playOutgoingRingback()
+  const updateStatus = (status) => {
+    statusRef.current = status
+    setCallStatus(status)
+  }
 
-      // Tự động hủy nếu đối phương không nhấc máy sau 45 giây (đủ thời gian cho người nhận kịp bấm)
-      ringTimeoutRef.current = setTimeout(() => {
-        handleEndCall('no_answer')
-      }, 45000)
-    } else {
-      audioSynth.stop()
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+  const markConnected = () => {
+    if (finalizedRef.current || statusRef.current === 'connected') return
+    updateStatus('connected')
+    stopRinging()
+    if (ringTimeoutRef.current) {
+      clearTimeout(ringTimeoutRef.current)
+      ringTimeoutRef.current = null
     }
+  }
 
-    return () => {
-      audioSynth.stop()
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+  const stopRinging = () => {
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current)
+      ringIntervalRef.current = null
     }
-  }, [callStatus])
-
-  // 2. Dọn dẹp âm thanh triệt để khi component unmount
-  useEffect(() => {
-    return () => {
-      audioSynth.stop()
+    if (ringContextRef.current) {
+      ringContextRef.current.close().catch((error) => {
+        console.warn('Không thể đóng âm thanh chuông:', error)
+      })
+      ringContextRef.current = null
     }
-  }, [])
+  }
 
-  // 3. Bộ đếm thời gian khi cuộc gọi kết nối
-  useEffect(() => {
-    if (callStatus === 'connected') {
-      durationTimerRef.current = setInterval(() => {
-        setDuration((prev) => prev + 1)
-      }, 1000)
-    } else {
-      if (durationTimerRef.current) clearInterval(durationTimerRef.current)
-    }
-
-    return () => {
-      if (durationTimerRef.current) clearInterval(durationTimerRef.current)
-    }
-  }, [callStatus])
-
-  // 4. Đồng bộ Stream vào DOM Video / Audio element (Giải quyết màn hình đen & không tiếng)
-  useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current && isVideoCall) {
-      if (localVideoRef.current.srcObject !== localStreamRef.current) {
-        localVideoRef.current.srcObject = localStreamRef.current
-      }
-      localVideoRef.current.play().catch(() => {})
-    }
-  }, [callStatus, isVideoCall])
-
-  useEffect(() => {
-    if (remoteStreamRef.current) {
-      if (remoteVideoRef.current && isVideoCall) {
-        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
-          remoteVideoRef.current.srcObject = remoteStreamRef.current
-        }
-        const playPromise = remoteVideoRef.current.play()
-        if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn('remoteVideo play err, retrying muted:', err)
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.muted = true
-              remoteVideoRef.current.play().catch(() => {})
-            }
+  const playRing = (incoming) => {
+    stopRinging()
+    const playTone = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext
+        if (!AudioContext) return
+        const context = ringContextRef.current || new AudioContext()
+        ringContextRef.current = context
+        if (context.state === 'suspended') {
+          context.resume().catch((error) => {
+            console.warn('Không thể kích hoạt âm thanh chuông:', error)
           })
         }
-      }
-      if (remoteAudioRef.current) {
-        if (remoteAudioRef.current.srcObject !== remoteStreamRef.current) {
-          remoteAudioRef.current.srcObject = remoteStreamRef.current
-        }
-        remoteAudioRef.current.play().catch(() => {})
-      }
-    }
-  }, [callStatus, isVideoCall])
 
-  // 5. Khởi tạo WebRTC PeerConnection
-  const initPeerConnection = () => {
-    if (peerConnectionRef.current) return peerConnectionRef.current
-
-    const pc = new RTCPeerConnection(RTC_CONFIG)
-    peerConnectionRef.current = pc
-
-    // Gửi ICE candidate tới đối phương qua WebSocket
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        onSendSignal({
-          type: 'call:ice_candidate',
-          candidate: event.candidate,
-          call_type: callSession.callType,
-          target_user_id: callSession.partner?.id,
-          conversation_id: callSession.conversationId,
+        const now = context.currentTime
+        const frequencies = incoming ? [523.25, 659.25, 783.99] : [440]
+        frequencies.forEach((frequency, index) => {
+          const oscillator = context.createOscillator()
+          const gain = context.createGain()
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(frequency, now)
+          gain.gain.setValueAtTime(incoming ? 0.06 : 0.04, now)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45)
+          oscillator.connect(gain)
+          gain.connect(context.destination)
+          oscillator.start(now + index * 0.02)
+          oscillator.stop(now + 0.45)
         })
+      } catch (error) {
+        console.warn('Không thể phát âm thanh chuông:', error)
       }
     }
 
-    // Nhận stream Audio/Video từ đối phương - gom các track liên tục vào stream chung
-    pc.ontrack = (event) => {
-      // Khi đã nhận được track media từ đối phương -> Khẳng định kết nối thành công, vào Live ngay
-      setCallStatus('connected')
-      audioSynth.stop()
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-
-      if (!remoteStreamRef.current) {
-        remoteStreamRef.current = new MediaStream()
-      }
-      if (event.streams && event.streams[0]) {
-        event.streams[0].getTracks().forEach((track) => {
-          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
-            remoteStreamRef.current.addTrack(track)
-          }
-        })
-      } else if (event.track) {
-        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
-          remoteStreamRef.current.addTrack(event.track)
-        }
-      }
-
-      const stream = remoteStreamRef.current
-
-      if (remoteVideoRef.current && isVideoCall) {
-        if (remoteVideoRef.current.srcObject !== stream) {
-          remoteVideoRef.current.srcObject = stream
-        }
-        const playPromise = remoteVideoRef.current.play()
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.muted = true
-              remoteVideoRef.current.play().catch(() => {})
-            }
-          })
-        }
-      }
-
-      if (remoteAudioRef.current) {
-        if (remoteAudioRef.current.srcObject !== stream) {
-          remoteAudioRef.current.srcObject = stream
-        }
-        remoteAudioRef.current.play().catch(() => {})
-      }
-    }
-
-    // Đồng bộ trạng thái kết nối hai bên: CHỈ đếm giờ khi gói tin media thực sự kết nối!
-    const checkConnected = () => {
-      if (
-        pc.connectionState === 'connected' ||
-        pc.iceConnectionState === 'connected' ||
-        pc.iceConnectionState === 'completed'
-      ) {
-        setCallStatus('connected')
-        audioSynth.stop()
-        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-      }
-    }
-
-    pc.onconnectionstatechange = () => {
-      checkConnected()
-      if (pc.connectionState === 'failed') {
-        setTimeout(() => {
-          if (
-            peerConnectionRef.current &&
-            peerConnectionRef.current.connectionState === 'failed' &&
-            peerConnectionRef.current.iceConnectionState === 'failed'
-          ) {
-            handleEndCall('connection_lost')
-          }
-        }, 7000)
-      }
-    }
-
-    pc.oniceconnectionstatechange = () => {
-      checkConnected()
-    }
-
-    return pc
+    playTone()
+    ringIntervalRef.current = setInterval(playTone, incoming ? 2000 : 3500)
   }
 
-  // 6. Lấy Media Stream từ Microphone / Camera (có cơ chế fallback an toàn nếu Camera đang bận)
-  const getMediaStream = async (wantVideo) => {
-    try {
-      if (wantVideo) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              facingMode: 'user',
-            },
-          })
-          localStreamRef.current = stream
-
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream
-            localVideoRef.current.play().catch(() => {})
-          }
-
-          return stream
-        } catch (camErr) {
-          console.warn('Camera đang bận hoặc không khả dụng, tự động fallback sang Mic:', camErr)
-          // Fallback sang Voice nếu Camera đang bị ứng dụng/tab khác giữ
-          const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-            video: false,
-          })
-          localStreamRef.current = audioOnlyStream
-          return audioOnlyStream
-        }
-      } else {
-        const audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-          video: false,
-        })
-        localStreamRef.current = audioStream
-        return audioStream
-      }
-    } catch (err) {
-      console.warn('Lỗi lấy Microphone:', err)
-      throw new Error('Vui lòng cấp quyền Microphone để đàm thoại.')
-    }
-  }
-
-  // 7. Khởi tạo cuộc gọi đi (Outgoing Call)
-  const startOutgoingCall = async () => {
-    try {
-      const stream = await getMediaStream(isVideoCall)
-      const pc = initPeerConnection()
-
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream)
-      })
-
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: isVideoCall,
-      })
-      await pc.setLocalDescription(offer)
-
-      onSendSignal({
-        type: 'call:offer',
-        call_type: callSession.callType,
-        sdp: offer,
-        target_user_id: callSession.partner?.id,
-        conversation_id: callSession.conversationId,
-      })
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể bắt đầu cuộc gọi')
-      setTimeout(() => handleEndCall('error'), 3000)
-    }
-  }
-
-  // 8. Chấp nhận cuộc gọi đến (Accept Call)
-  const handleAcceptCall = async () => {
-    audioSynth.stop()
-    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-    setCallStatus('connecting') // Đặt connecting, chờ WebRTC ICE bắt tay xong mới đếm giờ đồng bộ
-
-    try {
-      const stream = await getMediaStream(isVideoCall)
-      const pc = initPeerConnection()
-
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream)
-      })
-
-      if (callSession.sdp) {
-        await pc.setRemoteDescription(new RTCSessionDescription(callSession.sdp))
-
-        const answer = await pc.createAnswer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: isVideoCall,
-        })
-        await pc.setLocalDescription(answer)
-
-        // Áp dụng các ICE candidate sau khi đã setLocalDescription(answer) thành công
-        while (iceCandidateQueueRef.current.length > 0) {
-          const cand = iceCandidateQueueRef.current.shift()
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(cand))
-          } catch (e) {
-            console.warn('Lỗi thêm queued ICE candidate on accept:', e)
-          }
-        }
-
-        onSendSignal({
-          type: 'call:answer',
-          call_type: callSession.callType,
-          sdp: answer,
-          target_user_id: callSession.partner?.id,
-          conversation_id: callSession.conversationId,
-        })
-      }
-    } catch (err) {
-      console.error('Lỗi khi chấp nhận cuộc gọi:', err)
-      setErrorMessage(err.message || 'Lỗi khi chấp nhận cuộc gọi')
-      setTimeout(() => handleEndCall('error'), 3000)
-    }
-  }
-
-  // 9. Từ chối cuộc gọi đến (Reject Call)
-  const handleRejectCall = () => {
-    audioSynth.stop()
-    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-    onSendSignal({
-      type: 'call:reject',
-      call_type: callSession.callType,
-      reason: 'declined',
-      target_user_id: callSession.partner?.id,
-      conversation_id: callSession.conversationId,
-    })
-    cleanupCall()
-    onEndCall({ duration: 0, reason: 'declined' })
-  }
-
-  // 10. Kết thúc cuộc gọi
-  const handleEndCall = (reason = 'user_hangup') => {
-    audioSynth.stop()
-    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-    onSendSignal({
-      type: 'call:end',
-      call_type: callSession.callType,
-      duration_seconds: duration,
-      reason: reason,
-      target_user_id: callSession.partner?.id,
-      conversation_id: callSession.conversationId,
-    })
-    cleanupCall()
-    onEndCall({ duration, reason })
-  }
-
-  // Dọn dẹp Stream và PeerConnection
-  const cleanupCall = () => {
-    audioSynth.stop()
+  const cleanupMedia = () => {
+    stopRinging()
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop())
+      localStreamRef.current.getTracks().forEach((track) => track.stop())
       localStreamRef.current = null
     }
     if (remoteStreamRef.current) {
-      remoteStreamRef.current.getTracks().forEach((t) => t.stop())
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop())
       remoteStreamRef.current = null
     }
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null
+    if (localVideoRef.current) localVideoRef.current.srcObject = null
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+    if (remoteMediaRef.current) {
+      remoteMediaRef.current.pause()
+      remoteMediaRef.current.srcObject = null
     }
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null
-    }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null
-      remoteAudioRef.current.pause()
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close()
-      peerConnectionRef.current = null
-    }
+    mediaTracksRef.current.forEach((track) => {
+      try {
+        track.detachAndRemove()
+      } catch (error) {
+        console.warn('Không thể gỡ media track Stringee:', error)
+      }
+    })
+    mediaTracksRef.current.clear()
+    localVideoRef.current?.replaceChildren()
+    remoteVideoRef.current?.replaceChildren()
     if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+    if (finalizeTimeoutRef.current) clearTimeout(finalizeTimeoutRef.current)
     if (durationTimerRef.current) clearInterval(durationTimerRef.current)
   }
 
-  // 11. Lắng nghe và xử lý trực tiếp tất cả tín hiệu WebRTC từ đối phương
-  const handleIncomingSignal = async (signal) => {
-    if (!signal) return
-    const { type, sdp, candidate, reason } = signal
-    const pc = peerConnectionRef.current
+  const recordCallResult = async (reason) => {
+    if (callSession.mode !== 'outgoing') return true
 
-    if (type === 'call:answer') {
-      // Triệt tiêu chuông đổ và hủy ngay bộ đếm tự động ngắt 45s khi đối phương đã nhấc máy
-      audioSynth.stop()
-      if (ringTimeoutRef.current) {
-        clearTimeout(ringTimeoutRef.current)
-        ringTimeoutRef.current = null
-      }
-      setCallStatus('connecting')
+    let outcome = null
+    if (reason === 'busy') outcome = 'busy'
+    else if (reason === 'declined') outcome = 'declined'
+    else if (reason === 'no_answer') outcome = 'missed'
+    else if (durationRef.current > 0 || statusRef.current === 'connected') {
+      outcome = 'completed'
+    }
+    if (!outcome) return true
 
-      if (pc) {
-        try {
-          if (sdp && pc.signalingState !== 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+    try {
+      await api.post(`/api/calls/${callSession.conversationId}/events`, {
+        call_type: callSession.callType,
+        outcome,
+        duration_seconds: durationRef.current,
+      })
+      return true
+    } catch (error) {
+      console.error('Không thể lưu lịch sử cuộc gọi:', error)
+      setErrorMessage('Cuộc gọi đã kết thúc nhưng không thể lưu lịch sử.')
+      return false
+    }
+  }
 
-            // Áp dụng tất cả ICE candidate đang xếp hàng chờ
-            while (iceCandidateQueueRef.current.length > 0) {
-              const queuedCand = iceCandidateQueueRef.current.shift()
-              try {
-                await pc.addIceCandidate(new RTCIceCandidate(queuedCand))
-              } catch (e) {
-                console.warn('Lỗi áp dụng queued candidate:', e)
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Lỗi khi setRemoteDescription answer:', err)
-        }
-      }
-    } else if (type === 'call:ice_candidate') {
-      if (candidate) {
-        // Nếu PeerConnection chưa sẵn sàng hoặc chưa có RemoteDescription -> Đưa vào hàng đợi
-        if (!pc || !pc.remoteDescription || !pc.remoteDescription.type) {
-          iceCandidateQueueRef.current.push(candidate)
-        } else {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate))
-          } catch (e) {
-            console.warn('Lỗi thêm ICE candidate:', e)
-          }
-        }
-      }
-    } else if (type === 'call:reject' || type === 'call:end') {
-      audioSynth.stop()
-      if (ringTimeoutRef.current) {
-        clearTimeout(ringTimeoutRef.current)
-        ringTimeoutRef.current = null
-      }
-      setErrorMessage(
-        type === 'call:reject'
-          ? (reason === 'busy' ? 'Đối phương đang bận' : 'Đối phương đã từ chối cuộc gọi')
-          : 'Cuộc gọi đã kết thúc'
-      )
-      setTimeout(() => {
-        cleanupCall()
-        onEndCall({ duration, reason: reason || 'remote_ended' })
-      }, 600)
-    } else if (type === 'call:unavailable') {
-      audioSynth.stop()
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
-      setErrorMessage(signal.message || 'Đối phương hiện không trực tuyến.')
-      setTimeout(() => {
-        cleanupCall()
-        onEndCall({ duration: 0, reason: 'unavailable' })
+  const finalizeCall = async (reason, shouldRecord) => {
+    if (finalizedRef.current) return
+    finalizedRef.current = true
+    const recorded = !shouldRecord || (await recordCallResult(reason))
+    cleanupMedia()
+    if (!recorded) {
+      updateStatus('ended')
+      finalizeTimeoutRef.current = setTimeout(() => {
+        onEndCall({ duration: durationRef.current, reason })
       }, 2500)
-    } else if (type === 'call:error') {
-      audioSynth.stop()
-      setErrorMessage(signal.message || 'Lỗi cuộc gọi')
-      setTimeout(() => {
-        cleanupCall()
-        onEndCall({ duration: 0, reason: 'error' })
-      }, 2000)
+      return
     }
+    onEndCall({ duration: durationRef.current, reason })
   }
 
-  // Đăng ký listener nhận tín hiệu realtime từ WebSocket trong Messages.jsx
-  useEffect(() => {
-    if (onRegisterSignalListener) {
-      const unsubscribe = onRegisterSignalListener(handleIncomingSignal)
-      return () => {
-        if (unsubscribe) unsubscribe()
+  const finalizeCallRef = useRef(finalizeCall)
+  finalizeCallRef.current = finalizeCall
+
+  const attachCallEvents = (call) => {
+    callRef.current = call
+    const attachVideoTrack = (track, container, isLocal) => {
+      if (!container) return
+      const element = track.attach()
+      element.autoplay = true
+      element.playsInline = true
+      element.muted = isLocal
+      element.style.width = '100%'
+      element.style.height = '100%'
+      element.style.maxWidth = '100%'
+      element.style.maxHeight = '100%'
+      element.style.objectFit = 'contain'
+      element.style.display = 'block'
+      // Giữ nguyên chiều camera (không lật gương) để hình mình thấy khớp y hệt bên kia nhìn thấy
+      element.style.transform = 'none'
+
+      if (isLocal) {
+        const syncLocalAspectRatio = () => {
+          if (!finalizedRef.current && element.videoWidth > 0 && element.videoHeight > 0) {
+            setLocalAspectRatio(element.videoWidth / element.videoHeight)
+          }
+        }
+        element.onloadedmetadata = syncLocalAspectRatio
+        element.onresize = syncLocalAspectRatio
+        syncLocalAspectRatio()
       }
-    }
-  }, [onRegisterSignalListener])
 
-  // Bắt đầu gọi nếu là người khởi xướng
+      container.appendChild(element)
+      mediaTracksRef.current.add(track)
+    }
+
+    if (isVideoCall) {
+      call.on('addlocaltrack', (track) => {
+        attachVideoTrack(track, localVideoRef.current, true)
+      })
+      call.on('addremotetrack', (track) => {
+        attachVideoTrack(track, remoteVideoRef.current, false)
+        // Trên StringeeCall2, bên người nghe không nhận signalingstate code 3 nên đồng bộ khi media đến
+        if (statusRef.current === 'connecting') {
+          markConnected()
+        }
+      })
+      call.on('removelocaltrack', (track) => {
+        mediaTracksRef.current.delete(track)
+        track.detachAndRemove()
+      })
+      call.on('removeremotetrack', (track) => {
+        mediaTracksRef.current.delete(track)
+        track.detachAndRemove()
+      })
+    }
+
+    call.on('addlocalstream', (stream) => {
+      localStreamRef.current = stream
+    })
+    call.on('addremotestream', (stream) => {
+      remoteStreamRef.current = stream
+      stopRinging()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+      if (statusRef.current === 'connecting') {
+        markConnected()
+      }
+
+      if (remoteMediaRef.current) {
+        remoteMediaRef.current.srcObject = stream
+        remoteMediaRef.current.play().catch((error) => {
+          console.error('Không thể phát media đối phương:', error)
+          setErrorMessage('Trình duyệt chưa phát được âm thanh. Hãy kiểm tra quyền âm thanh và thử lại.')
+        })
+      }
+    })
+    call.on('signalingstate', (state) => {
+      console.info('Stringee signalingstate:', state)
+      if (state?.code === 3) {
+        markConnected()
+      } else if (state?.code === 5) {
+        endingReasonRef.current = 'busy'
+        setErrorMessage('Đối phương đang bận hoặc đã từ chối cuộc gọi.')
+        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+        finalizeTimeoutRef.current = setTimeout(() => {
+          void finalizeCallRef.current('busy', true)
+        }, 2000)
+      } else if (state?.code === 6) {
+        const connected = statusRef.current === 'connected'
+        const reason =
+          endingReasonRef.current || (connected ? 'remote_ended' : 'no_answer')
+        void finalizeCallRef.current(reason, true)
+      }
+    })
+    call.on('mediastate', (state) => {
+      console.info('Stringee mediastate:', state)
+      if (
+        statusRef.current === 'connecting' &&
+        (state?.code === 1 || state?.isConnected === true)
+      ) {
+        markConnected()
+      }
+    })
+    call.on('error', (info) => {
+      console.error('Stringee call error:', info)
+      setErrorMessage(info?.message || 'Cuộc gọi gặp lỗi.')
+    })
+    call.on('otherdevice', (data) => {
+      if (data?.type === 'CALL_END') {
+        void finalizeCallRef.current('remote_ended', true)
+      }
+    })
+  }
+
   useEffect(() => {
-    if (callSession.mode === 'outgoing') {
-      startOutgoingCall()
+    if (callSession.mode === 'incoming' && callSession.stringeeCall) {
+      if (callRef.current !== callSession.stringeeCall) {
+        attachCallEvents(callSession.stringeeCall)
+      }
+      return
     }
-  }, [])
+    if (callSession.mode !== 'outgoing' || !callClient || callStartedRef.current) return
 
-  // Bật/tắt Micro
+    let isCancelled = false
+    callStartedRef.current = true
+    import('stringee')
+    .then(({ StringeeCall, StringeeCall2 }) => {
+        if (isCancelled) return
+      const CallConstructor = isVideoCall ? StringeeCall2 : StringeeCall
+      const call = isVideoCall
+        ? new CallConstructor(
+            callClient,
+            String(currentUserId),
+            String(partner?.id),
+            true
+          )
+        : new CallConstructor(callClient, String(currentUserId), String(partner?.id))
+      attachCallEvents(call)
+        call.makeCall((result) => {
+          if (result?.r !== 0) {
+            const message = result?.message || 'Stringee không thể bắt đầu cuộc gọi.'
+            console.error('Stringee makeCall thất bại:', result)
+            setErrorMessage(message)
+            finalizeTimeoutRef.current = setTimeout(() => {
+              void finalizeCallRef.current('error', false)
+            }, 2500)
+          }
+        })
+      })
+      .catch((error) => {
+        if (isCancelled) return
+        console.error('Không thể khởi tạo cuộc gọi Stringee:', error)
+        setErrorMessage(error.message || 'Không thể khởi tạo cuộc gọi.')
+        setTimeout(() => {
+          void finalizeCallRef.current('error', false)
+        }, 2500)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [callClient, callSession, currentUserId, isVideoCall, partner?.id])
+
+  useEffect(() => {
+    if (callError && callSession.mode === 'outgoing' && !callStartedRef.current) {
+      setErrorMessage(callError)
+      const timeout = setTimeout(() => {
+        void finalizeCallRef.current('error', false)
+      }, 3000)
+      return () => clearTimeout(timeout)
+    }
+  }, [callError, callSession.mode])
+
+  useEffect(() => {
+    if (callStatus === 'incoming') {
+      playRing(true)
+    } else if (callStatus === 'calling' || callStatus === 'ringing') {
+      playRing(false)
+      ringTimeoutRef.current = setTimeout(() => {
+        endCallRef.current?.('no_answer')
+      }, 45000)
+    } else {
+      stopRinging()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+    }
+
+    return () => {
+      stopRinging()
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current)
+    }
+  }, [callStatus])
+
+  useEffect(() => {
+    if (callStatus === 'connected') {
+      durationTimerRef.current = setInterval(() => {
+        durationRef.current += 1
+        setDuration(durationRef.current)
+      }, 1000)
+    } else if (durationTimerRef.current) {
+      clearInterval(durationTimerRef.current)
+      durationTimerRef.current = null
+    }
+    return () => {
+      if (durationTimerRef.current) clearInterval(durationTimerRef.current)
+    }
+  }, [callStatus])
+
+  useEffect(
+    () => () => {
+      cleanupMedia()
+    },
+    []
+  )
+
+  const handleAcceptCall = () => {
+    const call = callRef.current
+    if (!call) {
+      setErrorMessage('Không tìm thấy phiên gọi Stringee.')
+      return
+    }
+    updateStatus('connecting')
+    call.answer((result) => {
+      if (result?.r === 0) {
+        // Stringee SDK chỉ bắn signalingstate code 3 (Answered) cho phía người gọi,
+        // phía người nghe chuyển sang connected ngay khi answer thành công.
+        markConnected()
+      } else {
+        const message = result?.message || 'Không thể trả lời cuộc gọi.'
+        console.error('Stringee answer thất bại:', result)
+        setErrorMessage(message)
+      }
+    })
+  }
+
+  const handleRejectCall = () => {
+    const call = callRef.current
+    if (call) {
+      call.reject((result) => {
+        if (result?.r !== 0) {
+          console.error('Stringee reject thất bại:', result)
+        }
+      })
+    }
+    void finalizeCall('declined', false)
+  }
+
+  const handleEndCall = (reason = 'user_hangup') => {
+    const finalReason =
+      reason === 'user_hangup' &&
+      callSession.mode === 'outgoing' &&
+      statusRef.current !== 'connected'
+        ? 'no_answer'
+        : reason
+    const call = callRef.current
+    if (call) {
+      call.hangup((result) => {
+        if (result?.r !== 0) {
+          console.error('Stringee hangup thất bại:', result)
+        }
+      })
+    }
+    void finalizeCall(finalReason, true)
+  }
+  endCallRef.current = handleEndCall
+
   const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks()
-      if (audioTracks.length > 0) {
-        audioTracks[0].enabled = !audioTracks[0].enabled
-        setIsMuted(!audioTracks[0].enabled)
-      }
-    }
+    const nextMuted = !isMuted
+    callRef.current?.mute(nextMuted)
+    setIsMuted(nextMuted)
   }
 
-  // Bật/tắt Camera
   const toggleCamera = () => {
-    if (localStreamRef.current) {
-      const videoTracks = localStreamRef.current.getVideoTracks()
-      if (videoTracks.length > 0) {
-        videoTracks[0].enabled = !videoTracks[0].enabled
-        setIsCameraOff(!videoTracks[0].enabled)
-      }
-    }
+    const nextCameraOff = !isCameraOff
+    callRef.current?.enableLocalVideo(!nextCameraOff)
+    setIsCameraOff(nextCameraOff)
   }
 
-  // Định dạng thời gian MM:SS
-  const formatDuration = (secs) => {
-    const m = Math.floor(secs / 60)
-    const s = secs % 60
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  const formatDuration = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainder = seconds % 60
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
   }
+
+  const statusText =
+    callStatus === 'connected'
+      ? formatDuration(duration)
+      : callStatus === 'connecting'
+      ? 'Đang kết nối...'
+      : errorMessage || (callStatus === 'incoming' ? 'Cuộc gọi đến' : 'Đang đổ chuông...')
 
   return (
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        inset: 0,
         zIndex: 9999,
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#ffffff',
+        padding: 16,
+        color: '#fff',
         fontFamily: 'inherit',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        backdropFilter: 'blur(12px)',
       }}
     >
-      {/* Audio element ẩn để phát tiếng của đối phương */}
-      <audio
-        ref={remoteAudioRef}
-        autoPlay
-        playsInline
-        onLoadedMetadata={(e) => e.target.play().catch(() => {})}
-      />
-
-      {/* ============================================================== */}
-      {/* TRƯỜNG HỢP 1: CUỘC GỌI ĐẾN (INCOMING CALL DIALOG)              */}
-      {/* ============================================================== */}
-      {callStatus === 'incoming' && (
-        <div
+      {isVideoCall ? (
+        <audio ref={remoteMediaRef} autoPlay playsInline />
+      ) : (
+        <video
+          ref={remoteMediaRef}
+          autoPlay
+          playsInline
           style={{
-            backgroundColor: '#1e293b',
-            borderRadius: '24px',
-            padding: '36px 40px',
-            textAlign: 'center',
-            maxWidth: '380px',
-            width: '90%',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            border: '1px solid #334155',
-            animation: 'fadeIn 0.3s ease',
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: 'none',
           }}
-        >
-          {/* Avatar nhấp nháy chuông */}
-          <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto 20px auto' }}>
-            <img
-              src={
-                partner?.avatar_url ||
-                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
-              }
-              alt={partner?.display_name || partner?.username}
-              style={{
-                width: '100%',
-                height: '100%',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '3px solid #245745',
-                boxShadow: '0 0 20px rgba(36, 87, 69, 0.6)',
-              }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                top: -5,
-                right: -5,
-                fontSize: '22px',
-                animation: 'pulse 1.2s infinite',
-              }}
-            >
-              {isVideoCall ? <Video size={22} /> : <Phone size={22} />}
-            </span>
-          </div>
-
-          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 6px 0', color: '#f8fafc' }}>
-            {partner?.display_name || partner?.username}
-          </h2>
-          <p style={{ fontSize: '14px', color: '#94a3b8', margin: '0 0 32px 0' }}>
-            {isVideoCall ? 'Đang gọi video cho bạn...' : 'Đang gọi thoại cho bạn...'}
-          </p>
-
-          {/* 2 nút Chấp nhận / Từ chối */}
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
-            <button
-              type="button"
-              onClick={handleRejectCall}
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#ef4444',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '22px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.4)',
-                transition: 'transform 0.15s ease',
-              }}
-              title="Từ chối cuộc gọi"
-              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >
-              <X size={22} aria-hidden="true" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAcceptCall}
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#10b981',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.4)',
-                animation: 'bounce 1.5s infinite',
-                transition: 'transform 0.15s ease',
-              }}
-              title="Trả lời cuộc gọi"
-              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >
-              <Phone size={24} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
+        />
       )}
 
-      {/* ============================================================== */}
-      {/* TRƯỜNG HỢP 2 & 3: ĐANG GỌI ĐI HOẶC ĐANG NÓI CHUYỆN (ACTIVE)    */}
-      {/* ============================================================== */}
-      {callStatus !== 'incoming' && (
-        <div
+      {callStatus === 'incoming' ? (
+        <section
+          style={{
+            width: 'min(380px, 100%)',
+            padding: 36,
+            textAlign: 'center',
+            border: '1px solid #334155',
+            borderRadius: 24,
+            background: '#1e293b',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,.5)',
+          }}
+        >
+          <Avatar
+            src={avatarFor(partner)}
+            alt=""
+            style={{
+              width: 100,
+              height: 100,
+              margin: '0 auto 20px',
+              border: '3px solid #00ff88',
+              borderRadius: '50%',
+              objectFit: 'cover',
+            }}
+          />
+          <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>
+            {partner?.display_name || partner?.username}
+          </h2>
+          <p style={{ margin: '0 0 28px', color: '#94a3b8' }}>
+            {isVideoCall ? 'Cuộc gọi video đến' : 'Cuộc gọi thoại đến'}
+          </p>
+          {errorMessage && <p role="alert">{errorMessage}</p>}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
+            <button type="button" onClick={handleRejectCall} style={{ ...buttonStyle('#ef4444'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} title="Từ chối cuộc gọi">
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>call_end</span>
+            </button>
+            <button type="button" onClick={handleAcceptCall} style={{ ...buttonStyle('#10b981'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} title="Trả lời cuộc gọi">
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>call</span>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section
           style={{
             position: 'relative',
-            width: '100%',
-            maxWidth: isVideoCall ? '960px' : '440px',
-            height: isVideoCall ? '85vh' : 'auto',
-            maxHeight: '680px',
-            backgroundColor: '#0f172a',
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            border: '1px solid #1e293b',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
+            width: 'min(960px, 100%)',
+            minHeight: isVideoCall ? 'min(680px, 85vh)' : 440,
+            overflow: 'hidden',
+            border: '1px solid #1e293b',
+            borderRadius: 24,
+            background: '#0f172a',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,.7)',
           }}
         >
-          {/* Header cuộc gọi: Tên đối phương + Đồng hồ */}
-          <div
+          <header
             style={{
-              padding: '20px 24px',
+              zIndex: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
-              zIndex: 10,
+              gap: 12,
+              padding: '20px 24px',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,.8), transparent)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img
-                src={
-                  partner?.avatar_url ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
-                }
-                alt=""
-                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar src={avatarFor(partner)} alt="" style={avatarStyle(40)} />
               <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>
+                <h3 style={{ margin: 0, fontSize: 15 }}>
                   {partner?.display_name || partner?.username}
                 </h3>
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                  {callStatus === 'connected'
-                    ? formatDuration(duration)
-                    : callStatus === 'connecting'
-                    ? 'Đang kết nối...'
-                    : errorMessage || 'Đang đổ chuông...'}
-                </span>
+                <span style={{ color: '#94a3b8', fontSize: 12 }}>{statusText}</span>
               </div>
             </div>
+            {callStatus === 'connected' && <span style={liveStyle}>● LIVE</span>}
+          </header>
 
-            {callStatus === 'connected' && (
-              <span
-                style={{
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                }}
-              >
-                ● LIVE
-              </span>
-            )}
-          </div>
-
-          {/* Vùng hiển thị chính (Video hoặc Avatar sóng âm) */}
-          <div
+          <main
             style={{
               position: 'relative',
-              flex: 1,
               display: 'flex',
+              flex: 1,
               alignItems: 'center',
               justifyContent: 'center',
+              minHeight: isVideoCall ? 280 : 220,
               overflow: 'hidden',
-              backgroundColor: '#090d16',
+              background: '#090d16',
             }}
           >
             {isVideoCall ? (
               <>
-                {/* Remote Video (Đối phương) */}
-                <video
+                <div
                   ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  onLoadedMetadata={(e) => e.target.play().catch(() => {})}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 />
-
-                {/* Local Video (Bản thân - Góc nhỏ trên bên phải) */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    width: '140px',
-                    height: '190px',
-                    borderRadius: '16px',
+                    top: 20,
+                    right: 20,
+                    ...getLocalPipSizeStyle(isCameraOff, localAspectRatio),
                     overflow: 'hidden',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                    backgroundColor: '#1e293b',
-                    zIndex: 5,
+                    border: '2px solid rgba(255,255,255,.2)',
+                    borderRadius: 16,
+                    background: '#1e293b',
                   }}
                 >
-                  <video
+                  <div
                     ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    onLoadedMetadata={(e) => e.target.play().catch(() => {})}
                     style={{
+                      display: isCameraOff ? 'none' : 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover',
-                      transform: 'scaleX(-1)', // Hiệu ứng gương
-                      display: isCameraOff ? 'none' : 'block',
                     }}
                   />
                   {isCameraOff && (
                     <div
                       style={{
-                        width: '100%',
-                        height: '100%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: '#334155',
+                        width: '100%',
+                        height: '100%',
+                        padding: 12,
                         color: '#94a3b8',
-                        fontSize: '12px',
+                        fontSize: 12,
+                        textAlign: 'center',
                       }}
                     >
-                      <CameraOff size={16} aria-hidden="true" /> Camera tắt
+                      Camera tắt
                     </div>
                   )}
                 </div>
               </>
             ) : (
-              /* Vùng giao diện Cuộc gọi thoại (Audio Only) */
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={{ position: 'relative', width: '130px', height: '130px', margin: '0 auto 24px auto' }}>
-                  {/* Hiệu ứng sóng âm lan tỏa */}
-                  {callStatus === 'connected' && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: -10,
-                        left: -10,
-                        right: -10,
-                        bottom: -10,
-                        borderRadius: '50%',
-                        border: '2px solid #245745',
-                        animation: 'ripple 2s infinite ease-out',
-                      }}
-                    />
-                  )}
-                  <img
-                    src={
-                      partner?.avatar_url ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner?.username || 'user')}`
-                    }
-                    alt=""
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '3px solid #245745',
-                    }}
-                  />
-                </div>
-
-                <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 8px 0' }}>
+              <div style={{ padding: 40, textAlign: 'center' }}>
+                <Avatar
+                  src={avatarFor(partner)}
+                  alt=""
+                  style={{
+                    ...avatarStyle(130),
+                    marginBottom: 20,
+                    border: '3px solid #00ff88',
+                  }}
+                />
+                <h3 style={{ margin: '0 0 8px', fontSize: 20 }}>
                   {partner?.display_name || partner?.username}
                 </h3>
-                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
-                  {errorMessage ||
-                    (callStatus === 'connected'
-                      ? 'Cuộc gọi thoại đang diễn ra'
-                      : callStatus === 'connecting'
-                      ? 'Đang kết nối...'
-                      : 'Đang đổ chuông...')}
+                <p style={{ margin: 0, color: '#94a3b8' }}>
+                  {errorMessage || statusText}
                 </p>
               </div>
             )}
-          </div>
+          </main>
 
-          {/* Thanh công cụ điều khiển ở đáy (Control Bar) */}
-          <div
-            style={{
-              padding: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '20px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
-              zIndex: 10,
-            }}
-          >
-            {/* Nút Bật/Tắt Micro */}
+          <footer style={{ display: 'flex', justifyContent: 'center', gap: 20, padding: 24 }}>
             <button
               type="button"
               onClick={toggleMute}
-              style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '50%',
-                backgroundColor: isMuted ? '#ef4444' : 'rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '20px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backdropFilter: 'blur(8px)',
-                transition: 'all 0.15s ease',
-              }}
-              title={isMuted ? 'Bật Mic' : 'Tắt Mic'}
+              style={{ ...buttonStyle(isMuted ? '#ef4444' : 'rgba(255,255,255,.15)'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
-              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                {isMuted ? 'mic_off' : 'mic'}
+              </span>
             </button>
-
-            {/* Nút Bật/Tắt Camera (cho Video Call) */}
             {isVideoCall && (
               <button
                 type="button"
                 onClick={toggleCamera}
-                style={{
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '50%',
-                  backgroundColor: isCameraOff ? '#ef4444' : 'rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backdropFilter: 'blur(8px)',
-                  transition: 'all 0.15s ease',
-                }}
-                title={isCameraOff ? 'Bật Camera' : 'Tắt Camera'}
+                style={{ ...buttonStyle(isCameraOff ? '#ef4444' : 'rgba(255,255,255,.15)'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                title={isCameraOff ? 'Bật camera' : 'Tắt camera'}
               >
-                {isCameraOff ? <Ban size={20} /> : <Camera size={20} />}
+                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                  {isCameraOff ? 'videocam_off' : 'videocam'}
+                </span>
               </button>
             )}
-
-            {/* Nút Kết thúc cuộc gọi */}
             <button
               type="button"
               onClick={() => handleEndCall('user_hangup')}
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#ef4444',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '22px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.4)',
-                transition: 'transform 0.15s ease',
-              }}
+              style={{ ...buttonStyle('#ef4444'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               title="Kết thúc cuộc gọi"
-              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              <Phone size={22} aria-hidden="true" />
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>call_end</span>
             </button>
-          </div>
-        </div>
+          </footer>
+        </section>
       )}
-
-      {/* Hiệu ứng CSS động */}
-      <style>{`
-        @keyframes ripple {
-          0% { transform: scale(1); opacity: 0.8; }
-          100% { transform: scale(1.4); opacity: 0; }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.15); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-      `}</style>
     </div>
   )
+}
+
+/** Sizes the local PiP container to match the active camera aspect ratio. */
+function getLocalPipSizeStyle(isCameraOff, localAspectRatio) {
+  if (isCameraOff) {
+    return { width: 150, height: 100 }
+  }
+  if (localAspectRatio && localAspectRatio < 1) {
+    return {
+      height: 'min(190px, 28vh)',
+      width: 'auto',
+      maxWidth: 'min(220px, 34vw)',
+      aspectRatio: String(localAspectRatio),
+    }
+  }
+  return {
+    width: 'min(220px, 34vw)',
+    height: 'auto',
+    maxHeight: 'min(190px, 28vh)',
+    aspectRatio: String(localAspectRatio || 4 / 3),
+  }
+}
+
+function buttonStyle(backgroundColor) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 56,
+    height: 56,
+    padding: 0,
+    border: 0,
+    borderRadius: '50%',
+    backgroundColor,
+    color: '#fff',
+    fontSize: 22,
+    cursor: 'pointer',
+  }
+}
+
+function avatarStyle(size) {
+  return {
+    width: size,
+    height: size,
+    borderRadius: '50%',
+    objectFit: 'cover',
+  }
+}
+
+const liveStyle = {
+  padding: '4px 10px',
+  borderRadius: 20,
+  backgroundColor: '#10b981',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 700,
 }

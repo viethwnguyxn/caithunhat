@@ -7,7 +7,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(localStorage.getItem('access_token'))
   const [loading, setLoading] = useState(true)
-  const [loginEventId, setLoginEventId] = useState(0)
 
   useEffect(() => {
     async function loadUser() {
@@ -31,31 +30,39 @@ export function AuthProvider({ children }) {
 
   const login = async (account, password) => {
     const res = await api.post('/api/auth/login', { account, password })
-    const { access_token } = res.data
+    const { access_token, user: authenticatedUser } = res.data
     localStorage.setItem('access_token', access_token)
     setToken(access_token)
+
+    if (authenticatedUser) {
+      setUser(authenticatedUser)
+      return authenticatedUser
+    }
 
     // Lấy thông tin user ngay sau khi login
     const userRes = await api.get('/api/users/me', {
       headers: { Authorization: `Bearer ${access_token}` },
     })
     setUser(userRes.data)
-    setLoginEventId((current) => current + 1)
     return userRes.data
   }
 
   const loginWithGoogle = async (idToken) => {
     const res = await api.post('/api/auth/google', { id_token: idToken })
-    const { access_token } = res.data
+    const { access_token, user: authenticatedUser } = res.data
     localStorage.setItem('access_token', access_token)
     setToken(access_token)
+
+    if (authenticatedUser) {
+      setUser(authenticatedUser)
+      return authenticatedUser
+    }
 
     // Lấy thông tin user
     const userRes = await api.get('/api/users/me', {
       headers: { Authorization: `Bearer ${access_token}` },
     })
     setUser(userRes.data)
-    setLoginEventId((current) => current + 1)
     return userRes.data
   }
 
@@ -66,7 +73,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, logout, loginEventId }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   )

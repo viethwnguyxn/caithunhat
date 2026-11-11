@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowRight, Ban, Check, Flag, HeartHandshake, MessageCircle, MoreVertical, Sparkles, UserRoundMinus, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import {
@@ -9,7 +10,6 @@ import {
   getConnectionRequests,
   acceptConnection,
   rejectConnection,
-  removeConnection,
 } from '../services/connectionService'
 
 export default function Connections() {
@@ -17,13 +17,13 @@ export default function Connections() {
   const location = useLocation()
   const searchParams = new URLSearchParams(location.search)
   const initialTab = searchParams.get('tab') || location.state?.tab
+
   const [activeTab, setActiveTab] = useState(
     initialTab === 'received' || initialTab === 'sent' || initialTab === 'connections'
       ? initialTab
       : 'connections'
-  ) // 'connections' | 'received' | 'sent'
+  )
 
-  // Đồng bộ activeTab khi query param trên URL thay đổi (ví dụ điều hướng từ /discover sang ?tab=received)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const tab = params.get('tab') || location.state?.tab
@@ -31,29 +31,28 @@ export default function Connections() {
       setActiveTab(tab)
     }
   }, [location.search, location.state])
+
   const [connections, setConnections] = useState([])
   const [receivedRequests, setReceivedRequests] = useState([])
   const [sentRequests, setSentRequests] = useState([])
 
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(null) // id đang xử lý
-  const [error, setError] = useState('')
+  const [actionLoading, setActionLoading] = useState(null)
   const [toastMessage, setToastMessage] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterOnlineOnly, setFilterOnlineOnly] = useState(false)
 
-  // Modal Báo cáo & Chặn
+  // Modals for Report & Block
   const [reportTargetUser, setReportTargetUser] = useState(null)
   const [blockTargetUser, setBlockTargetUser] = useState(null)
   const [openMenuUserId, setOpenMenuUserId] = useState(null)
-
-  // Modal thông báo nhắn tin
-  const [chatNoticeUser, setChatNoticeUser] = useState(null)
 
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(''), 4000)
   }
 
-  // Đóng dropdown khi click ngoài
+  // Close menus on outside click
   useEffect(() => {
     const handleOutside = () => setOpenMenuUserId(null)
     if (openMenuUserId) {
@@ -62,31 +61,24 @@ export default function Connections() {
     }
   }, [openMenuUserId])
 
-  const handleBlockSuccess = (msg) => {
-    if (blockTargetUser) {
-      const blockedId = blockTargetUser.id
-      setConnections((prev) => prev.filter((c) => c.user.id !== blockedId))
-    }
-    setBlockTargetUser(null)
-    showToast(msg)
-  }
-
   const loadData = async () => {
     setLoading(true)
-    setError('')
     try {
-      const [connsData, reqsData] = await Promise.all([
+      const [connsData, reqsData] = await Promise.allSettled([
         getMyConnections(),
         getConnectionRequests(),
       ])
-      setConnections(connsData || [])
-      setReceivedRequests(reqsData.incoming || [])
-      setSentRequests(reqsData.outgoing || [])
+
+      if (connsData.status === 'fulfilled' && connsData.value) {
+        setConnections(connsData.value)
+      }
+      if (reqsData.status === 'fulfilled' && reqsData.value) {
+        setReceivedRequests(reqsData.value.incoming || [])
+        setSentRequests(reqsData.value.outgoing || [])
+      }
     } catch (err) {
       console.error('Lỗi tải dữ liệu kết nối:', err)
-      setError(
-        err.response?.data?.detail || 'Không thể tải danh sách kết nối. Vui lòng thử lại sau.'
-      )
+      showToast('Không thể tải danh sách kết nối. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
@@ -96,12 +88,11 @@ export default function Connections() {
     loadData()
   }, [])
 
-  // Chấp nhận lời mời
+  // Accept Request
   const handleAccept = async (conn) => {
     setActionLoading(conn.id)
     try {
       await acceptConnection(conn.id)
-      // Cập nhật state lạc quan (optimistic update)
       setReceivedRequests((prev) => prev.filter((item) => item.id !== conn.id))
       setConnections((prev) => [
         { ...conn, status: 'accepted', updated_at: new Date().toISOString() },
@@ -110,912 +101,542 @@ export default function Connections() {
       showToast(`Đã trở thành bạn bè với ${conn.user.display_name || conn.user.username}!`)
     } catch (err) {
       console.error('Lỗi khi chấp nhận kết nối:', err)
-      alert(err.response?.data?.detail || 'Không thể chấp nhận lời mời. Vui lòng thử lại.')
+      showToast(err.response?.data?.detail || 'Không thể chấp nhận lời mời.')
     } finally {
       setActionLoading(null)
     }
   }
 
-  // Từ chối lời mời
+  // Reject Request
   const handleReject = async (conn) => {
-    if (!window.confirm(`Bạn có chắc muốn từ chối lời mời từ ${conn.user.display_name || conn.user.username}?`)) {
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn từ chối lời mời từ ${conn.user.display_name || conn.user.username}?`
+      )
+    ) {
       return
     }
     setActionLoading(conn.id)
     try {
       await rejectConnection(conn.id)
       setReceivedRequests((prev) => prev.filter((item) => item.id !== conn.id))
-      showToast(`Đã từ chối lời mời kết nối từ ${conn.user.display_name || conn.user.username}.`)
+      showToast(`Đã từ chối lời mời kết nối.`)
     } catch (err) {
       console.error('Lỗi khi từ chối kết nối:', err)
-      alert(err.response?.data?.detail || 'Không thể từ chối lời mời. Vui lòng thử lại.')
+      showToast(err.response?.data?.detail || 'Không thể từ chối lời mời.')
     } finally {
       setActionLoading(null)
     }
   }
 
-  const handleRemoveFriend = async (conn) => {
-    const name = conn.user.display_name || conn.user.username
-    setOpenMenuUserId(null)
-    if (!window.confirm(`Gỡ ${name} khỏi danh sách bạn bè? Người này sẽ không nhận được thông báo.`)) {
-      return
-    }
-
-    setActionLoading(conn.id)
-    try {
-      await removeConnection(conn.id)
-      setConnections((current) => current.filter((item) => item.id !== conn.id))
-      showToast(`Đã gỡ ${name} khỏi danh sách bạn bè.`)
-    } catch (err) {
-      console.error('Lỗi khi gỡ bạn bè:', err)
-      alert(err.response?.data?.detail || 'Không thể gỡ bạn bè. Vui lòng thử lại.')
-    } finally {
-      setActionLoading(null)
-    }
-  }
+  // Filter connections
+  const filteredConnections = connections.filter((conn) => {
+    const u = conn.user
+    if (!u) return false
+    const matchQuery =
+      !searchQuery.trim() ||
+      (u.display_name && u.display_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.username && u.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.bio && u.bio.toLowerCase().includes(searchQuery.toLowerCase()))
+    return matchQuery
+  })
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c]">
       <Navbar />
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 16px' }}>
-        {/* Banner tiêu đề */}
-        <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-            Kết nối & <span style={{ color: '#245745' }}>Bạn bè</span>
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '15px' }}>
-            Quản lý mạng lưới bạn bè đồng điệu và những lời mời kết nối của bạn.
-          </p>
-        </div>
-
-        {/* Toast thông báo nhanh */}
+      <main className="w-full pt-20 min-h-[calc(100vh-80px)] pb-16">
+        {/* Toast Feedback */}
         {toastMessage && (
-          <div
-            style={{
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              marginBottom: '20px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              animation: 'fadeIn 0.3s ease-in-out',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, fontSize: '14px' }}>
-              <Check size={16} aria-hidden="true" />
-              <span>{toastMessage}</span>
+          <div className="fixed top-24 right-6 z-50 animate-bounce">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00ff88]/50 bg-[#11151c]/95 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-[20px]">check_circle</span>
+              <span className="text-sm font-medium">{toastMessage}</span>
             </div>
+          </div>
+        )}
+
+        {/* Ambient HUD Glows */}
+        <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-6 pb-12">
+          <div className="absolute top-10 left-1/4 w-96 h-96 bg-[#00ff88]/5 rounded-full blur-3xl pointer-events-none -z-10"></div>
+          <div className="absolute top-40 right-10 w-80 h-80 bg-[#44fb8a]/5 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+          {/* 1. HEADER SECTION */}
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-[#f1ffef] tracking-tight">
+                Mạng lưới & Bạn bè
+              </h1>
+              <p className="text-sm md:text-base text-[#b9cbb9] max-w-2xl">
+                Quản lý bạn bè và lời mời kết nối của bạn.
+              </p>
+            </div>
+
+            {/* Search & Filters Toolbar */}
+            <div className="mt-2 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-[#11151c] border border-[#1a232e] p-2.5 rounded-xl shadow-md">
+              <div className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#849585] text-[20px] pointer-events-none">
+                  search
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm trong danh sách bạn bè, username, sở thích..."
+                  className="w-full h-11 pl-11 pr-14 rounded-lg bg-[#08090a] text-[#f1ffef] placeholder:text-[#849585] text-sm focus:outline-none focus:ring-1 focus:ring-[#00ff88] border border-[#1a232e] transition-all"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-2 py-0.5 rounded bg-[#181d26] text-[11px] font-mono text-[#849585] pointer-events-none">
+                  <span>⌘</span>
+                  <span>K</span>
+                </div>
+              </div>
+
+              {/* Filter Chips */}
+              <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setFilterOnlineOnly(!filterOnlineOnly)}
+                  className={`flex items-center gap-1.5 h-11 px-4 rounded-lg transition-all ${
+                    filterOnlineOnly
+                      ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_12px_rgba(0,255,136,0.2)]'
+                      : 'bg-[#181d26] text-[#b9cbb9] hover:bg-[#1f2021]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+                  <span>Đang online</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setFilterOnlineOnly(false)
+                  }}
+                  className="h-11 px-3 rounded-lg bg-[#181d26] hover:bg-[#1f2021] text-[#b9cbb9] hover:text-[#f1ffef] transition-all"
+                  title="Đặt lại bộ lọc"
+                >
+                  <span className="material-symbols-outlined text-[20px]">restart_alt</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. MAIN NAVIGATION TABS (HUD Switcher) */}
+          <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-[#08090a] border border-[#1a232e] w-fit max-w-full overflow-x-auto mb-8 shadow-inner">
+            {/* Tab 1: Friends */}
             <button
-              onClick={() => setToastMessage('')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#ffffff',
-                cursor: 'pointer',
-                fontSize: '16px',
-              }}
+              type="button"
+              onClick={() => setActiveTab('connections')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'connections'
+                  ? 'bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_16px_rgba(0,255,136,0.18)] border border-[#00ff88]/30'
+                  : 'text-[#b9cbb9] hover:text-[#f1ffef] hover:bg-[#11151c]'
+              }`}
             >
-              <X size={16} aria-hidden="true" />
+              <span className="material-symbols-outlined text-[20px]">group</span>
+              <span>Bạn bè của tôi ({connections.length})</span>
+            </button>
+
+            {/* Tab 2: Received Requests */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('received')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'received'
+                  ? 'bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_16px_rgba(0,255,136,0.18)] border border-[#00ff88]/30'
+                  : 'text-[#b9cbb9] hover:text-[#f1ffef] hover:bg-[#11151c]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">inbox</span>
+              <span>Lời mời đã nhận</span>
+              {receivedRequests.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-[#00ff88] text-[#00210c] text-[11px] font-bold shadow-[0_0_10px_rgba(0,255,136,0.6)]">
+                  {receivedRequests.length}
+                </span>
+              )}
+            </button>
+
+            {/* Tab 3: Sent Requests */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('sent')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'sent'
+                  ? 'bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_16px_rgba(0,255,136,0.18)] border border-[#00ff88]/30'
+                  : 'text-[#b9cbb9] hover:text-[#f1ffef] hover:bg-[#11151c]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">outbox</span>
+              <span>Lời mời đã gửi ({sentRequests.length})</span>
             </button>
           </div>
-        )}
 
-        {/* Thông báo lỗi nếu có */}
-        {error && (
-          <div
-            style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#b91c1c',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '24px',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span>{error}</span>
-            <button
-              onClick={loadData}
-              style={{
-                background: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '13px',
-              }}
-            >
-              Thử lại
-            </button>
-          </div>
-        )}
+          {/* 3. PRIORITY INBOX: INCOMING REQUESTS TRAY (Shows if any incoming or on Tab 2) */}
+          {(activeTab === 'received' || (receivedRequests.length > 0 && activeTab === 'connections')) && (
+            <div className="mb-8 bg-[#11151c] border border-[#1a232e] rounded-xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#00ff88]/5 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* Tabs chuyển đổi */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            backgroundColor: '#ffffff',
-            padding: '6px',
-            borderRadius: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            marginBottom: '24px',
-            border: '1px solid #dce8e2',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('connections')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: activeTab === 'connections' ? '#245745' : 'transparent',
-              color: activeTab === 'connections' ? '#ffffff' : '#6b7280',
-            }}
-          >
-            <span>Bạn bè</span>
-            <span
-              style={{
-                backgroundColor: activeTab === 'connections' ? 'rgba(255,255,255,0.25)' : '#e5e7eb',
-                color: activeTab === 'connections' ? '#ffffff' : '#374151',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px',
-              }}
-            >
-              {connections.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('received')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: activeTab === 'received' ? '#245745' : 'transparent',
-              color: activeTab === 'received' ? '#ffffff' : '#6b7280',
-            }}
-          >
-            <span>Lời mời nhận được</span>
-            {receivedRequests.length > 0 && (
-              <span
-                style={{
-                  backgroundColor: activeTab === 'received' ? '#ef4444' : '#fee2e2',
-                  color: activeTab === 'received' ? '#ffffff' : '#b91c1c',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                }}
-              >
-                {receivedRequests.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('sent')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: activeTab === 'sent' ? '#245745' : 'transparent',
-              color: activeTab === 'sent' ? '#ffffff' : '#6b7280',
-            }}
-          >
-            <span>Đã gửi</span>
-            <span
-              style={{
-                backgroundColor: activeTab === 'sent' ? 'rgba(255,255,255,0.25)' : '#e5e7eb',
-                color: activeTab === 'sent' ? '#ffffff' : '#374151',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px',
-              }}
-            >
-              {sentRequests.length}
-            </span>
-          </button>
-        </div>
-
-        {/* LOADING STATE */}
-        {loading && (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              border: '1px solid #dce8e2',
-            }}
-          >
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '4px solid #dce8e2',
-                borderTop: '4px solid #245745',
-                borderRadius: '50%',
-                margin: '0 auto 16px',
-                animation: 'spin 1s linear infinite',
-              }}
-            />
-            <p style={{ color: '#6b7280', fontSize: '15px' }}>Đang tải danh sách kết nối...</p>
-          </div>
-        )}
-
-        {/* NỘI DUNG TỪNG TAB */}
-        {!loading && (
-          <div>
-            {/* TAB 1: BẠN BÈ (MY CONNECTIONS) */}
-            {activeTab === 'connections' && (
-              <div>
-                {connections.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '60px 20px',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '20px',
-                      border: '1px solid #dce8e2',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                    }}
-                  >
-                    <HeartHandshake size={42} style={{ marginBottom: '16px' }} aria-hidden="true" />
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                      Chưa có bạn bè nào
-                    </h3>
-                    <p style={{ color: '#6b7280', fontSize: '14px', maxWidth: '420px', margin: '0 auto 20px' }}>
-                      Bạn chưa kết nối với ai. Hãy vào trang Khám phá để tìm những người bạn có cùng hoàn cảnh và sở thích nhé!
-                    </p>
-                    <Link
-                      to="/discover"
-                      className="btn-primary"
-                      style={{
-                        display: 'inline-block',
-                        padding: '10px 24px',
-                        fontSize: '14px',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Khám phá ngay <Sparkles size={14} aria-hidden="true" />
-                    </Link>
+              {/* Section Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-[#1a232e]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#181d26] flex items-center justify-center text-[#00ff88] shadow-[0_0_12px_rgba(0,255,136,0.3)]">
+                    <span className="material-symbols-outlined text-[20px]">move_to_inbox</span>
                   </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '16px' }}>
-                    {connections.map((item) => {
-                      const u = item.user
-                      return (
-                        <div
-                          key={item.id}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            border: '1px solid #dce8e2',
-                            boxShadow: '0 4px 16px rgba(36, 87, 69, 0.05)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                          }}
-                        >
+                  <div>
+                    <h2 className="text-lg font-bold text-[#f1ffef] flex items-center gap-2">
+                      Lời mời kết nối mới
+                      <span className="px-2 py-0.5 rounded-full bg-[#181d26] text-[#44fb8a] text-[11px] font-mono">
+                        {receivedRequests.length} chờ xử lý
+                      </span>
+                    </h2>
+                  </div>
+                </div>
+
+                {activeTab !== 'received' && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('received')}
+                    className="text-xs font-mono text-[#00ff88] hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                  >
+                    Xem tất cả lời mời
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Pending Request Cards Row */}
+              {receivedRequests.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {receivedRequests.map((req) => {
+                    const u = req.user || {}
+                    return (
+                      <div
+                        key={req.id}
+                        className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-[#181d26] border border-[#1a232e] hover:border-[#00ff88]/30 transition-all shadow-sm"
+                      >
+                        <div className="relative shrink-0 w-14 h-14">
+                          <Avatar
+                            src={u.avatar_url}
+                            alt={u.username}
+                            className="w-14 h-14 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
+                          />
+                          <OnlineStatusDot
+                            isOnline={u.is_online}
+                            className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#181d26]"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                              <img
-                                src={
-                                  u.avatar_url ||
-                                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-                                }
-                                alt={u.display_name || u.username}
-                                style={{
-                                  width: '56px',
-                                  height: '56px',
-                                  borderRadius: '50%',
-                                  border: '2px solid #245745',
-                                  objectFit: 'cover',
-                                  backgroundColor: '#e1efe8',
-                                }}
-                              />
-                              <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="font-bold text-[#f1ffef] text-sm truncate">
                                   {u.display_name || u.username}
-                                </h3>
-                                <p style={{ fontSize: '13px', color: '#6b7280', margin: '2px 0 0 0' }}>
-                                  @{u.username}
-                                </p>
+                                </span>
                                 <span
-                                  style={{
-                                    display: 'inline-block',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    color: '#059669',
-                                    backgroundColor: '#ecfdf5',
-                                    padding: '2px 8px',
-                                    borderRadius: '10px',
-                                    marginTop: '4px',
-                                  }}
+                                  className="material-symbols-outlined text-[#00ff88] text-[16px]"
+                                  style={{ fontVariationSettings: "'FILL' 1" }}
                                 >
-                                  <Check size={12} aria-hidden="true" /> Đã kết nối
+                                  verified
+                                </span>
+                                <span className="text-xs text-[#849585] font-mono truncate">
+                                  @{u.username}
                                 </span>
                               </div>
+                              <span className="text-[11px] font-mono text-[#849585] shrink-0">
+                                Mới đây
+                              </span>
                             </div>
 
-                            {/* Thông tin thêm */}
-                            {(u.age_group || u.current_status) && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                                {u.age_group && (
-                                  <span
-                                    style={{
-                                      fontSize: '12px',
-                                      backgroundColor: '#f3f4f6',
-                                      color: '#4b5563',
-                                      padding: '3px 8px',
-                                      borderRadius: '6px',
-                                    }}
-                                  >
-                                    🎂 {u.age_group}
-                                  </span>
-                                )}
-                                {u.current_status && (
-                                  <span
-                                    style={{
-                                      fontSize: '12px',
-                                      backgroundColor: '#eff6ff',
-                                      color: '#2563eb',
-                                      padding: '3px 8px',
-                                      borderRadius: '6px',
-                                    }}
-                                  >
-                                    💼 {u.current_status}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                            <p className="text-xs text-[#44fb8a] font-mono mt-0.5">
+                              {u.current_status || 'Thành viên mới'} • {u.age_group || '20-25 tuổi'}
+                            </p>
 
-                            {u.bio && (
-                              <p
-                                style={{
-                                  fontSize: '13px',
-                                  color: '#4b5563',
-                                  lineHeight: '1.4',
-                                  margin: '0 0 16px 0',
-                                  fontStyle: 'italic',
-                                }}
-                              >
-                                "{u.bio}"
-                              </p>
-                            )}
+                            <p className="text-xs text-[#e3e2e3] mt-2 italic bg-[#08090a]/80 p-2 rounded-lg line-clamp-2 border border-[#1a232e]">
+                              “{u.bio || 'Muốn kết nối và cùng nhau trao đổi góc nhìn cuộc sống.'}”
+                            </p>
                           </div>
 
-                          {/* Nút hành động */}
-                          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px', display: 'flex', gap: '8px', position: 'relative' }}>
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 pt-2">
                             <button
                               type="button"
-                              onClick={() => navigate(`/messages?userId=${u.id}`)}
-                              style={{
-                                flex: 1,
-                                padding: '10px',
-                                borderRadius: '10px',
-                                border: '1px solid #245745',
-                                backgroundColor: '#245745',
-                                color: '#ffffff',
-                                fontWeight: 600,
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 2px 8px rgba(36, 87, 69, 0.25)',
-                              }}
+                              onClick={() => handleAccept(req)}
+                              disabled={actionLoading === req.id}
+                              className="flex-1 h-9 px-3 rounded-lg bg-[#00ff88] hover:bg-[#44fb8a] text-[#00210c] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-[0_0_14px_rgba(0,255,136,0.35)] cursor-pointer disabled:opacity-50"
                             >
-                              <MessageCircle size={16} aria-hidden="true" />
+                              <span className="material-symbols-outlined text-[17px]">
+                                handshake
+                              </span>
+                              <span>Chấp nhận</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleReject(req)}
+                              disabled={actionLoading === req.id}
+                              className="h-9 px-3 rounded-lg bg-[#08090a] hover:bg-red-500/20 text-[#b9cbb9] hover:text-red-400 text-xs font-medium flex items-center justify-center gap-1 transition-all border border-[#1a232e] cursor-pointer disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined text-[17px]">close</span>
+                              <span>Từ chối</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-sm text-[#849585]">
+                  Hiện tại không có lời mời kết nối nào đang chờ.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. TAB 1: FRIENDS LIST GRID */}
+          {activeTab === 'connections' && (
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-bold text-[#f1ffef] flex items-center gap-2">
+                  <span>Danh sách bạn bè đang kết nối</span>
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-[#181d26] text-[#b9cbb9]">
+                    {filteredConnections.length} người
+                  </span>
+                </h2>
+                <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#849585]">
+                  <span className="w-2 h-2 rounded-full bg-[#00ff88]"></span>
+                  <span>Mạng lưới Peer-to-Peer E2EE</span>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="py-20 text-center text-[#849585] font-mono text-sm">
+                  Đang tải danh sách kết nối...
+                </div>
+              ) : filteredConnections.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {filteredConnections.map((conn) => {
+                    const u = conn.user || {}
+                    return (
+                      <div
+                        key={conn.id}
+                        className="group relative rounded-xl bg-[#11151c] border border-[#1a232e] p-5 flex flex-col justify-between gap-4 transition-all duration-300 hover:border-[#00ff88]/40 hover:bg-[#141922] shadow-lg"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="relative shrink-0">
+                            <Avatar
+                              src={u.avatar_url}
+                              alt={u.username}
+                              className="w-16 h-16 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
+                            />
+                            <OnlineStatusDot
+                              isOnline={u.is_online}
+                              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#11151c]"
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-base font-bold text-[#f1ffef] truncate group-hover:text-[#00ff88] transition-colors">
+                                  {u.display_name || u.username}
+                                </span>
+                                <span
+                                  className="material-symbols-outlined text-[#00ff88] text-[18px]"
+                                  style={{ fontVariationSettings: "'FILL' 1" }}
+                                >
+                                  verified
+                                </span>
+                              </div>
+
+                              {/* Match Pill */}
+                              <span className="shrink-0 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#00ff88] to-[#44fb8a] text-[#00210c] text-[11px] font-bold font-mono shadow-[0_0_10px_rgba(0,255,136,0.35)]">
+                                95% Tương thích
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-0.5 text-xs font-mono">
+                              <span className="text-[#849585]">@{u.username}</span>
+                              <span className="text-[#849585]">•</span>
+                              <span className={u.is_online ? 'text-[#44fb8a]' : 'text-[#849585]'}>
+                                {u.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-[#b9cbb9] mt-1 truncate">
+                              {u.current_status || 'Thành viên'} • {u.age_group || '21-25 tuổi'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Bio quote */}
+                        <p className="text-xs md:text-sm text-[#e3e2e3] line-clamp-2 italic bg-[#08090a]/50 p-2.5 rounded-lg border border-[#1a232e]">
+                          “{u.bio || 'Chào bạn! Mình mong muốn kết nối và chia sẻ góc nhìn cùng bạn.'}”
+                        </p>
+
+                        {/* Bottom Actions */}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#1a232e]">
+                          <div className="flex items-center gap-2 flex-1 mr-2">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/messages?user=${u.id}`)}
+                              className="flex-1 h-9 px-4 rounded-lg bg-[#00ff88] hover:bg-[#44fb8a] text-[#00210c] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-[0_0_14px_rgba(0,255,136,0.25)] cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[17px]">chat</span>
                               <span>Nhắn tin</span>
                             </button>
 
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/messages?user=${u.id}&call=audio`)}
+                              className="h-9 w-9 rounded-lg bg-[#08090a] hover:bg-[#1f2021] text-[#00ff88] flex items-center justify-center transition-all border border-[#1a232e] cursor-pointer"
+                              title="Gọi thoại WebRTC"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">call</span>
+                            </button>
+                          </div>
+
+                          {/* Menu dropdown */}
+                          <div className="relative">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setOpenMenuUserId(openMenuUserId === u.id ? null : u.id)
                               }}
-                              style={{
-                                padding: '10px 14px',
-                                borderRadius: '10px',
-                                border: '1px solid #e5e7eb',
-                                backgroundColor: '#ffffff',
-                                color: '#4b5563',
-                                fontSize: '16px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                              title="Tùy chọn an toàn"
+                              className="h-9 w-9 rounded-lg bg-[#08090a] hover:bg-[#1f2021] text-[#849585] hover:text-[#f1ffef] flex items-center justify-center transition-all border border-[#1a232e] cursor-pointer"
+                              title="Tùy chọn khác"
                             >
-                              <MoreVertical size={18} aria-hidden="true" />
+                              <span className="material-symbols-outlined text-[18px]">more_vert</span>
                             </button>
 
                             {openMenuUserId === u.id && (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  right: 0,
-                                  bottom: '50px',
-                                  backgroundColor: '#ffffff',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-                                  border: '1px solid #f3f4f6',
-                                  minWidth: '160px',
-                                  zIndex: 50,
-                                  padding: '6px',
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  disabled={actionLoading === item.id}
-                                  onClick={() => handleRemoveFriend(item)}
-                                  style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 12px',
-                                    background: 'none',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    color: '#b45309',
-                                    cursor: actionLoading === item.id ? 'wait' : 'pointer',
-                                    textAlign: 'left',
-                                    opacity: actionLoading === item.id ? 0.6 : 1,
-                                  }}
-                                  onMouseOver={(e) => {
-                                    if (actionLoading !== item.id) e.currentTarget.style.backgroundColor = '#fffbeb'
-                                  }}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                >
-                                  <UserRoundMinus size={16} aria-hidden="true" />
-                                  <span>Gỡ bạn bè</span>
-                                </button>
+                              <div className="absolute right-0 bottom-full mb-1 w-44 rounded-xl bg-[#11151c] border border-[#1a232e] shadow-2xl p-1 z-30 animate-fadeIn">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setOpenMenuUserId(null)
                                     setReportTargetUser(u)
+                                    setOpenMenuUserId(null)
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 12px',
-                                    background: 'none',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    color: '#374151',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                  }}
-                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-xs text-[#b9cbb9] hover:text-amber-400 hover:bg-[#181d26] flex items-center gap-2"
                                 >
-                                  <Flag size={16} aria-hidden="true" />
-                                  <span>Báo cáo</span>
+                                  <span className="material-symbols-outlined text-[16px]">flag</span>
+                                  <span>Báo cáo vi phạm</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setOpenMenuUserId(null)
                                     setBlockTargetUser(u)
+                                    setOpenMenuUserId(null)
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 12px',
-                                    background: 'none',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    color: '#dc2626',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                  }}
-                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-xs text-red-400 hover:bg-red-500/15 flex items-center gap-2"
                                 >
-                                  <Ban size={16} aria-hidden="true" />
-                                  <span>Chặn bạn này</span>
+                                  <span className="material-symbols-outlined text-[16px]">block</span>
+                                  <span>Chặn người dùng</span>
                                 </button>
                               </div>
                             )}
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 2: LỜI MỜI NHẬN ĐƯỢC (REQUESTS RECEIVED) */}
-            {activeTab === 'received' && (
-              <div>
-                {receivedRequests.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '60px 20px',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '20px',
-                      border: '1px solid #dce8e2',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                    }}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="p-12 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] space-y-4">
+                  <span className="material-symbols-outlined text-[#00ff88] text-[40px]">
+                    person_search
+                  </span>
+                  <h3 className="text-lg font-bold text-[#f1ffef]">Chưa có kết nối nào</h3>
+                  <p className="text-sm text-[#b9cbb9] max-w-md mx-auto">
+                    Hãy truy cập mục Khám phá để tìm những người bạn có điểm tương đồng cao và gửi lời
+                    mời kết nối!
+                  </p>
+                  <Link
+                    to="/discover"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#00210c] text-xs font-bold shadow-[0_0_16px_rgba(0,255,136,0.3)] hover:shadow-[0_0_22px_rgba(0,255,136,0.6)] transition-all"
                   >
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📬</div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                      Không có lời mời nào
-                    </h3>
-                    <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-                      Hiện tại không có lời mời kết nối nào đang chờ bạn duyệt.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {receivedRequests.map((item) => {
-                      const u = item.user
-                      const isProcessing = actionLoading === item.id
-                      return (
-                        <div
-                          key={item.id}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            border: '1px solid #dce8e2',
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '16px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <img
-                              src={
-                                u.avatar_url ||
-                                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-                              }
-                              alt={u.display_name || u.username}
-                              style={{
-                                width: '54px',
-                                height: '54px',
-                                borderRadius: '50%',
-                                border: '2px solid #245745',
-                                objectFit: 'cover',
-                                backgroundColor: '#e1efe8',
-                              }}
-                            />
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-                                  {u.display_name || u.username}
-                                </h4>
-                                <span style={{ fontSize: '13px', color: '#6b7280' }}>@{u.username}</span>
-                              </div>
-                              <p style={{ fontSize: '13px', color: '#4b5563', margin: '4px 0 0 0' }}>
-                                {u.bio || (u.current_status ? `Tình trạng: ${u.current_status}` : 'Muốn kết nối cùng bạn')}
-                              </p>
-                              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                                Gửi lúc: {new Date(item.created_at).toLocaleDateString('vi-VN')}
-                              </span>
-                            </div>
-                          </div>
+                    <span>Khám phá bạn mới</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
 
-                          {/* Nút Accept & Reject */}
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => handleReject(item)}
-                              style={{
-                                padding: '8px 18px',
-                                borderRadius: '10px',
-                                border: '1px solid #d1d5db',
-                                backgroundColor: '#ffffff',
-                                color: '#4b5563',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                                opacity: isProcessing ? 0.6 : 1,
-                              }}
-                            >
-                              Từ chối
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => handleAccept(item)}
-                              style={{
-                                padding: '8px 20px',
-                                borderRadius: '10px',
-                                border: 'none',
-                                backgroundColor: '#245745',
-                                color: '#ffffff',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                                opacity: isProcessing ? 0.6 : 1,
-                                boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
-                              }}
-                            >
-                              {isProcessing ? 'Đang xử lý...' : 'Chấp nhận'}
-                            </button>
+          {/* 5. TAB 3: SENT REQUESTS */}
+          {activeTab === 'sent' && (
+            <div className="mb-12">
+              <h2 className="text-xl font-bold text-[#f1ffef] mb-4 flex items-center gap-2">
+                <span>Lời mời kết nối đã gửi</span>
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-[#181d26] text-[#b9cbb9]">
+                  {sentRequests.length} người
+                </span>
+              </h2>
+
+              {sentRequests.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {sentRequests.map((req) => {
+                    const u = req.user || {}
+                    return (
+                      <div
+                        key={req.id}
+                        className="flex items-center justify-between p-4 rounded-xl bg-[#11151c] border border-[#1a232e]"
+                      >
+                        <div className="flex items-center gap-3 truncate mr-3">
+                          <Avatar
+                            src={u.avatar_url}
+                            alt={u.username}
+                            className="w-12 h-12 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
+                          />
+                          <div className="truncate">
+                            <h4 className="text-sm font-bold text-[#f1ffef] truncate">
+                              {u.display_name || u.username}
+                            </h4>
+                            <p className="text-xs font-mono text-[#849585]">@{u.username}</p>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* TAB 3: ĐÃ GỬI (REQUESTS SENT) */}
-            {activeTab === 'sent' && (
-              <div>
-                {sentRequests.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '60px 20px',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '20px',
-                      border: '1px solid #dce8e2',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                    }}
-                  >
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📤</div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', marginBottom: '8px' }}>
-                      Chưa gửi lời mời nào
-                    </h3>
-                    <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-                      Bạn chưa gửi lời mời kết nối nào đang chờ phản hồi.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {sentRequests.map((item) => {
-                      const u = item.user
-                      return (
-                        <div
-                          key={item.id}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            border: '1px solid #dce8e2',
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '16px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <img
-                              src={
-                                u.avatar_url ||
-                                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-                              }
-                              alt={u.display_name || u.username}
-                              style={{
-                                width: '54px',
-                                height: '54px',
-                                borderRadius: '50%',
-                                border: '2px solid #cbd5e1',
-                                objectFit: 'cover',
-                                backgroundColor: '#f8fafc',
-                              }}
-                            />
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-                                  {u.display_name || u.username}
-                                </h4>
-                                <span style={{ fontSize: '13px', color: '#6b7280' }}>@{u.username}</span>
-                              </div>
-                              <p style={{ fontSize: '13px', color: '#4b5563', margin: '4px 0 0 0' }}>
-                                {u.bio || (u.current_status ? `Tình trạng: ${u.current_status}` : 'Đã gửi lời mời')}
-                              </p>
-                              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                                Gửi lúc: {new Date(item.created_at).toLocaleDateString('vi-VN')}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Badge trạng thái Pending */}
-                          <div>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 16px',
-                                borderRadius: '20px',
-                                backgroundColor: '#fffbeb',
-                                border: '1px solid #fef3c7',
-                                color: '#b45309',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  width: '8px',
-                                  height: '8px',
-                                  borderRadius: '50%',
-                                  backgroundColor: '#f59e0b',
-                                }}
-                              />
-                              Đang chờ phản hồi
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* MODAL THÔNG BÁO TÍNH NĂNG NHẮN TIN (TASK 11) */}
-      {chatNoticeUser && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-          }}
-          onClick={() => setChatNoticeUser(null)}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '28px',
-              maxWidth: '460px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              textAlign: 'center',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: '#e1efe8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '32px',
-                margin: '0 auto 16px',
-              }}
-            >
-              <MessageCircle size={36} aria-hidden="true" />
+                        <span className="px-3 py-1 rounded-full bg-[#181d26] text-[#4edea3] text-[11px] font-mono border border-[#4edea3]/20 flex items-center gap-1.5 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span>
+                          <span>Đang chờ duyệt</span>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="p-12 text-center rounded-2xl bg-[#11151c] border border-[#1a232e] text-[#849585] text-sm">
+                  Bạn chưa gửi lời mời kết nối nào gần đây.
+                </div>
+              )}
             </div>
-
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-              Trò chuyện cùng {chatNoticeUser.display_name || chatNoticeUser.username}
-            </h3>
-
-            <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
-              Hai bạn đã kết nối thành công! Tính năng <strong>Nhắn tin Realtime 1-1 qua WebSocket</strong> đang được hoàn thiện ở <strong>TASK 11</strong> theo đúng lộ trình sản phẩm.
-            </p>
-
-            <div
-              style={{
-                backgroundColor: '#faf5ff',
-                borderRadius: '12px',
-                padding: '14px',
-                marginBottom: '24px',
-                border: '1px dashed #c084fc',
-                fontSize: '13px',
-                color: '#6b21a8',
-                textAlign: 'left',
-              }}
-            >
-              🚀 <strong>Sắp ra mắt tại Task 11:</strong>
-              <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
-                <li>Trò chuyện trực tiếp realtime qua WebSocket</li>
-                <li>Lịch sử tin nhắn được lưu trữ bảo mật</li>
-                <li>Thông báo trạng thái đọc / nhận tin nhắn</li>
-              </ul>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setChatNoticeUser(null)}
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '14px' }}
-            >
-              Tuyệt vời, tôi đã hiểu!
-            </button>
-          </div>
+          )}
         </div>
-      )}
+      </main>
 
-      {/* Modal Báo cáo vi phạm */}
+      {/* Modals for Reporting and Blocking */}
       {reportTargetUser && (
         <ReportModal
           targetUser={reportTargetUser}
           onClose={() => setReportTargetUser(null)}
-          onSuccess={(msg) => showToast(msg)}
+          onSuccess={(msg) => {
+            showToast(msg)
+            setReportTargetUser(null)
+          }}
         />
       )}
 
-      {/* Modal Xác nhận Chặn */}
       {blockTargetUser && (
         <BlockConfirmModal
           targetUser={blockTargetUser}
           onClose={() => setBlockTargetUser(null)}
-          onSuccess={handleBlockSuccess}
+          onSuccess={(msg) => {
+            setConnections((prev) => prev.filter((c) => c.user?.id !== blockTargetUser.id))
+            showToast(msg)
+            setBlockTargetUser(null)
+          }}
         />
       )}
     </div>

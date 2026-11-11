@@ -11,6 +11,7 @@ class ConnectionUserResponse(BaseModel):
     bio: str | None = None
     age_group: str | None = None
     current_status: str | None = None
+    is_online: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -38,4 +39,3 @@ class ConnectionActionResponse(BaseModel):
     """Phản hồi sau khi thực hiện thao tác kết nối."""
     message: str
     connection: ConnectionResponse
-

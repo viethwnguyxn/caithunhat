@@ -1,462 +1,248 @@
-# Kindred — Community Connection Platform
+# La Pulga — Nền tảng Kết nối Cộng đồng & Đồng hành Cảm xúc
 
-> **"Find people who understand you."**  
-> Nền tảng kết nối cộng đồng thông minh, giúp người dùng tìm thấy những người bạn đồng điệu và sẻ chia dựa trên khảo sát tâm lý, hoàn cảnh sống và sở thích cá nhân. Tích hợp trò chuyện thời gian thực (WebSocket) và gọi thoại / video trực tiếp (WebRTC P2P).
+> **Kết nối từ sự đồng điệu.**  
+> *Kết nối thật. Khoảnh khắc thật.*
 
----
-
-## 1. Giới thiệu Dự án (Project Description)
-
-**Kindred** là một ứng dụng web kết nối cộng đồng (Community Connection Platform) được xây dựng theo phong cách: **Ấm áp, Hiện đại, Thân thiện và Tinh giản**.
-
-Thay vì chạy theo các thuật toán câu tương tác gây kiệt quệ tâm lý hay lướt mạng xã hội vô định, Kindred tập trung vào sự đồng cảm sâu sắc:
-1. **Khảo sát Đồng điệu (Onboarding Survey)**: Người dùng hoàn thành một bảng khảo sát ngắn gọn gồm 6 nhóm nội dung (nhóm tuổi, hoàn cảnh hiện tại, cảm xúc gần đây, mục tiêu cá nhân, sở thích và câu chuyện tự thuật).
-2. **Thuật toán Khớp đôi Thông minh (Matching Engine)**: Sử dụng kỹ thuật xử lý ngôn ngữ tự nhiên truyền thống (**TF-IDF + Cosine Similarity**) để tính toán độ tương đồng giữa các hồ sơ mà không cần đến các mô hình Deep Learning phức tạp.
-3. **Kết nối & Trò chuyện Thời gian thực (Realtime Chat & Calling)**: Sau khi tìm thấy người đồng điệu, người dùng có thể gửi kết nối, trò chuyện trực tiếp qua **WebSocket**, và thực hiện cuộc gọi thoại / video 1-1 qua giao thức **WebRTC P2P**.
-4. **Bảng tin Cộng đồng (Community Feed & Moments)**: Chia sẻ những khoảnh khắc, tâm sự theo từng chủ đề, thảo luận và tương tác lành mạnh.
-5. **Môi trường An toàn & Kiểm duyệt (Safety & Moderation)**: Hỗ trợ tính năng Chặn 2 chiều (Block), Báo cáo vi phạm (Report) và Bảng điều khiển Quản trị viên (Admin Dashboard) để giữ gìn môi trường cộng đồng văn minh.
+**La Pulga** là ứng dụng web Full-Stack giúp những người có cùng hoàn cảnh, sở thích và tâm trạng tìm thấy nhau thông qua khảo sát onboarding, thuật toán gợi ý **TF-IDF + Cosine Similarity**, hệ thống **Cộng đồng & Nhóm chat riêng**, **Bảng tin khoảnh khắc**, **Nhắn tin & Gọi thoại/Video 1-1 realtime**, cùng **Trợ lý tâm lý AI "El Pulga"**.
 
 ---
 
-## 2. Tính năng Chính (Key Features)
+## 1. Tính năng chính
 
-### 🔐 1. Xác thực & Bảo mật (Authentication & Security)
-- Đăng ký và đăng nhập tài khoản bằng Email / Tên người dùng và Mật khẩu (bảo mật bằng thuật toán băm `bcrypt`).
-- Đăng nhập một chạm tiện lợi bằng **Google OAuth 2.0** (Google Identity Services).
-- Phân quyền người dùng an toàn bằng **JSON Web Token (JWT)** với thuật toán mã hóa `HS256`, kiểm tra thời hạn hết hạn (`exp`) và phân quyền tài nguyên nghiêm ngặt.
-
-### 📝 2. Khảo sát Onboarding & Hồ sơ cá nhân (Survey & Profile)
-- 6 nhóm câu hỏi khảo sát ngắn gọn, trực quan (nhóm tuổi, hoàn cảnh sống, cảm xúc, mục tiêu, sở thích, câu chuyện).
-- Tự động đồng bộ các thông tin cơ bản sang Hồ sơ cá nhân (Profile).
-- **Gợi ý làm khảo sát (Survey CTA Banner)**: Phát hiện người dùng mới chưa làm khảo sát (`has_survey: false`) ngay trên trang Khám phá để kêu gọi hoàn thành khảo sát mở khóa tính năng ghép đôi.
-- Xem và chỉnh sửa hồ sơ cá nhân; xem hồ sơ công khai của bạn bè một cách an toàn (tuyệt đối không lộ email hoặc mã băm mật khẩu).
-
-### 🎯 3. Thuật toán Ghép đôi (Matching Engine)
-- Kết hợp **TF-IDF Vectorizer** và độ đo góc **Cosine Similarity** từ thư viện `scikit-learn`.
-- Biểu diễn văn bản đặc trưng tiếng Việt có tiền tố ngữ nghĩa từ dữ liệu khảo sát và tiểu sử.
-- Điểm tương đồng được chuẩn hóa sang thang đo 0–100%, cộng thưởng điểm theo các quy tắc thực tế (cùng lứa tuổi, cùng hoàn cảnh).
-- Tự động bóc tách sở thích chung (Common Interests) và chỉ ra các lý do đồng điệu (Match Reasons) để người dùng dễ mở lời làm quen.
-- Tự động loại trừ chính bản thân khỏi danh sách gợi ý.
-
-### 🧭 4. Khám phá & Kết nối (Discover & Connections)
-- Giao diện thẻ người dùng trực quan hiển thị % Match, lý do đồng điệu, huy hiệu chủ đề và bio tóm tắt.
-- Bộ lọc tìm kiếm nhanh theo lứa tuổi, hoàn cảnh và sở thích.
-- **Đồng ý kết bạn 1-chạm (Inline Quick Accept)**: Nút **[ 🤝 Đồng ý ]** ngay trên thẻ người dùng tại trang Khám phá, cập nhật trạng thái tức thì sang **[ 💬 Nhắn tin ]** mà không cần rời trang.
-- Quản lý 3 danh sách kết nối rõ ràng: Bạn bè của tôi, Lời mời đã nhận, Lời mời đã gửi (hỗ trợ deeplink URL `/connections?tab=received`).
-
-### 💬 5. Nhắn tin Thời gian thực (Realtime 1-1 Chat)
-- Xây dựng trên nền tảng **FastAPI WebSocket** thuần kết hợp chuẩn **HTML5 WebSocket API** ở Frontend.
-- Xác thực 2 lớp: JWT handshake qua query parameter và kiểm tra quyền thành viên trong cơ sở dữ liệu trước khi chấp thuận kết nối socket (`websocket.accept()`).
-- Tự động lưu trữ tin nhắn bền vững vào cơ sở dữ liệu; hỗ trợ fallback REST API nếu kết nối mạng của người dùng không ổn định.
-- Tự động đánh dấu tin nhắn đã đọc (`read`) và cập nhật số lượng tin nhắn chưa đọc theo thời gian thực.
-
-### 📞 6. Gọi Thoại & Gọi Video 1-1 (WebRTC Voice & Video Call)
-- **Công nghệ WebRTC P2P**: Truyền tải âm thanh và hình ảnh trực tiếp giữa 2 trình duyệt không qua máy chủ trung gian, sử dụng STUN server công khai miễn phí của Google (`stun:stun.l.google.com:19302`).
-- **Kênh Báo hiệu (Signaling Protocol)**: Tận dụng kết nối WebSocket hiện hữu để chuyển tiếp các bản tin bắt tay WebRTC (`call:offer`, `call:answer`, `call:ice_candidate`, `call:reject`, `call:end`).
-- **Giao diện Cuộc gọi Chuyên nghiệp (CallModal)**:
-  - Nền tối (dark overlay) sang trọng, hiển thị video đối phương toàn màn hình và video của mình thu nhỏ ở góc.
-  - Chế độ Gọi thoại hiển thị avatar to cùng hiệu ứng sóng âm (Pulse Ripple Effect).
-  - Bảng điều khiển nổi: Bật/Tắt Micro, Bật/Tắt Camera, Kết thúc cuộc gọi và Đồng hồ đếm thời gian thực (`00:01`, `00:02`...).
-- **Hệ thống Âm thanh Thuần Web Audio API**: Tự động tổng hợp âm thanh tút đổ chuông (ringback tone) và chuông reo cuộc gọi đến bằng dao động sóng âm (OscillatorNode), triệt tiêu hoàn toàn lỗi rò rỉ âm thanh mà không cần dùng file mp3 ngoài.
-- **Tự động Ghi vết Lịch sử**: Khi cuộc gọi kết thúc, hệ thống tự động lưu tin nhắn vào đoạn chat: `📞 Cuộc gọi thoại (Thời lượng: 00:26)`, `📹 Cuộc gọi video (Thời lượng: 00:53)` hoặc `📞 Cuộc gọi nhỡ`.
-- **Ràng buộc An toàn**: Tự động hủy sau 30 giây đổ chuông nếu đối phương không nghe máy; vô hiệu hóa nút gọi nếu hai người dùng đã chặn nhau.
-
-### 📰 7. Bảng tin Cộng đồng & Khoảnh khắc (Community Feed & Moments)
-- Đăng bài viết chia sẻ cảm nghĩ, khoảnh khắc cuộc sống kèm lựa chọn danh mục chủ đề (Công nghệ, Đọc sách, Nghệ thuật, Sinh viên, v.v.).
-- Lọc bài viết theo danh mục; xem chi tiết bài viết kèm danh sách bình luận theo luồng thời gian.
-- Thả tim (Like) và Bỏ thả tim (Unlike) tức thì kèm thông báo tự động gửi đến tác giả bài viết.
-- Phân quyền chặt chẽ: Chỉ tác giả bài viết hoặc Quản trị viên (Admin) mới có quyền xóa bài.
-
-### 🛡️ 8. An toàn & Kiểm duyệt (Safety, Block & Report)
-- **Chặn 2 chiều (Block)**: Ẩn hoàn toàn đối phương khỏi trang Khám phá, chặn gửi lời mời kết nối, khóa phòng chat và vô hiệu hóa các nút gọi điện thoại/video.
-- **Báo cáo vi phạm (Report)**: Người dùng có thể báo cáo các tài khoản có hành vi không phù hợp (Spam, Quấy rối, Lừa đảo, Khác) kèm mô tả chi tiết gửi lên hệ thống quản trị.
-
-### 👑 9. Bảng điều khiển Quản trị viên (Admin Dashboard)
-- Endpoint và giao diện chuyên biệt dành cho tài khoản có quyền Quản trị viên (`role == "admin"`).
-- **Thống kê tổng quan (System Stats)**: Tổng số thành viên, số tài khoản đang hoạt động, số tài khoản đang bị khóa, số lượng báo cáo vi phạm đang chờ xử lý.
-- **Quản lý người dùng**: Tìm kiếm người dùng, xem trạng thái, Khóa hoặc Mở khóa tài khoản ngay lập tức.
-- **Kiểm duyệt báo cáo**: Phê duyệt báo cáo vi phạm (hỗ trợ tùy chọn khóa luôn tài khoản bị tố cáo) hoặc Bác bỏ báo cáo không hợp lệ.
-
-### 🔔 10. Thông báo & Trạng thái Hoạt động (Notifications & Online Status)
-- Chuông thông báo trực quan trên thanh điều hướng với badge số lượng chưa đọc, hỗ trợ đánh dấu đọc từng tin hoặc đọc tất cả.
-- Tự động kích hoạt thông báo khi: Nhận được lời mời kết bạn, Lời mời được chấp nhận, Có tin nhắn mới, Bài viết được thả tim hoặc có bình luận mới.
-- Theo dõi trạng thái Online/Offline và thời gian hoạt động gần nhất (`last_seen`) cập nhật tự động qua WebSocket connection manager.
+- **Xác thực & Tài khoản**
+  - Đăng ký, đăng nhập bằng Email/Username + mật khẩu (`bcrypt` + JWT `HS256`).
+  - Đăng nhập nhanh bằng **Google OAuth 2.0** (Google Identity Services).
+  - Tự động khởi tạo hồ sơ cá nhân (`Profile`), bảo vệ route qua `ProtectedRoute` & `AuthContext`.
+- **Khảo sát Đồng điệu (Onboarding Survey)**
+  - Thu thập đa chiều thông tin: độ tuổi, tình trạng hiện tại, hoàn cảnh sống, cảm xúc gần đây, mục tiêu, kỳ vọng cộng đồng, chủ đề yêu thích, hoạt động rảnh rỗi, hình thức kết nối mong muốn và câu chuyện cá nhân.
+  - Tự động đồng bộ nhóm tuổi và tình trạng hiện tại sang `Profile`, gợi ý hoàn thành khảo sát tại trang Khám phá nếu chưa thực hiện.
+- **Thuật toán Ghép đôi & Khám phá (`/discover`)**
+  - Biểu diễn hồ sơ khảo sát & tiểu sử thành văn bản có tiền tố ngữ nghĩa tiếng Việt, tính độ tương đồng bằng **Scikit-learn TF-IDF + Cosine Similarity** kết hợp thưởng theo quy tắc thực tế.
+  - Hiển thị phần trăm đồng điệu, sở thích chung, lý do ghép đôi; hỗ trợ tìm kiếm từ khóa và lọc theo độ tuổi, tình trạng, mục tiêu kết nối.
+  - Kết nối nhanh trực tiếp trên thẻ người dùng, xem hồ sơ công khai, chặn 2 chiều hoặc báo cáo vi phạm.
+- **Cộng đồng & Nhóm chat riêng (`/communities` & `/discover?tab=groups`)**
+  - Tự động khởi tạo 6 cộng đồng mặc định ban đầu kèm nhóm chat chào mừng.
+  - Cho phép người dùng **Tạo cộng đồng mới** với tên, mô tả, chọn chủ đề có sẵn hoặc **tự nhập chủ đề mới**, chọn/tải ảnh đại diện nhóm (có nén ảnh phía trình duyệt) và gắn tags.
+  - Mỗi cộng đồng có **Nhóm chat riêng (`Group Conversation`)**: khi tạo hoặc tham gia/rời cộng đồng, hệ thống tự động đồng bộ thành viên vào nhóm chat.
+  - Giao diện chat nhóm realtime (`CommunityChatModal`), xem danh sách bài viết theo nhóm, lọc bài theo *Tất cả / Nhóm của tôi / từng nhóm / chủ đề* và giữ nguyên trạng thái bộ lọc qua URL query params.
+- **Bảng tin Trang chủ & Khoảnh khắc (`/home`)**
+  - Bảng tin cá nhân hóa theo bạn bè kết nối và sự tương đồng khảo sát (*Phù hợp với bạn*, *Bạn bè kết nối*, *Cùng tâm trạng & hoàn cảnh*, *Tất cả bài viết*).
+  - Đăng bài viết kèm tâm trạng (`mood`), gắn cộng đồng/chủ đề và ảnh minh họa (URL hoặc tải ảnh trực tiếp từ máy tính).
+  - Hiển thị ảnh đúng tỷ lệ gốc (`object-contain`), hỗ trợ click mở **Lightbox phóng to ảnh**; tương tác Thả tim, Bình luận, Sao chép liên kết chia sẻ và Xóa bài viết/bình luận theo quyền tác giả hoặc Admin.
+- **Nhắn tin Realtime 1-1 & Nhóm (`/messages`)**
+  - Kết nối WebSocket toàn cục (`/api/ws/user`) duy trì trạng thái trực tuyến và nhận sự kiện tức thì ở mọi trang.
+  - Phòng chat realtime (`/api/ws/chat/{conversation_id}`) hỗ trợ cả chat 1-1 và nhóm chat cộng đồng (`[Nhóm]`), kèm REST API fallback khi mất kết nối socket, lọc tin nhắn chưa đọc, đánh dấu đã đọc và theo dõi trạng thái `is_online` / `last_seen`.
+- **Gọi Thoại & Video Call 1-1 (Stringee Web SDK)**
+  - Tích hợp **Stringee Web SDK** (`CallContext` & `CallModal`) với token xác thực ngắn hạn (`GET /api/calls/stringee-token`), Answer URL webhook ký HMAC-SHA1 (`GET /api/calls/stringee-answer`) và cấu hình STUN/TURN ICE (`GET /api/calls/ice-servers`).
+  - Hỗ trợ đồng bộ đồng hồ thời gian cuộc gọi ở cả người gọi và người nghe, âm chuông Web Audio API, bật/tắt Mic & Camera, hiển thị video đúng tỷ lệ khung hình thật của camera (không bị cắt hay lật gương giữa 2 phía), tự động lưu lịch sử cuộc gọi và thông báo cuộc gọi nhỡ vào đoạn chat.
+- **Trợ lý Tâm lý AI "El Pulga" (`ElPulgaChatWidget` & `/messages?chat=el-pulga`)**
+  - Người bạn đồng hành tâm lý sử dụng **LangChain (`langchain-google-genai`)** và **Google Gemini API** (có danh sách model fallback), cá nhân hóa System Prompt theo `Profile` & `SurveyAnswer` của từng người dùng.
+  - Hỗ trợ nạp tài liệu tham khảo từ kho tri thức tâm lý `backend/app/knowledge/` (Liệu pháp Nhân văn Carl Rogers, Lắng nghe Tích cực, ACT).
+  - Lưu trữ lịch sử trò chuyện bền vững trong DB, gợi ý câu mở lời theo cảm xúc (`quick-prompts`), dùng được cả ở widget nổi góc màn hình lẫn chế độ toàn màn hình trong `/messages`.
+- **Hồ sơ, Cài đặt, Thông báo, An toàn & Quản trị**
+  - Trang Hồ sơ cá nhân (`/profile`) hỗ trợ chọn/upload ảnh đại diện từ máy tính, xem lại khảo sát và bài viết đã đăng; trang Cài đặt (`/settings`) quản lý tài khoản, quyền riêng tư và đăng xuất.
+  - Chuông thông báo (`NotificationBell`) với polling & sự kiện cập nhật tức thì; hệ thống chặn 2 chiều (`Block`) và báo cáo vi phạm (`Report`).
+  - Trang Quản trị (`/admin`): thống kê hệ thống, tìm kiếm/lọc/khóa/mở khóa tài khoản người dùng và xử lý báo cáo vi phạm.
 
 ---
 
-## 3. Kiến trúc Hệ thống (System Architecture)
+## 2. Công nghệ sử dụng (Tech Stack)
 
-```mermaid
-flowchart TD
-    subgraph Clients [Trình duyệt Người dùng]
-        ClientA["Client A (React SPA)"]
-        ClientB["Client B (React SPA)"]
-    end
+### Frontend (`frontend/`)
+- **Core:** React 18 (`react`, `react-dom`), Vite 5, JavaScript (JSX)
+- **Routing & HTTP:** `react-router-dom` v6, `axios`
+- **Styling:** Tailwind CSS 3, PostCSS, custom CSS (`frontend/src/styles/lapulga.css`)
+- **Realtime & Calling:** Native Browser WebSocket API, `stringee` (`^2.9.3`), Web Audio API
+- **Auth:** Google Identity Services SDK
 
-    subgraph BackendServer [FastAPI Backend Service]
-        Router["API Routers (/api/*)"]
-        AuthMiddleware["JWT / Security Layer"]
-        ServiceLayer["Service Business Logic"]
-        WSEndpoint["WebSocket Endpoint (/api/ws/chat/*)"]
-        ConnManager["ConnectionManager (Sockets & Status)"]
-        MatchingEngine["TF-IDF + Cosine Similarity Engine"]
-    end
-
-    subgraph ExternalServices [Hạ tầng Mạng & Hỗ trợ]
-        GoogleSTUN["Google STUN Server\n(stun.l.google.com:19302)"]
-    end
-
-    subgraph Storage [Cơ sở Dữ liệu]
-        DB[("PostgreSQL\n(Supabase Cloud — Production)\nSQLite (Local Dev)")]
-    end
-
-    %% REST & WebSocket Communication
-    ClientA -->|HTTP / REST Requests| Router
-    ClientB -->|HTTP / REST Requests| Router
-    ClientA <-->|WebSocket Realtime & Signaling| WSEndpoint
-    ClientB <-->|WebSocket Realtime & Signaling| WSEndpoint
-
-    %% WebRTC Direct Stream
-    ClientA <-.->|NAT Traversal / ICE Candidates| GoogleSTUN
-    ClientB <-.->|NAT Traversal / ICE Candidates| GoogleSTUN
-    ClientA <===>|WebRTC P2P Direct Media Stream\n(Audio / Video)| ClientB
-
-    %% Backend Internals
-    Router --> AuthMiddleware
-    AuthMiddleware --> ServiceLayer
-    WSEndpoint <--> ConnManager
-    ConnManager --> ServiceLayer
-    ServiceLayer --> MatchingEngine
-    ServiceLayer --> DB
-```
+### Backend (`backend/`)
+- **Framework:** Python, FastAPI (`0.115.0`), Uvicorn (`uvicorn[standard]`)
+- **ORM & Validation:** SQLAlchemy `2.0.36`, Pydantic
+- **Database:** SQLite mặc định (`sqlite:///./community.db`) hoặc PostgreSQL (Supabase / Render qua `psycopg2-binary`)
+- **Security & Auth:** `pyjwt`, `bcrypt`, `google-auth`, `python-dotenv`
+- **Matching & AI:** `scikit-learn` (`TfidfVectorizer`, `cosine_similarity`), `langchain`, `langchain-google-genai`, Google Gemini REST API
 
 ---
 
-## 4. Công nghệ Sử dụng (Technology Stack)
+## 3. Cấu trúc thư mục
 
-| Tầng | Công nghệ | Chi tiết |
-| :--- | :--- | :--- |
-| **Frontend** | React 18, Vite | JavaScript thuần (không dùng TypeScript/Next.js/Redux), React Router DOM v6, Context API, Vanilla CSS Design Tokens |
-| **Backend** | Python 3.10+, FastAPI | Pydantic v2 (Validation), SQLAlchemy 2.0 ORM, Uvicorn ASGI Server |
-| **Khớp đôi / AI** | Scikit-learn | TF-IDF Vectorizer, Cosine Similarity (Tuân thủ nghiêm ngặt: Không dùng Deep Learning/LLM) |
-| **Database** | PostgreSQL (Supabase) | Supabase Cloud PostgreSQL cho production; SQLite local cho phát triển. NullPool + pool_pre_ping cho Supabase |
-| **Xác thực** | JWT & Google OAuth 2.0 | `PyJWT`, `bcrypt`, Google Identity Services (`@react-oauth/google`) |
-| **Realtime Chat** | Native WebSocket | Giao thức WebSocket chuẩn RFC 6455, tự động quản lý trạng thái Online/Offline |
-| **Gọi thoại & Video**| WebRTC & Web Audio API | Kết nối P2P trực tiếp, Google STUN (`stun:stun.l.google.com:19302`), Web Audio synthesizer |
-| **Triển khai (Deploy)**| Vercel + Render + Supabase | Frontend trên Vercel, Backend API trên Render Web Service, Database trên Supabase |
-
----
-
-## 5. Cấu trúc Thư mục Dự án (Project Structure)
-
-```
-chat/
+```text
+.
 ├── backend/
 │   ├── app/
-│   │   ├── core/               # Cấu hình hệ thống, JWT, hashing mật khẩu, dependencies
-│   │   │   ├── config.py
-│   │   │   ├── security.py
-│   │   │   └── dependencies.py
-│   │   ├── db/                 # Kết nối SQLAlchemy engine, SessionLocal, Base (NullPool + pool_pre_ping cho Supabase)
-│   │   │   └── database.py
-│   │   ├── models/             # SQLAlchemy ORM models
-│   │   │   ├── user.py         # User, Profile, SurveyAnswer
-│   │   │   ├── connection.py   # Connection
-│   │   │   ├── chat.py         # Conversation, ConversationMember, Message
-│   │   │   ├── post.py         # Post, Comment, Like
-│   │   │   ├── report.py       # UserBlock, UserReport
-│   │   │   └── notification.py # Notification
-│   │   ├── schemas/            # Pydantic Schemas (Request / Response validation)
-│   │   │   ├── auth.py, user.py, profile.py, survey.py, matching.py
-│   │   │   ├── connection.py, chat.py, post.py, report.py, admin.py
-│   │   ├── services/           # Tầng nghiệp vụ (Business Logic Layer)
-│   │   │   ├── user_service.py, profile_service.py, survey_service.py
-│   │   │   ├── matching_service.py, connection_service.py, chat_service.py
-│   │   │   ├── post_service.py, report_service.py, admin_service.py
-│   │   ├── routers/            # FastAPI Routers (/api/...)
-│   │   │   ├── auth.py, users.py, profile.py, survey.py, matching.py
-│   │   │   ├── connections.py, chat.py, posts.py, reports.py, admin.py
-│   │   ├── websocket/          # Quản lý kết nối WebSocket và tín hiệu gọi điện WebRTC
-│   │   │   └── manager.py
-│   │   └── main.py             # Entrypoint FastAPI, CORS middleware, auto-migration
-│   ├── tests/                  # Bộ kiểm thử tự động (Automated Test Suites)
-│   │   ├── test_full_suite.py
-│   │   ├── test_posts_and_feed.py
-│   │   ├── test_block_and_report.py
-│   │   ├── test_admin.py
-│   │   ├── test_realtime_ws.py
-│   │   ├── test_connections.py
-│   │   ├── test_chat_flow.py
-│   │   └── test_notifications_and_status.py
-│   ├── requirements.txt        # Danh sách thư viện Python
-│   ├── .env.example            # Mẫu cấu hình môi trường backend
-│   └── community.db            # Cơ sở dữ liệu SQLite (chỉ dùng local — production dùng Supabase PostgreSQL)
+│   │   ├── core/            # Cấu hình biến môi trường (config.py) & bảo mật JWT/bcrypt (security.py)
+│   │   ├── db/              # Kết nối SQLAlchemy & session (database.py)
+│   │   ├── knowledge/       # Tài liệu tâm lý học (.txt/.md) nạp cho AI El Pulga
+│   │   ├── models/          # SQLAlchemy ORM models (User, Profile, SurveyAnswer, Community, Post, Chat, AIChatMessage...)
+│   │   ├── routers/         # FastAPI endpoints & WebSocket endpoints (/api/*)
+│   │   ├── schemas/         # Pydantic schemas validate request/response
+│   │   ├── services/        # Business logic (matching, community, post, chat, ai, admin...)
+│   │   ├── websocket/       # ConnectionManager quản lý phòng chat & user sockets
+│   │   └── main.py          # Khởi tạo app, auto-migration nhẹ, CORS, auto-seed admin & 6 cộng đồng
+│   ├── tests/               # Bộ kiểm thử pytest (9 file test)
+│   ├── .env.example         # Mẫu biến môi trường backend
+│   ├── requirements.txt     # Danh sách thư viện Python
+│   ├── seed_data.py         # Script nạp dữ liệu mẫu (local SQLite hoặc PostgreSQL)
+│   └── seed_demo_content.py # Script nạp tài khoản & bài viết demo
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # CallModal, Navbar, NotificationBell, ReportModal, BlockConfirmModal
-│   │   ├── contexts/           # AuthContext (quản lý token JWT, trạng thái đăng nhập)
-│   │   ├── pages/              # Landing, Login, Register, Survey, Home, Discover, Communities
-│   │   │                       # Connections, Messages, Profile, AdminDashboard
-│   │   ├── services/           # Axios HTTP client & API service modules
-│   │   ├── App.jsx             # Định tuyến React Router DOM
-│   │   ├── main.jsx            # Entry point ReactDOM
-│   │   └── index.css           # Global CSS variables, animations, theme tokens
-│   ├── package.json            # Cấu hình dependencies Frontend
-│   └── vite.config.js          # Cấu hình Vite build tool
-├── vercel.json                 # Cấu hình định tuyến SPA cho Vercel Deployment
-├── AI_RULES.md                 # Quy tắc phát triển và chuẩn mực kỹ thuật
-├── MVP_STATUS.md               # Báo cáo chi tiết trạng thái tính năng MVP
-└── README.md                   # Tài liệu hướng dẫn sử dụng và giới thiệu dự án
+│   │   ├── assets/          # Logo SVG & ảnh nền
+│   │   ├── components/      # Navbar, CallModal, CommunityHubContent, CommunityChatModal, CreateCommunityModal, ElPulgaChatWidget...
+│   │   ├── contexts/        # AuthContext, CallContext
+│   │   ├── data/            # Danh mục cộng đồng & avatar mặc định
+│   │   ├── pages/           # Landing, Login, Register, Home, Discover, Communities, Connections, Messages, Profile, Survey, Settings, AdminDashboard
+│   │   ├── services/        # Axios API clients theo từng domain
+│   │   ├── styles/          # lapulga.css
+│   │   └── App.jsx          # Định tuyến & Providers
+│   ├── .env.example         # Mẫu biến môi trường frontend
+│   ├── index.html
+│   ├── package.json
+│   ├── vercel.json          # Cấu hình SPA rewrite trên Vercel
+│   └── vite.config.js
+├── GOOGLE_OAUTH_GUIDE.md    # Hướng dẫn tạo Google Client ID
+├── MVP_STATUS.md            # Báo cáo trạng thái các module & tính năng
+├── migrate_db.py            # Script sao chép dữ liệu giữa 2 PostgreSQL DB
+└── vercel.json              # Cấu hình SPA rewrite cấp root
 ```
 
 ---
 
-## 6. Hướng dẫn Cài đặt & Khởi chạy (Installation & Setup)
+## 4. Cài đặt & chạy cục bộ (Local Development)
 
-### 6.1 Yêu cầu Môi trường
-- **Python**: Phiên bản 3.10 trở lên.
-- **Node.js**: Phiên bản 18 trở lên (kèm `npm`).
-- Trình duyệt hiện đại hỗ trợ WebRTC và HTML5 WebSocket (Google Chrome, Microsoft Edge, Firefox, Safari).
+### Yêu cầu môi trường
+- **Python 3.11+** (xem `.python-version` / `backend/.python-version`)
+- **Node.js 18+** và `npm`
 
-### 6.2 Cài đặt & Khởi động Backend
-```bash
-# 1. Di chuyển vào thư mục backend
+### Bước 1: Khởi chạy Backend
+
+```powershell
 cd backend
-
-# 2. Khởi tạo môi trường ảo Python (Virtual Environment)
 python -m venv venv
-
-# 3. Kích hoạt môi trường ảo:
-# Trên Windows:
-venv\Scripts\activate
-# Trên macOS / Linux:
-source venv/bin/activate
-
-# 4. Cài đặt các thư viện phụ thuộc
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 5. Tạo file cấu hình môi trường từ mẫu .env.example
-copy .env.example .env   # Trên Windows
-# cp .env.example .env   # Trên macOS / Linux
-
-# 6. Khởi chạy máy chủ FastAPI (Uvicorn)
-uvicorn app.main:app --reload --port 8000
 ```
-- Máy chủ Backend sẽ hoạt động tại: `http://localhost:8000`
-- Tài liệu API tương tác trực quan (Swagger UI): `http://localhost:8000/docs`
 
-### 6.3 Cấu hình Biến môi trường (`backend/.env`)
+Tạo file `backend/.env` từ `backend/.env.example` và điền các giá trị phù hợp:
+
 ```env
-# Local Development (SQLite)
+# Để trống hoặc dùng SQLite cục bộ nếu chạy local nhanh: sqlite:///./community.db
 DATABASE_URL=sqlite:///./community.db
 
-# Production (Supabase PostgreSQL) — chỉ set trên Render, không commit vào git
-# DATABASE_URL=postgresql://user:password@host:5432/dbname
-
-JWT_SECRET_KEY=your_secure_random_secret_key_here
+JWT_SECRET_KEY=your_jwt_secret_key
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
-GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
-CORS_ORIGINS=https://your-app.vercel.app
+
+# Google OAuth (tùy chọn, xem GOOGLE_OAUTH_GUIDE.md)
+GOOGLE_CLIENT_ID=your_google_client_id
+
+# Tài khoản Admin mặc định tự tạo khi server khởi động
+ADMIN_EMAIL=admin@la-pulga.local
+ADMIN_DEFAULT_PASSWORD=@Abc1234
+
+# CORS bổ sung (nếu cần ngoài localhost và *.vercel.app)
+CORS_ORIGINS=http://localhost:5173
+
+# Stringee Calling (cần thiết để bật gọi thoại/video qua Stringee)
+STRINGEE_API_KEY_SID=your_stringee_api_key_sid
+STRINGEE_API_KEY_SECRET=your_stringee_api_key_secret
+STRINGEE_SIGNING_SECRET=your_stringee_project_signing_secret
+STRINGEE_ACCESS_TOKEN_TTL_SECONDS=3600
+
+# TURN Server (tùy chọn cho WebRTC)
+# TURN_SERVER_URLS=turn:your-turn-server:3478
+# TURN_SHARED_SECRET=your_turn_secret
+# TURN_CREDENTIAL_TTL_SECONDS=3600
+
+# Trợ lý AI El Pulga (Google Gemini)
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-flash-lite-latest
 ```
 
-### 6.4 Cài đặt & Khởi động Frontend
-```bash
-# 1. Di chuyển vào thư mục frontend (mở cửa sổ terminal mới)
+Chạy server FastAPI (cổng `8000`):
+
+```powershell
+uvicorn app.main:app --reload --port 8000
+```
+
+- Khi khởi động, `backend/app/main.py` sẽ tự động tạo bảng (`Base.metadata.create_all`), chạy các hàm kiểm tra/bổ sung cột tương thích schema, khởi tạo tài khoản Admin (từ `ADMIN_EMAIL` / `ADMIN_DEFAULT_PASSWORD`, mặc định fallback trong code là `admin@kindred.local` / `admin123` nếu không set env) và seed **6 cộng đồng chuẩn ban đầu** kèm nhóm chat riêng.
+- Tài liệu API tương tác mặc định tại: `http://localhost:8000/docs`
+
+### Bước 2: Khởi chạy Frontend
+
+```powershell
 cd frontend
-
-# 2. Cài đặt các thư viện Node.js
 npm install
+```
 
-# 3. Khởi chạy máy chủ phát triển Vite
+Tạo `frontend/.env` từ `frontend/.env.example`:
+
+```env
+VITE_API_URL=http://localhost:8000
+VITE_GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
+```
+
+Chạy Vite dev server (cổng `5173`):
+
+```powershell
 npm run dev
 ```
-- Giao diện người dùng sẽ sẵn sàng tại: `http://localhost:5173`
+
+Truy cập ứng dụng tại `http://localhost:5173`. Xem thêm hướng dẫn cấu hình đăng nhập Google tại [GOOGLE_OAUTH_GUIDE.md](GOOGLE_OAUTH_GUIDE.md).
 
 ---
 
-## 7. Tài liệu API Endpoints (API Documentation)
+## 5. Scripts dữ liệu, Kiểm thử & Build
 
-### 🔑 Xác thực & Người dùng (Auth & Users)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Đăng ký tài khoản người dùng mới | Public |
-| `POST` | `/api/auth/login` | Đăng nhập bằng Email/Username + Mật khẩu | Public |
-| `POST` | `/api/auth/google` | Đăng nhập một chạm bằng Google ID Token | Public |
-| `GET` | `/api/users/me` | Lấy thông tin tài khoản hiện tại | Bearer JWT |
-| `GET` | `/api/users/{id}/public` | Lấy thông tin hồ sơ công khai của người dùng (Hỗ trợ cả `/api/profile/{id}`) | Bearer JWT |
+### Nạp dữ liệu mẫu & Di chuyển Database
+- Nạp người dùng mẫu vào Local SQLite:
+  ```powershell
+  python backend/seed_data.py --local
+  ```
+- Hoặc nạp vào `DATABASE_URL` (PostgreSQL/Supabase):
+  ```powershell
+  python backend/seed_data.py --supabase
+  python backend/seed_demo_content.py
+  ```
+- Sao chép dữ liệu giữa 2 database PostgreSQL:
+  ```powershell
+  python migrate_db.py "URL_DATABASE_CU" "URL_DATABASE_MOI"
+  ```
 
-### 📋 Khảo sát & Hồ sơ (Survey & Profile)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/profile/me` | Xem thông tin hồ sơ cá nhân | Bearer JWT |
-| `PUT` | `/api/profile/me` | Cập nhật hồ sơ cá nhân | Bearer JWT |
-| `POST` | `/api/survey` | Gửi câu trả lời khảo sát Onboarding | Bearer JWT |
-| `GET` | `/api/survey/me` | Xem lại kết quả khảo sát cá nhân | Bearer JWT |
-
-### 🎯 Khớp đôi & Kết nối (Matching & Connections)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/matches` | Gợi ý danh sách người đồng điệu (TF-IDF + Cosine) | Bearer JWT |
-| `GET` | `/api/connections` | Lấy danh sách bạn bè đã kết nối | Bearer JWT |
-| `GET` | `/api/connections/requests`| Lấy danh sách lời mời đã gửi và đã nhận | Bearer JWT |
-| `POST` | `/api/connections/{user_id}` | Gửi lời mời kết nối tới một người dùng | Bearer JWT |
-| `PUT` | `/api/connections/{id}/accept` | Chấp nhận lời mời kết nối | Bearer JWT |
-| `PUT` | `/api/connections/{id}/reject` | Từ chối lời mời kết nối | Bearer JWT |
-
-### 💬 Trò chuyện & Báo hiệu Cuộc gọi (Chat & WebRTC Signaling)
-| Method / Giao thức | Endpoint / Event | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/conversations` | Lấy danh sách các cuộc trò chuyện | Bearer JWT |
-| `POST` | `/api/conversations/{user_id}` | Khởi tạo hoặc lấy phòng chat 1-1 với user | Bearer JWT |
-| `GET` | `/api/conversations/{id}/messages`| Lấy lịch sử tin nhắn trong cuộc trò chuyện | Bearer JWT |
-| `POST` | `/api/conversations/{id}/messages`| Gửi tin nhắn qua REST API (Fallback) | Bearer JWT |
-| `PUT` | `/api/messages/{id}/read` | Đánh dấu tin nhắn đã đọc | Bearer JWT |
-| `WS` | `/api/ws/chat/{conv_id}?token=...`| Kết nối WebSocket truyền tin nhắn & Báo hiệu WebRTC | Query Token |
-| *WS Event* | `call:offer` | Gửi lời mời gọi điện thoại/video kèm SDP Offer | WebSocket |
-| *WS Event* | `call:answer` | Chấp nhận cuộc gọi kèm SDP Answer | WebSocket |
-| *WS Event* | `call:ice_candidate` | Trao đổi ứng viên ICE để kết nối P2P WebRTC | WebSocket |
-| *WS Event* | `call:reject` | Từ chối cuộc gọi đến | WebSocket |
-| *WS Event* | `call:end` | Kết thúc cuộc gọi và tự động ghi lịch sử đàm thoại | WebSocket |
-
-### 📰 Bảng tin & Khoảnh khắc Cộng đồng (Community Feed)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/posts` | Đăng bài viết / khoảnh khắc mới | Bearer JWT |
-| `GET` | `/api/posts` | Lấy danh sách bài viết (hỗ trợ lọc theo `category`) | Bearer JWT |
-| `GET` | `/api/posts/{id}` | Xem chi tiết bài viết kèm danh sách bình luận | Bearer JWT |
-| `DELETE` | `/api/posts/{id}` | Xóa bài viết (Chỉ tác giả hoặc Admin) | Bearer JWT |
-| `POST` | `/api/posts/{id}/like` | Thả tim hoặc Hủy thả tim bài viết | Bearer JWT |
-| `POST` | `/api/posts/{id}/comments` | Thêm bình luận mới vào bài viết | Bearer JWT |
-| `GET` | `/api/posts/{id}/comments` | Lấy danh sách bình luận của bài viết | Bearer JWT |
-
-### 🛡️ An toàn, Chặn & Báo cáo (Block & Report)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/reports` | Gửi báo cáo vi phạm người dùng | Bearer JWT |
-| `POST` | `/api/blocks/{user_id}` | Chặn người dùng 2 chiều | Bearer JWT |
-| `DELETE` | `/api/blocks/{user_id}` | Bỏ chặn người dùng | Bearer JWT |
-| `GET` | `/api/blocks` | Lấy danh sách những người dùng đã chặn | Bearer JWT |
-
-### 👑 Quản trị viên (Admin Dashboard)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/admin/stats` | Thống kê số liệu hệ thống (User, Khóa, Đơn chờ) | Admin Role |
-| `GET` | `/api/admin/users` | Danh sách tài khoản người dùng và bộ lọc | Admin Role |
-| `PUT` | `/api/admin/users/{id}/toggle-status` | Khóa hoặc Mở khóa tài khoản người dùng | Admin Role |
-| `GET` | `/api/admin/reports` | Danh sách báo cáo vi phạm chờ kiểm duyệt | Admin Role |
-| `PUT` | `/api/admin/reports/{id}` | Phê duyệt (kèm tùy chọn khóa user) hoặc Bác bỏ báo cáo | Admin Role |
-
-### 🔔 Thông báo (Notifications)
-| Method | Endpoint | Mô tả | Yêu cầu Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/notifications` | Lấy danh sách thông báo và số lượng chưa đọc | Bearer JWT |
-| `PUT` | `/api/notifications/{id}/read` | Đánh dấu 1 thông báo là đã đọc | Bearer JWT |
-| `PUT` | `/api/notifications/read-all` | Đánh dấu tất cả thông báo là đã đọc | Bearer JWT |
+### Kiểm thử Backend & Build Frontend
+- Chạy test backend (gồm 9 bộ test trong `backend/tests/`: `test_admin.py`, `test_block_and_report.py`, `test_chat_flow.py`, `test_community_feature.py`, `test_connections.py`, `test_full_suite.py`, `test_notifications_and_status.py`, `test_posts_and_feed.py`, `test_realtime_ws.py`):
+  ```powershell
+  cd backend
+  pytest
+  ```
+- Build production frontend:
+  ```powershell
+  cd frontend
+  npm run build
+  ```
 
 ---
 
-## 8. Chi tiết Thuật toán Ghép đôi (Matching Engine)
+## 6. Tóm tắt API Endpoints chính
 
-Thuật toán ghép đôi được xây dựng tại `backend/app/services/matching_service.py` dựa trên nguyên lý xử lý ngôn ngữ tự nhiên:
-1. **Biểu diễn văn bản (Text Representation)**:
-   Ghép nối các dữ liệu trả lời khảo sát và tiểu sử của người dùng thành một chuỗi văn bản thuần túy có tiền tố định danh ngữ nghĩa:
-   ```python
-   text = f"tuổi_{age} hoàn_cảnh_{status} cảm_xúc_{feeling} mục_tiêu_{goal} chủ_đề_{topics} hoạt_động_{activities} {bio} {story}"
-   ```
-2. **Vector hóa TF-IDF (Term Frequency - Inverse Document Frequency)**:
-   Sử dụng `TfidfVectorizer` từ thư viện `scikit-learn` để chuyển đổi chuỗi văn bản của tất cả người dùng thành ma trận vector đặc trưng số học:
-   $$\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1$$
-   Các từ khóa độc đáo của người dùng sẽ nhận trọng số cao hơn, trong khi các từ phổ biến sẽ được giảm trọng số tương ứng.
-3. **Độ đo tương đồng Cosine (Cosine Similarity)**:
-   Tính góc giữa vector của người dùng đang đăng nhập ($\mathbf{u}$) và vector của từng người dùng khác ($\mathbf{v}$):
-   $$\text{Cosine Similarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}$$
-4. **Điểm số & Lý do Tương đồng (Score & Explanations)**:
-   - Điểm số Cosine được chuyển đổi về thang điểm 0–100%.
-   - Cộng thưởng điểm theo quy tắc (Rule-based Bonus): Cùng nhóm tuổi, Cùng hoàn cảnh sống.
-   - Tự động bóc tách các sở thích chung và tạo các thông điệp giải thích lý do tương đồng hiển thị sinh động trên thẻ người dùng.
-
----
-
-## 9. Kiểm thử Tự động (Automated Testing & QA)
-
-Dự án có đầy đủ các bộ test tự động kiểm chứng 100% logic nghiệp vụ backend và khả năng đóng gói frontend.
-
-### 9.1 Chạy Kiểm thử Backend
-Tại thư mục `backend`, chạy các lệnh sau:
-```bash
-# 1. Chạy toàn bộ test suite cốt lõi (Auth, Profile, Survey, Matching, Connections, Chat)
-venv\Scripts\python.exe tests\test_full_suite.py
-
-# 2. Kiểm thử Bảng tin cộng đồng, Thả tim, Bình luận và Phân quyền xóa bài
-venv\Scripts\python.exe tests\test_posts_and_feed.py
-
-# 3. Kiểm thử Chặn 2 chiều (Block) và Báo cáo vi phạm (Report)
-venv\Scripts\python.exe tests\test_block_and_report.py
-
-# 4. Kiểm thử Bảng điều khiển Quản trị viên (Admin Dashboard & Permissions)
-venv\Scripts\python.exe tests\test_admin.py
-
-# 5. Kiểm thử WebSocket Chat Realtime độc lập
-venv\Scripts\python.exe tests\test_realtime_ws.py
-
-# 6. Kiểm thử Thông báo & Cập nhật Trạng thái Online / Offline
-venv\Scripts\python.exe tests\test_notifications_and_status.py
-```
-> Tất cả các bộ kiểm thử đều vượt qua **100% PASSED** mà không gặp bất kỳ lỗi nào.
-
-### 9.2 Kiểm thử Đóng gói Frontend
-Tại thư mục `frontend`:
-```bash
-npm run build
-```
-> Kết quả: Đóng gói thành công vào thư mục `frontend/dist/` sạch sẽ, tối ưu hóa kích thước bundle và sẵn sàng deploy.
-
----
-
-## 10. Hướng dẫn Triển khai Sản phẩm (Production Deployment)
-
-Hệ sinh thái Kindred được triển khai thực tế trên 3 nền tảng Cloud:
-
-| Thành phần | Nền tảng | Ghi chú |
+| Nhóm API | Prefix / Endpoints tiêu biểu | Mô tả |
 | :--- | :--- | :--- |
-| **Frontend** | [Vercel](https://vercel.com) | CI/CD tự động deploy mỗi khi push lên `main`, cấu hình SPA rewrite qua `vercel.json` |
-| **Backend API** | [Render](https://render.com) | Python 3.10+, hỗ trợ đầy đủ WebSocket và WebRTC Signaling |
-| **Database** | [Supabase](https://supabase.com) | PostgreSQL cloud, kết nối qua `DATABASE_URL`, NullPool + pool_pre_ping |
-
-### 10.1 Biến môi trường cần set trên Render
-
-| Biến | Mô tả |
-| :--- | :--- |
-| `DATABASE_URL` | Connection string Supabase (`postgresql://...`) |
-| `JWT_SECRET_KEY` | Chuỗi ngẫu nhiên bảo mật, tối thiểu 32 ký tự |
-| `JWT_ALGORITHM` | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` |
-| `GOOGLE_CLIENT_ID` | OAuth Client ID từ Google Cloud Console |
-| `CORS_ORIGINS` | Domain Vercel của frontend (vd: `https://caithunhat.vercel.app`) |
-
-### 10.2 Start Command trên Render
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
-
-> **Lưu ý:** Giữ **1 instance** trên Render (mặc định free tier) để WebSocket ConnectionManager hoạt động đúng. WebSocket state được lưu trong bộ nhớ — nếu scale nhiều instance sẽ cần Redis.
+| **Health** | `GET /api/health`, `GET /api/db-check` | Kiểm tra server & kết nối DB |
+| **Auth** | `POST /api/auth/register`, `/login`, `/google` | Đăng ký, đăng nhập & Google OAuth |
+| **Users & Profile** | `GET /api/users/me`, `GET/PUT /api/profile/me`, `GET /api/users/{id}/public`, `GET /api/profile/{id}` | Hồ sơ cá nhân & hồ sơ công khai |
+| **Survey** | `POST /api/survey`, `GET /api/survey/me` | Lưu & xem lại khảo sát onboarding |
+| **Matching** | `GET /api/matches` | Gợi ý người đồng điệu (TF-IDF + Cosine Similarity) |
+| **Connections** | `POST /api/connections/{user_id}`, `GET /api/connections`, `/requests`, `PUT .../accept`, `.../reject` | Kết bạn & quản lý lời mời |
+| **Communities** | `GET/POST /api/communities`, `GET /api/communities/{id}`, `POST .../join`, `.../leave`, `GET .../posts` | Quản lý cộng đồng & nhóm chat riêng |
+| **Posts (Feed)** | `GET/POST /api/posts`, `GET/DELETE /api/posts/{id}`, `POST .../like`, `GET/POST .../comments`, `DELETE /api/comments/{id}` | Bảng tin, lọc nhóm/chủ đề, like & bình luận |
+| **Chat & WebSocket** | `GET /api/conversations`, `POST /api/conversations/{user_id}`, `GET/POST .../messages`, `PUT /api/messages/{id}/read`, `WS /api/ws/user`, `WS /api/ws/chat/{id}` | Nhắn tin realtime 1-1 & nhóm, trạng thái online |
+| **Voice / Video Call** | `GET /api/calls/stringee-token`, `/stringee-answer`, `/ice-servers`, `POST /api/calls/{id}/events` | Tích hợp Stringee Call, TURN ICE & lưu lịch sử cuộc gọi |
+| **AI Companion** | `GET /api/ai/history`, `POST /api/ai/chat`, `DELETE /api/ai/history`, `GET /api/ai/quick-prompts` | Trợ lý tâm lý El Pulga (Gemini + LangChain) |
+| **Safety & Notifications** | `GET/POST/DELETE /api/blocks*`, `POST /api/reports`, `GET/PUT /api/notifications*` | Chặn 2 chiều, báo cáo & thông báo |
+| **Admin** | `GET /api/admin/stats`, `GET /api/admin/users`, `PUT .../toggle-status`, `GET/PUT /api/admin/reports*` | Quản trị người dùng & kiểm duyệt báo cáo |
 
 ---
 
-## 11. Hướng dẫn Test Tính Năng Gọi Thoại / Video (WebRTC Demo)
+## 7. Triển khai (Deployment)
 
-Để kiểm tra trực tiếp tính năng Gọi điện WebRTC giữa 2 người dùng trên cùng một máy tính:
-1. Mở trình duyệt thường (ví dụ: Google Chrome) đăng nhập tài khoản A.
-2. Mở một cửa sổ ẩn danh (Incognito) đăng nhập tài khoản B.
-3. Đảm bảo tài khoản A và B đã kết bạn với nhau và mở khung chat của nhau tại `/messages`.
-4. Trên tài khoản A, bấm vào nút 📹 **Gọi Video** hoặc 📞 **Gọi thoại** ở góc trên bên phải khung chat.
-5. Tài khoản B sẽ nghe thấy tiếng chuông reo và xuất hiện popup Cuộc gọi đến kèm avatar rung nhẹ.
-6. Bấm nút 🟢 **Chấp nhận** trên tài khoản B:
-   - Trình duyệt yêu cầu quyền truy cập Micro / Camera → Bấm **Allow**.
-   - Màn hình cuộc gọi tối sang trọng xuất hiện: Camera 2 bên được truyền tải tức thì, đồng hồ đếm giây hoạt động.
-   - Thử nghiệm bấm nút **Tắt Micro** hoặc **Tắt Camera** để kiểm tra phản hồi.
-7. Bấm nút 🔴 **Kết thúc cuộc gọi**:
-   - Màn hình cuộc gọi đóng lại.
-   - Trong khung chat của cả 2 tài khoản xuất hiện ngay thông báo hệ thống: `📹 Cuộc gọi video (Thời lượng: 00:xx)`.
+- **Frontend (Vercel):** Dùng Vite build (`dist/`), đã cấu hình SPA fallback rewrite tại `vercel.json` và `frontend/vercel.json`. Cần khai báo `VITE_API_URL` và `VITE_GOOGLE_CLIENT_ID`.
+- **Backend (Render / ASGI):** Chạy `uvicorn app.main:app` hỗ trợ WebSocket, kết nối PostgreSQL (Supabase với `NullPool` + `pool_pre_ping`), cấu hình đầy đủ biến môi trường tại `backend/.env.example` và `CORS_ORIGINS`.

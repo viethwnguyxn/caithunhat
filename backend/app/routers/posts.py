@@ -30,6 +30,8 @@ def create_new_post(
 @router.get("/posts", response_model=list[PostResponse])
 def get_community_feed(
     category: str | None = Query(None, description="Lọc theo chủ đề"),
+    joined_only: bool = Query(False, description="Chỉ lấy bài viết từ các nhóm đã tham gia"),
+    community_id: int | None = Query(None, description="Lọc theo ID nhóm cộng đồng cụ thể"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -40,6 +42,8 @@ def get_community_feed(
         db=db,
         current_user_id=current_user.id,
         category=category,
+        community_id=community_id,
+        joined_only=joined_only,
         limit=limit,
         offset=offset,
     )

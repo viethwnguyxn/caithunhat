@@ -1,23 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  ArrowLeft,
-  Flag,
-  HeartHandshake,
-  Info,
-  LockKeyhole,
-  Mail,
-  MessageCircle,
-  MessageCircleHeart,
-  MoreVertical,
-  Phone,
-  ShieldBan,
-  UserRound,
-  UserRoundPlus,
-  Video,
-  X,
-} from 'lucide-react'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
 import { useAuth } from '../contexts/AuthContext'
@@ -31,6 +16,14 @@ import { reportService } from '../services/reportService'
 import { markConversationNotificationsAsRead } from '../services/notificationService'
 import { getPublicProfile } from '../services/profileService'
 import { useCall } from '../contexts/CallContext'
+import {
+  clearAiHistory,
+  getAiHistory,
+  getAiQuickPrompts,
+  sendAiMessage,
+} from '../services/aiService'
+import { getCommunityAvatarUrl } from '../data/communities'
+import brandMark from '../assets/lapulga-mark.svg'
 
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
@@ -40,12 +33,24 @@ function formatTimeAgo(dateString) {
 
   if (diffInSeconds < 60) return 'vừa xong'
   const diffInMinutes = Math.floor(diffInSeconds / 60)
-  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`
+  if (diffInMinutes < 60) return `${diffInMinutes}p`
   const diffInHours = Math.floor(diffInMinutes / 60)
-  if (diffInHours < 24) return `${diffInHours} giờ trước`
+  if (diffInHours < 24) return `${diffInHours}h`
   const diffInDays = Math.floor(diffInHours / 24)
-  if (diffInDays < 7) return `${diffInDays} ngày trước`
-  return date.toLocaleDateString('vi-VN')
+  if (diffInDays < 7) return `${diffInDays}d`
+  return date.toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' })
+}
+
+function mergeMessages(current, incoming, conversationId) {
+  const messagesById = new Map()
+  for (const message of [...current, ...incoming]) {
+    if (String(message.conversation_id) === String(conversationId)) {
+      messagesById.set(String(message.id), message)
+    }
+  }
+  return [...messagesById.values()].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id - b.id
+  )
 }
 
 export default function Messages() {
@@ -53,134 +58,47 @@ export default function Messages() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Danh sách cuộc trò chuyện
+  // Conversations
   const [conversations, setConversations] = useState([])
   const [activeConversation, setActiveConversation] = useState(null)
   const [loadingConversations, setLoadingConversations] = useState(true)
 
-  // Tin nhắn của cuộc trò chuyện hiện tại
+  // Messages
   const [messages, setMessages] = useState([])
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [inputText, setInputText] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [aiQuickPrompts, setAiQuickPrompts] = useState([])
 
-  // Trạng thái kết nối WebSocket: 'connecting' | 'connected' | 'disconnected' | 'error'
-  const [wsStatus, setWsStatus] = useState('disconnected')
-
-  // Search filter cho danh sách chat bên trái
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterUnreadOnly, setFilterUnreadOnly] = useState(false)
 
-  // Trạng thái modal Báo cáo & Chặn
+  // Modals
   const [showReportModal, setShowReportModal] = useState(false)
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [showChatMenu, setShowChatMenu] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
-  // Trạng thái xem hồ sơ đối phương
+  // Partner profile modal
   const [partnerProfileModal, setPartnerProfileModal] = useState(null)
   const [loadingPartnerProfile, setLoadingPartnerProfile] = useState(false)
-  const [isHoveringPartner, setIsHoveringPartner] = useState(false)
 
-  // Quản lý cuộc gọi toàn cục qua CallContext
+  // CallContext hook
   const { startCall } = useCall()
 
-  // Tự động tải lại lịch sử tin nhắn khi cuộc gọi kết thúc để cập nhật dòng log cuộc gọi
-  useEffect(() => {
-    const handleCallEnded = () => {
-      if (activeConversation?.id) {
-        setTimeout(() => {
-          getMessages(activeConversation.id)
-            .then((history) => {
-              if (history) setMessages(history)
-            })
-            .catch(() => {})
-        }, 500)
-      }
-    }
-    window.addEventListener('call-session-ended', handleCallEnded)
-    return () => window.removeEventListener('call-session-ended', handleCallEnded)
-  }, [activeConversation?.id])
+  // Mobile drawer toggle
+  const [isMobileListOpen, setIsMobileListOpen] = useState(false)
 
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(''), 4000)
-      return () => clearTimeout(timer)
-    }
-  }, [toastMessage])
-
-  // Đóng menu khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = () => setShowChatMenu(false)
-    if (showChatMenu) {
-      window.addEventListener('click', handleClickOutside)
-      return () => window.removeEventListener('click', handleClickOutside)
-    }
-  }, [showChatMenu])
-
-  // Xem thông tin chi tiết hồ sơ đối phương
-  const handleOpenPartnerProfile = async () => {
-    if (!activeConversation?.partner) return
-    const partner = activeConversation.partner
-    setPartnerProfileModal({
-      ...partner,
-      bio: partner.bio || '',
-      age_group: partner.age_group || '',
-      current_status: partner.current_status || '',
-      story: partner.story || '',
-      interests: partner.interests || [],
-    })
-    setLoadingPartnerProfile(true)
-    try {
-      const fullProfile = await getPublicProfile(partner.id)
-      if (fullProfile) {
-        setPartnerProfileModal((prev) => ({
-          ...prev,
-          ...fullProfile,
-          display_name: fullProfile.display_name || prev?.display_name,
-          avatar_url: fullProfile.avatar_url || prev?.avatar_url,
-          bio: fullProfile.bio || prev?.bio,
-          age_group: fullProfile.age_group || prev?.age_group,
-          current_status: fullProfile.current_status || prev?.current_status,
-          story: fullProfile.story || prev?.story,
-          interests: fullProfile.interests || prev?.interests,
-        }))
-      }
-    } catch (err) {
-      console.warn('Không thể tải profile chi tiết:', err)
-    } finally {
-      setLoadingPartnerProfile(false)
-    }
-  }
-
-  // Đóng modal profile khi bấm phím Escape
-  useEffect(() => {
-    const handleEscKey = (e) => {
-      if (e.key === 'Escape') setPartnerProfileModal(null)
-    }
-    if (partnerProfileModal) {
-      window.addEventListener('keydown', handleEscKey)
-    }
-    return () => window.removeEventListener('keydown', handleEscKey)
-  }, [partnerProfileModal])
-
-  // Hỗ trợ responsive cho mobile
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  )
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Refs
   const socketRef = useRef(null)
   const messagesEndRef = useRef(null)
-  const textareaRef = useRef(null)
+  const inputRef = useRef(null)
 
-  // Tự động cuộn xuống tin nhắn mới nhất
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(''), 4000)
+  }
+
   const scrollToBottom = (smooth = true) => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -194,7 +112,43 @@ export default function Messages() {
     scrollToBottom(true)
   }, [messages])
 
-  // 1. Tải danh sách cuộc hội thoại ban đầu
+  useEffect(() => {
+    const handleGlobalMessage = (event) => {
+      const newMsg = event.detail?.message
+      if (!newMsg) return
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === newMsg.conversation_id
+            ? {
+                ...conversation,
+                last_message: newMsg,
+                unread_count:
+                  activeConversation?.id === newMsg.conversation_id
+                    ? conversation.unread_count
+                    : (conversation.unread_count || 0) + 1,
+              }
+            : conversation
+        )
+      )
+
+      if (activeConversation?.id === newMsg.conversation_id) {
+        setMessages((prev) => mergeMessages(prev, [newMsg], newMsg.conversation_id))
+        setActiveConversation((prev) =>
+          prev?.id === newMsg.conversation_id
+            ? { ...prev, last_message: newMsg }
+            : prev
+        )
+      }
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'))
+    }
+
+    window.addEventListener('new-chat-message', handleGlobalMessage)
+    return () => window.removeEventListener('new-chat-message', handleGlobalMessage)
+  }, [activeConversation?.id])
+
+  // Load conversations
   const loadConversations = async () => {
     setLoadingConversations(true)
     try {
@@ -209,29 +163,40 @@ export default function Messages() {
     }
   }
 
-  // 2. Xử lý query params hoặc state từ URL (?conversationId=... hoặc state.conversationId)
+  // Handle query params
   useEffect(() => {
     const initChat = async () => {
       const convList = await loadConversations()
       const searchParams = new URLSearchParams(location.search)
-      const queryConvId = location.state?.conversationId || searchParams.get('conversationId')
-      const queryUserId = location.state?.userId || searchParams.get('userId')
-
-      // Nếu có query param trên URL, chuẩn hóa URL về /messages để đồng nhất
-      if (searchParams.get('conversationId') || searchParams.get('userId')) {
-        navigate('/messages', {
-          replace: true,
-          state: {
-            conversationId: queryConvId ? parseInt(queryConvId, 10) : undefined,
-            userId: queryUserId ? parseInt(queryUserId, 10) : undefined,
+      const queryChat = searchParams.get('chat')
+      if (queryChat === 'el-pulga') {
+        setActiveConversation({
+          id: 'el-pulga',
+          isAi: true,
+          partner: {
+            display_name: 'El Pulga',
+            username: 'el_pulga',
+            bio: 'Trợ lý tâm lý & bạn tâm giao trên La Pulga',
+            is_online: true,
           },
         })
+        return
       }
+      const queryConvId = location.state?.conversationId || searchParams.get('conversationId') || searchParams.get('conv')
+      const queryUserId = location.state?.userId || searchParams.get('userId') || searchParams.get('user')
+      const queryCall = searchParams.get('call')
 
       if (queryConvId) {
         const found = convList.find((c) => c.id === parseInt(queryConvId, 10))
         if (found) {
           setActiveConversation(found)
+          if (queryCall && found.partner) {
+            startCall(
+              found.partner,
+              found.id,
+              queryCall === 'video' ? 'video' : 'audio'
+            )
+          }
           return
         }
       }
@@ -240,124 +205,157 @@ export default function Messages() {
         try {
           const conv = await getOrCreateConversation(parseInt(queryUserId, 10))
           setActiveConversation(conv)
-          // Cập nhật lại danh sách hội thoại nếu chưa có
           setConversations((prev) => {
             if (!prev.some((c) => c.id === conv.id)) {
               return [conv, ...prev]
             }
             return prev
           })
+          if (queryCall && conv.partner) {
+            startCall(
+              conv.partner,
+              conv.id,
+              queryCall === 'video' ? 'video' : 'audio'
+            )
+          }
         } catch (err) {
           console.error('Lỗi mở hội thoại với user:', err)
         }
+      } else if (convList.length > 0 && !activeConversation) {
+        setActiveConversation(convList[0])
       }
     }
 
     initChat()
   }, [location.search, location.state])
 
-  // 3. Quản lý WebSocket và tải tin nhắn khi đổi activeConversation
+  // WebSocket & Messages
   useEffect(() => {
     if (!activeConversation) return
 
     let isMounted = true
+    let isSyncing = false
+    const token = localStorage.getItem('access_token')
     setLoadingMessages(true)
-    setWsStatus('connecting')
+    setMessages([])
 
-    // 3.1. Tải lịch sử tin nhắn qua REST
-    getMessages(activeConversation.id)
-      .then((history) => {
-        if (isMounted) {
-          setMessages(history || [])
-          setTimeout(() => scrollToBottom(false), 50)
-          // Đánh dấu đã đọc các thông báo của cuộc hội thoại này và làm mới biểu tượng chuông
-          markConversationNotificationsAsRead(activeConversation.id)
-            .then(() => {
-              window.dispatchEvent(new CustomEvent('notifications-updated'))
-            })
-            .catch(() => {})
+    if (activeConversation.isAi) {
+      Promise.all([
+        getAiHistory().catch(() => ({ messages: [] })),
+        getAiQuickPrompts().catch(() => ({ prompts: [] })),
+      ])
+        .then(([historyRes, promptsRes]) => {
+          if (isMounted) {
+            setMessages(
+              (historyRes.messages || []).map((m, idx) => ({
+                id: `ai-${idx}`,
+                sender_id: m.role === 'user' ? user?.id : 0,
+                content: m.content,
+                created_at: m.created_at,
+              }))
+            )
+            setAiQuickPrompts(promptsRes.prompts || [])
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoadingMessages(false)
+        })
+      return () => {
+        isMounted = false
+      }
+    }
+
+    if (!token) {
+      setLoadingMessages(false)
+      return
+    }
+
+    const syncMessages = async () => {
+      if (isSyncing || document.hidden) return
+      isSyncing = true
+      try {
+        const history = await getMessages(activeConversation.id)
+        if (!isMounted) return
+        const conversationMessages = history || []
+        setMessages((prev) =>
+          mergeMessages(prev, conversationMessages, activeConversation.id)
+        )
+        const lastMessage = conversationMessages[conversationMessages.length - 1]
+        if (lastMessage) {
+          setConversations((prev) =>
+            prev.map((conversation) =>
+              conversation.id === activeConversation.id
+                ? { ...conversation, last_message: lastMessage }
+                : conversation
+            )
+          )
+          setActiveConversation((prev) =>
+            prev?.id === activeConversation.id
+              ? { ...prev, last_message: lastMessage }
+              : prev
+          )
         }
-      })
-      .catch((err) => {
-        console.error('Lỗi tải lịch sử tin nhắn:', err)
-      })
-      .finally(() => {
+        window.dispatchEvent(new CustomEvent('notifications-updated'))
+      } catch (err) {
+        console.error('Lỗi đồng bộ tin nhắn:', err)
+      } finally {
+        isSyncing = false
         if (isMounted) setLoadingMessages(false)
-      })
+      }
+    }
 
-    // 3.2. Đóng WebSocket cũ nếu đang mở
+    syncMessages()
+    const syncInterval = setInterval(syncMessages, 5000)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) syncMessages()
+    }
+    window.addEventListener('focus', syncMessages)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
     }
 
-    // 3.3. Mở kết nối WebSocket mới
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      setWsStatus('error')
-      return
-    }
-
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-    const wsBaseUrl = apiUrl.replace(/^http/, 'ws')
+    const wsBaseUrl = apiUrl.replace(/^http/, 'ws').replace(/\/+$/, '')
     const wsUrl = `${wsBaseUrl}/api/ws/chat/${activeConversation.id}?token=${encodeURIComponent(token)}`
     const ws = new WebSocket(wsUrl)
     socketRef.current = ws
-
-    ws.onopen = () => {
-      if (isMounted) {
-        setWsStatus('connected')
-        ws.send(JSON.stringify({ type: 'read' }))
-      }
-    }
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
         if (data.type === 'message' && data.message) {
           const newMsg = data.message
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) {
-              return prev
-            }
-            return [...prev, newMsg]
-          })
-
-          // Cập nhật last_message trong danh sách hội thoại bên trái
-          setConversations((prev) =>
-            prev.map((c) => {
-              if (c.id === activeConversation.id) {
-                return {
-                  ...c,
-                  last_message: newMsg,
-                }
-              }
-              return c
-            })
-          )
-
-          if (newMsg.sender_id !== user?.id && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'read' }))
-          }
-
-          // Tự động xóa thông báo vì đang mở xem cuộc trò chuyện này
-          markConversationNotificationsAsRead(activeConversation.id)
-            .then(() => {
-              window.dispatchEvent(new CustomEvent('notifications-updated'))
-            })
-            .catch(() => {})
-        } else if (data.type === 'read_receipt') {
           setMessages((prev) =>
-            prev.map((message) =>
-              message.id === data.message_id
-                ? { ...message, read_at: data.read_at }
-                : message
-            )
+            mergeMessages(prev, [newMsg], activeConversation.id)
           )
+          setConversations((prev) =>
+            prev.map((c) => (c.id === activeConversation.id ? { ...c, last_message: newMsg } : c))
+          )
+          markConversationNotificationsAsRead(activeConversation.id)
+            .then(() => window.dispatchEvent(new CustomEvent('notifications-updated')))
+            .catch(() => {})
         } else if (data.type === 'user_status') {
           const { user_id, is_online, last_seen } = data
+          setConversations((prev) =>
+            prev.map((conversation) =>
+              conversation.partner?.id === user_id
+                ? {
+                    ...conversation,
+                    partner: {
+                      ...conversation.partner,
+                      is_online,
+                      last_seen:
+                        last_seen !== undefined ? last_seen : conversation.partner.last_seen,
+                    },
+                  }
+                : conversation
+            )
+          )
           setActiveConversation((prev) => {
-            if (prev && prev.partner && prev.partner.id === user_id) {
+            if (prev?.partner?.id === user_id) {
               return {
                 ...prev,
                 partner: {
@@ -369,107 +367,102 @@ export default function Messages() {
             }
             return prev
           })
-
-          setConversations((prev) =>
-            prev.map((c) => {
-              if (c.partner && c.partner.id === user_id) {
-                return {
-                  ...c,
-                  partner: {
-                    ...c.partner,
-                    is_online,
-                    last_seen: last_seen !== undefined ? last_seen : c.partner.last_seen,
-                  },
-                }
-              }
-              return c
-            })
-          )
         } else if (data.type && data.type.startsWith('call:')) {
-          // Chuyển tiếp tín hiệu gọi WebRTC vào CallContext qua CustomEvent (dự phòng song song đảm bảo không mất gói tin)
           window.dispatchEvent(new CustomEvent('call-signal-received', { detail: data }))
-
-          if (data.type === 'call:end' || data.type === 'call:reject') {
-            setTimeout(() => {
-              getMessages(activeConversation.id)
-                .then((history) => {
-                  if (history) setMessages(history)
-                })
-                .catch(() => {})
-            }, 500)
-          }
         } else if (data.type === 'error') {
-          setToastMessage(data.message || 'Lỗi gửi tin nhắn')
+          showToast(data.message || 'Lỗi tin nhắn')
         }
       } catch (err) {
-        console.error('Lỗi phân tích tin nhắn WebSocket:', err)
+        console.error('Lỗi websocket:', err)
       }
     }
 
-    ws.onclose = () => {
-      if (isMounted) {
-        setWsStatus('disconnected')
-      }
-    }
+    ws.onerror = () => console.error('Kết nối WebSocket tin nhắn gặp lỗi.')
 
-    ws.onerror = (err) => {
-      console.error('Lỗi WebSocket:', err)
-      if (isMounted) {
-        setWsStatus('error')
-      }
-    }
-
-    // Dọn dẹp khi unmount hoặc đổi activeConversation
     return () => {
       isMounted = false
+      clearInterval(syncInterval)
+      window.removeEventListener('focus', syncMessages)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close()
       }
     }
-  }, [activeConversation?.id, user?.id])
+  }, [activeConversation?.id])
 
-  // 4. Gửi tin nhắn (ưu tiên WebSocket, fallback REST)
+  // Send message
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault()
     if (activeConversation?.is_blocked) {
-      setToastMessage('Cuộc trò chuyện đã bị chặn, không thể gửi tin nhắn.')
+      showToast('Cuộc trò chuyện đã bị chặn, không thể gửi tin nhắn.')
       return
     }
     const content = inputText.trim()
     if (!content || !activeConversation || isSending) return
+
+    if (activeConversation.isAi) {
+      setIsSending(true)
+      setInputText('')
+      const tempUserMsg = {
+        id: `ai-temp-${Date.now()}`,
+        sender_id: user?.id,
+        content: content,
+        created_at: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, tempUserMsg])
+      try {
+        const res = await sendAiMessage(content)
+        const botMsg = {
+          id: `ai-bot-${Date.now()}`,
+          sender_id: 0,
+          content: res.reply,
+          created_at: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, botMsg])
+      } catch (err) {
+        showToast('El Pulga đang tạm thời bận, vui lòng thử lại sau ít giây.')
+      } finally {
+        setIsSending(false)
+      }
+      return
+    }
 
     setIsSending(true)
     const ws = socketRef.current
 
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        // Gửi qua WebSocket
-        ws.send(
-          JSON.stringify({
-            type: 'message',
-            content,
-          })
-        )
+        ws.send(JSON.stringify({ type: 'message', content }))
         setInputText('')
       } else {
-        // Fallback gửi qua REST API nếu WebSocket bị gián đoạn
         const sentMsg = await sendMessage(activeConversation.id, content)
-        setMessages((prev) => [...prev, sentMsg])
+        setMessages((prev) =>
+          mergeMessages(prev, [sentMsg], activeConversation.id)
+        )
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === activeConversation.id
+              ? { ...conversation, last_message: sentMsg }
+              : conversation
+          )
+        )
+        setActiveConversation((prev) =>
+          prev?.id === activeConversation.id
+            ? { ...prev, last_message: sentMsg }
+            : prev
+        )
         setInputText('')
       }
     } catch (err) {
-      console.error('Lỗi khi gửi tin nhắn:', err)
-      const detail = err.response?.data?.detail
-      setToastMessage(detail || 'Không thể gửi tin nhắn. Vui lòng thử lại.')
+      console.error('Lỗi gửi tin nhắn:', err)
+      showToast('Không thể gửi tin nhắn. Vui lòng thử lại.')
     } finally {
       setIsSending(false)
-      if (textareaRef.current) {
-        textareaRef.current.focus()
-      }
+      inputRef.current?.focus()
     }
   }
 
-  // 5. Mở chặn người dùng
+  // Unblock
   const handleUnblock = async () => {
     if (!activeConversation?.partner) return
     setUnblocking(true)
@@ -478,1371 +471,673 @@ export default function Messages() {
       setActiveConversation((prev) => ({
         ...prev,
         is_blocked: false,
-        blocked_by_me: false,
+        blocked_by: null,
       }))
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeConversation.id
-            ? { ...c, is_blocked: false, blocked_by_me: false }
-            : c
-        )
-      )
-      setToastMessage(`Đã bỏ chặn ${activeConversation.partner.display_name || activeConversation.partner.username}`)
+      showToast(`Đã mở chặn @${activeConversation.partner.username}`)
     } catch (err) {
-      alert(err.response?.data?.detail || 'Không thể bỏ chặn người dùng')
+      showToast('Không thể mở chặn.')
     } finally {
       setUnblocking(false)
     }
   }
 
-  // 6. Xử lý sau khi chặn thành công
-  const handleBlockSuccess = (msg) => {
-    setActiveConversation((prev) => ({
-      ...prev,
-      is_blocked: true,
-      blocked_by_me: true,
-    }))
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeConversation.id
-          ? { ...c, is_blocked: true, blocked_by_me: true }
-          : c
-      )
-    )
-    setToastMessage(msg)
-  }
-
-  // 7. Bắt đầu cuộc gọi (Voice / Video Call qua CallContext toàn cục)
-  const handleStartCall = (callType) => {
-    if (activeConversation?.is_blocked) {
-      setToastMessage('Cuộc hội thoại này đã bị chặn. Không thể thực hiện cuộc gọi.')
-      return
-    }
-    if (!activeConversation?.partner || !activeConversation?.id) {
-      setToastMessage('Vui lòng chọn một cuộc trò chuyện để bắt đầu cuộc gọi.')
-      return
-    }
-    startCall(activeConversation.partner, activeConversation.id, callType)
-  }
-
-  // Xử lý bấm phím: Enter gửi, Shift+Enter xuống dòng
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+  // Open partner profile modal
+  const handleOpenPartnerProfile = async () => {
+    if (!activeConversation?.partner) return
+    const partner = activeConversation.partner
+    setPartnerProfileModal(partner)
+    setLoadingPartnerProfile(true)
+    try {
+      const fullProfile = await getPublicProfile(partner.id)
+      if (fullProfile) {
+        setPartnerProfileModal((prev) => ({ ...prev, ...fullProfile }))
+      }
+    } catch (err) {
+      console.warn('Không thể tải profile chi tiết:', err)
+    } finally {
+      setLoadingPartnerProfile(false)
     }
   }
 
-  // Lọc danh sách hội thoại theo từ khóa tìm kiếm
+  // Filter conversations
   const filteredConversations = conversations.filter((c) => {
-    const name = c?.partner?.display_name || c?.partner?.username || ''
-    return name.toLowerCase().includes(searchTerm.toLowerCase())
+    const p = c.partner
+    if (!p) return false
+    const matchSearch =
+      !searchTerm.trim() ||
+      (p.display_name && p.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.username && p.username.toLowerCase().includes(searchTerm.toLowerCase()))
+    return matchSearch
   })
 
+  const partner = activeConversation?.partner
+  const partnerAvatar = partner?.avatar_url
+
   return (
-    <div
-      style={{
-        height: '100vh',
-        maxHeight: '100vh',
-        overflow: 'hidden',
-        backgroundColor: '#f7faf8',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] flex flex-col justify-between">
       <Navbar />
 
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          maxWidth: '1200px',
-          width: '100%',
-          margin: '0 auto',
-          padding: '16px 16px 20px',
-          display: 'flex',
-          gap: '20px',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-        }}
-      >
-        {/* ========================================================= */}
-        {/* CỘT TRÁI: DANH SÁCH CUỘC HỘI THOẠI                        */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            width: isMobile ? '100%' : '340px',
-            height: '100%',
-            minHeight: 0,
-            display: isMobile && activeConversation ? 'none' : 'flex',
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #dce8e2',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Header cột trái */}
-          <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
-                Đoạn chat <MessageCircle size={18} aria-hidden="true" />
-              </h2>
-              <button
-                type="button"
-                onClick={() => navigate('/connections')}
-                style={{
-                  background: '#e1efe8',
-                  border: '1px solid #dce8e2',
-                  color: '#245745',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                <UserRoundPlus size={14} aria-hidden="true" /> Bạn bè
-              </button>
+      <main className="w-full pt-20 flex-1 flex flex-col">
+        {/* Toast */}
+        {toastMessage && (
+          <div className="fixed top-24 right-6 z-50 animate-bounce">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00ff88]/50 bg-[#11151c]/95 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-[20px]">info</span>
+              <span className="text-sm font-medium">{toastMessage}</span>
             </div>
-
-            {/* Ô tìm kiếm */}
-            <input
-              type="text"
-              placeholder="Tìm bạn bè, cuộc trò chuyện..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: '#f9fafb',
-                fontSize: '13px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
           </div>
+        )}
 
-          {/* Danh sách hội thoại */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px' }}>
-            {loadingConversations ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '14px' }}>
-                Đang tải hội thoại...
-              </div>
-            ) : filteredConversations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280' }}>
-                <Mail size={30} style={{ marginBottom: '8px' }} aria-hidden="true" />
-                <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Chưa có cuộc hội thoại nào.</p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/connections')}
-                  className="btn-primary"
-                  style={{ fontSize: '13px', padding: '8px 16px' }}
-                >
-                  Kết nối bạn bè ngay
-                </button>
-              </div>
-            ) : (
-              filteredConversations.map((conv) => {
-                const partner = conv.partner || { username: 'user', display_name: 'Người dùng' }
-                const isActive = activeConversation?.id === conv.id
-                const lastMsg = conv.last_message
-
-                return (
-                  <div
-                    key={conv.id}
-                    onClick={() => setActiveConversation(conv)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '14px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      backgroundColor: isActive ? '#e1efe8' : 'transparent',
-                      border: isActive ? '1px solid #ddd6fe' : '1px solid transparent',
-                      marginBottom: '4px',
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = '#f3f7f4'
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'
-                    }}
-                  >
-                    <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
-                      <img
-                        src={
-                          partner.avatar_url ||
-                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(partner.username)}`
-                        }
-                        alt={partner.display_name || partner.username}
-                        style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2px solid #245745',
-                          backgroundColor: '#f3f4f6',
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: '0px',
-                          right: '0px',
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          backgroundColor: partner.is_online ? '#10b981' : '#d1d5db',
-                          border: '2px solid #ffffff',
-                          boxShadow: partner.is_online ? '0 0 4px rgba(16, 185, 129, 0.4)' : 'none',
-                        }}
-                        title={partner.is_online ? 'Đang hoạt động' : 'Offline'}
-                      />
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <h4
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: 700,
-                            color: '#1a1a2e',
-                            margin: 0,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {partner.display_name || partner.username}
-                        </h4>
-                        {lastMsg && (
-                          <span style={{ fontSize: '11px', color: '#9ca3af', flexShrink: 0, marginLeft: '6px' }}>
-                            {new Date(lastMsg.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
-                        <p
-                          style={{
-                            fontSize: '12px',
-                            color: isActive ? '#6b21a8' : '#6b7280',
-                            margin: 0,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {lastMsg ? (
-                            <span>
-                              {lastMsg.sender_id === user?.id ? 'Bạn: ' : ''}
-                              {lastMsg.content}
-                            </span>
-                          ) : (
-                            <span style={{ fontStyle: 'italic' }}>Chưa có tin nhắn nào</span>
-                          )}
-                        </p>
-
-                        {conv.unread_count > 0 && !isActive && (
-                          <span
-                            style={{
-                              backgroundColor: '#245745',
-                              color: '#ffffff',
-                              borderRadius: '10px',
-                              padding: '1px 6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              marginLeft: '6px',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {conv.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* CỘT PHẢI: CỬA SỔ TRÒ CHUYỆN (CHAT WINDOW)                  */}
-        {/* ========================================================= */}
-        <div
-          style={{
-            flex: 1,
-            height: '100%',
-            minHeight: 0,
-            width: isMobile ? '100%' : 'auto',
-            display: isMobile && !activeConversation ? 'none' : 'flex',
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #dce8e2',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {activeConversation ? (
-            <>
-              {/* Top bar của phòng chat */}
-              <div
-                style={{
-                  padding: '14px 20px',
-                  borderBottom: '1px solid #f3f4f6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#ffffff',
-                  flexShrink: 0,
-                }}
+        <div className="max-w-[1440px] w-full mx-auto px-2 sm:px-6 py-4 flex-1 flex flex-col">
+          {/* Main Messages & WebRTC Workspace Canvas */}
+          <div className="relative w-full h-[calc(100vh-7.5rem)] flex flex-col overflow-hidden rounded-2xl bg-[#0d0e0f] border border-[#1a232e] shadow-2xl">
+            {/* Main Workspace Split Pane */}
+            <div className="flex-1 flex overflow-hidden relative">
+              {/* LEFT SIDEBAR: Conversations List (~360px) */}
+              <aside
+                className={`w-full md:w-[360px] lg:w-[380px] shrink-0 flex flex-col bg-[#11151c] border-r border-[#1a232e] z-10 transition-all ${
+                  isMobileListOpen ? 'block absolute inset-0 z-20' : 'hidden md:flex'
+                }`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {isMobile && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveConversation(null)}
-                      style={{
-                        background: '#e1efe8',
-                        border: '1px solid #dce8e2',
-                        color: '#245745',
-                        borderRadius: '8px',
-                        padding: '6px 10px',
-                        fontWeight: 700,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      aria-label="Quay lại danh sách hội thoại"
-                    >
-                      <ArrowLeft size={18} aria-hidden="true" />
-                    </button>
-                  )}
-                  {/* Khung thông tin đối phương: hover hoặc nhấp để xem profile */}
-                  <div
-                    onClick={handleOpenPartnerProfile}
-                    onMouseEnter={() => setIsHoveringPartner(true)}
-                    onMouseLeave={() => setIsHoveringPartner(false)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      transition: 'all 0.15s ease',
-                      backgroundColor: isHoveringPartner ? '#e1efe8' : 'transparent',
-                    }}
-                    title="Nhấp để xem hồ sơ cá nhân"
-                  >
-                    <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
-                      <img
-                        src={
-                          activeConversation.partner.avatar_url ||
-                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                            activeConversation.partner.username
-                          )}`
-                        }
-                        alt={activeConversation.partner.display_name || activeConversation.partner.username}
-                        style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2px solid #245745',
-                          backgroundColor: '#e1efe8',
-                          transition: 'transform 0.15s ease',
-                          transform: isHoveringPartner ? 'scale(1.06)' : 'scale(1)',
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: '0px',
-                          right: '0px',
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#d1d5db',
-                          border: '2px solid #ffffff',
-                          boxShadow: activeConversation.partner.is_online ? '0 0 4px rgba(16, 185, 129, 0.4)' : 'none',
-                        }}
-                        title={activeConversation.partner.is_online ? 'Đang hoạt động' : 'Offline'}
-                      />
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h3
-                          style={{
-                            fontSize: '16px',
-                            fontWeight: 700,
-                            color: isHoveringPartner ? '#245745' : '#1a1a2e',
-                            margin: 0,
-                            transition: 'color 0.15s ease',
-                          }}
-                        >
-                          {activeConversation.partner.display_name || activeConversation.partner.username}
-                        </h3>
-                        {/* Nút Xem hồ sơ hiển thị trực quan */}
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            backgroundColor: isHoveringPartner ? '#245745' : '#dce8e2',
-                            color: isHoveringPartner ? '#ffffff' : '#245745',
-                            padding: '2px 8px',
-                            borderRadius: '10px',
-                            transition: 'all 0.15s ease',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                          }}
-                        >
-                          <UserRound size={12} aria-hidden="true" /> Xem hồ sơ
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: activeConversation.partner.is_online ? '#059669' : '#6b7280',
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              backgroundColor: activeConversation.partner.is_online ? '#10b981' : '#9ca3af',
-                              display: 'inline-block',
-                            }}
-                          />
-                          {activeConversation.partner.is_online
-                            ? 'Đang hoạt động'
-                            : activeConversation.partner.last_seen
-                            ? `Hoạt động ${formatTimeAgo(activeConversation.partner.last_seen)}`
-                            : 'Offline'}
-                        </span>
-                        {activeConversation.partner.current_status && (
-                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                            • {activeConversation.partner.current_status}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Header */}
+                <div className="p-4 pb-3 flex flex-col gap-3 border-b border-[#1a232e]">
+                  <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-[#f1ffef]">Tin nhắn</h2>
 
-                {/* Trạng thái kết nối realtime & Menu tùy chọn */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        width: '9px',
-                        height: '9px',
-                        borderRadius: '50%',
-                        backgroundColor:
-                          wsStatus === 'connected'
-                            ? '#10b981'
-                            : wsStatus === 'connecting'
-                            ? '#f59e0b'
-                            : '#ef4444',
-                        display: 'inline-block',
-                        boxShadow: wsStatus === 'connected' ? '0 0 8px #10b981' : 'none',
-                      }}
-                    />
-                    <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>
-                      {wsStatus === 'connected'
-                        ? 'Realtime 🟢'
-                        : wsStatus === 'connecting'
-                        ? 'Đang kết nối...'
-                        : 'Ngoại tuyến'}
-                    </span>
-                  </div>
-
-                  {/* Nút Gọi thoại & Gọi video */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleStartCall('audio')}
-                      disabled={activeConversation.is_blocked}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '10px',
-                        border: '1px solid #dce8e2',
-                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#e1efe8',
-                        color: activeConversation.is_blocked ? '#9ca3af' : '#245745',
-                        fontSize: '16px',
-                        cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.15s ease',
-                      }}
-                      title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi thoại'}
-                      onMouseOver={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#dce8e2'
-                      }}
-                      onMouseOut={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
-                      }}
-                    >
-                      <Phone size={16} aria-hidden="true" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStartCall('video')}
-                      disabled={activeConversation.is_blocked}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '10px',
-                        border: '1px solid #dce8e2',
-                        backgroundColor: activeConversation.is_blocked ? '#f3f4f6' : '#e1efe8',
-                        color: activeConversation.is_blocked ? '#9ca3af' : '#245745',
-                        fontSize: '16px',
-                        cursor: activeConversation.is_blocked ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.15s ease',
-                      }}
-                      title={activeConversation.is_blocked ? 'Cuộc hội thoại đã bị chặn' : 'Gọi video'}
-                      onMouseOver={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#dce8e2'
-                      }}
-                      onMouseOut={(e) => {
-                        if (!activeConversation.is_blocked) e.currentTarget.style.backgroundColor = '#e1efe8'
-                      }}
-                    >
-                      <Video size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-
-                  {/* Menu dấu ba chấm (...) */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowChatMenu((prev) => !prev)
-                      }}
-                      style={{
-                        background: 'none',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '18px',
-                        color: '#4b5563',
-                        cursor: 'pointer',
-                        transition: 'background 0.15s ease',
-                      }}
-                      title="Tùy chọn cuộc hội thoại"
-                    >
-                      <MoreVertical size={18} aria-hidden="true" />
-                    </button>
-
-                    {showChatMenu && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: '38px',
-                          backgroundColor: '#ffffff',
-                          borderRadius: '12px',
-                          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                          border: '1px solid #f3f4f6',
-                          minWidth: '170px',
-                          zIndex: 100,
-                          padding: '6px',
-                        }}
-                        onClick={(e) => e.stopPropagation()}
+                    {isMobileListOpen && (
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileListOpen(false)}
+                        className="md:hidden p-1.5 rounded-lg bg-[#181d26] text-[#b9cbb9]"
                       >
-                        {/* Xem hồ sơ đối phương */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowChatMenu(false)
-                            handleOpenPartnerProfile()
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            background: 'none',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            color: '#374151',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                        >
-                          <UserRound size={16} aria-hidden="true" />
-                          <span>Xem hồ sơ</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowChatMenu(false)
-                            setShowReportModal(true)
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            background: 'none',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            color: '#374151',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                        >
-                          <Flag size={16} aria-hidden="true" />
-                          <span>Báo cáo vi phạm</span>
-                        </button>
-
-                        {activeConversation.is_blocked && activeConversation.blocked_by_me ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowChatMenu(false)
-                              handleUnblock()
-                            }}
-                            disabled={unblocking}
-                            style={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              background: 'none',
-                              border: 'none',
-                              borderRadius: '8px',
-                              fontSize: '13px',
-                              color: '#059669',
-                              cursor: unblocking ? 'not-allowed' : 'pointer',
-                              textAlign: 'left',
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#ecfdf5')}
-                            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                          >
-                            <LockKeyhole size={16} aria-hidden="true" />
-                            <span>{unblocking ? 'Đang bỏ chặn...' : 'Bỏ chặn'}</span>
-                          </button>
-                        ) : !activeConversation.is_blocked ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowChatMenu(false)
-                              setShowBlockModal(true)
-                            }}
-                            style={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              background: 'none',
-                              border: 'none',
-                              borderRadius: '8px',
-                              fontSize: '13px',
-                              color: '#dc2626',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                          >
-                            <ShieldBan size={16} aria-hidden="true" />
-                            <span>Chặn người dùng</span>
-                          </button>
-                        ) : null}
-                      </div>
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                      </button>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* Vùng hiển thị tin nhắn (Message stream - chỉ cuộn độc lập vùng này) */}
-              <div
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  padding: '20px',
-                  overflowY: 'auto',
-                  backgroundColor: '#f3f7f4',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                {loadingMessages ? (
-                  <div style={{ textAlign: 'center', padding: '30px', color: '#6b7280', fontSize: '14px' }}>
-                    Đang tải lịch sử tin nhắn...
+                  {/* Search Input */}
+                  <div className="relative w-full">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#849585] text-[18px] pointer-events-none">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Tìm kiếm cuộc trò chuyện..."
+                      className="w-full h-9 pl-9 pr-3 bg-[#08090a] text-[#f1ffef] placeholder:text-[#849585] text-xs rounded-lg outline-none border border-[#1a232e] focus:border-[#00ff88]/50 transition-all"
+                    />
                   </div>
-                ) : messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', margin: 'auto', color: '#6b7280' }}>
-                    <MessageCircleHeart size={40} style={{ marginBottom: '12px' }} aria-hidden="true" />
-                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px 0' }}>
-                      Bắt đầu cuộc trò chuyện!
-                    </h4>
-                    <p style={{ fontSize: '13px', margin: 0, maxWidth: '300px' }}>
-                      Gửi lời chào đầu tiên tới {activeConversation.partner.display_name || activeConversation.partner.username}.
-                    </p>
+                </div>
+
+                {/* Conversations Scrollable Area */}
+                <div className="flex-1 overflow-y-auto space-y-1 p-2">
+                  {/* Pin El Pulga AI Assistant */}
+                  <div
+                    onClick={() => {
+                      setActiveConversation({
+                        id: 'el-pulga',
+                        isAi: true,
+                        partner: {
+                          display_name: 'El Pulga',
+                          username: 'el_pulga',
+                          bio: 'Trợ lý tâm lý & bạn tâm giao trên La Pulga',
+                          is_online: true,
+                        },
+                      })
+                      setIsMobileListOpen(false)
+                    }}
+                    className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all mb-2 border ${
+                      activeConversation?.id === 'el-pulga'
+                        ? 'bg-[#18291f] border-[#4edea3]/50 shadow-[0_0_15px_rgba(78,222,163,0.15)] text-[#eff6f0]'
+                        : 'bg-[#121c15]/60 hover:bg-[#16231a] border-[#293d2f] text-[#c9d9cc]'
+                    }`}
+                  >
+                    {activeConversation?.id === 'el-pulga' && (
+                      <div className="absolute left-0 top-2 bottom-2 w-1 bg-[#4edea3] rounded-r-full shadow-[0_0_10px_#4edea3]" />
+                    )}
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-sm">
+                        <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#4edea3] border-2 border-[#11151c] rounded-full animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-[#f0f6f1] truncate">El Pulga</span>
+                          <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-[#2a4432] text-[#a4ef7b] rounded-full border border-[#3d5e45]">
+                            AI Tâm lý
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-[#8da090] truncate mt-0.5">
+                        Trợ lý tâm lý • Sẵn sàng lắng nghe
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  messages.map((m, idx) => {
-                    const isCallLog = m.content && (m.content.startsWith('📞') || m.content.startsWith('📹'))
-                    if (isCallLog) {
-                      const CallLogIcon = m.content.startsWith('📹') ? Video : Phone
+
+                  {loadingConversations ? (
+                    <div className="py-10 text-center text-[#849585] text-xs font-mono">
+                      Đang tải hội thoại...
+                    </div>
+                  ) : filteredConversations.length > 0 ? (
+                    filteredConversations.map((c) => {
+                      const p = c.partner || {}
+                      const isActive = activeConversation?.id === c.id
                       return (
                         <div
-                          key={m.id || idx}
-                          style={{
-                            alignSelf: 'center',
-                            margin: '6px 0',
-                            textAlign: 'center',
+                          key={c.id}
+                          onClick={() => {
+                            setActiveConversation(c)
+                            setIsMobileListOpen(false)
                           }}
+                          className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                            isActive
+                              ? 'bg-[#181d26] border border-[#00ff88]/30 shadow-[0_0_12px_rgba(0,255,136,0.1)]'
+                              : 'hover:bg-[#181d26]/60 border border-transparent'
+                          }`}
                         >
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '6px 14px',
-                              borderRadius: '20px',
-                              backgroundColor: '#f1f5f9',
-                              color: '#475569',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              border: '1px solid #e2e8f0',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                            }}
-                          >
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <CallLogIcon size={14} aria-hidden="true" />
-                              {m.content.replace(/^[📞📹]\s*/, '')}
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>
-                              • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                          {isActive && (
+                            <div className="absolute left-0 top-2 bottom-2 w-1 bg-[#00ff88] rounded-r-full shadow-[0_0_10px_#00ff88]"></div>
+                          )}
+
+                          <div className="relative shrink-0">
+                            {c.is_group ? (
+                              <img
+                                src={getCommunityAvatarUrl({ name: p.display_name, avatar_url: p.avatar_url })}
+                                alt={p.display_name || 'Nhóm cộng đồng'}
+                                onError={(e) => {
+                                  e.currentTarget.src = brandMark
+                                }}
+                                className="w-11 h-11 rounded-xl bg-[#181d26] border border-[#00ff88]/40 object-cover shadow-[0_0_10px_rgba(0,255,136,0.15)]"
+                              />
+                            ) : (
+                              <>
+                                <Avatar
+                                  src={p.avatar_url}
+                                  alt={p.username}
+                                  className="w-11 h-11 rounded-xl object-cover border border-[#1a232e] bg-[#08090a]"
+                                />
+                                <OnlineStatusDot
+                                  isOnline={p.is_online}
+                                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#11151c]"
+                                />
+                              </>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs md:text-sm font-bold text-[#f1ffef] truncate group-hover:text-[#00ff88] transition-colors">
+                                  {p.display_name || p.username}
+                                </span>
+                                {c.is_group && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 shrink-0">
+                                    Nhóm
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-mono text-[#849585]">
+                                {formatTimeAgo(c.last_message?.created_at || c.updated_at)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#849585] truncate font-medium">
+                              {c.last_message?.content || 'Chưa có tin nhắn'}
+                            </p>
                           </div>
                         </div>
                       )
-                    }
-
-                    const isMe = m.sender_id === user?.id
-                    return (
-                      <div
-                        key={m.id || idx}
-                        style={{
-                          display: 'flex',
-                          flexDirection: isMe ? 'row-reverse' : 'row',
-                          alignItems: 'flex-end',
-                          gap: '8px',
-                          maxWidth: '75%',
-                          alignSelf: isMe ? 'flex-end' : 'flex-start',
-                        }}
-                      >
-                        {!isMe && (
-                          <img
-                            src={
-                              activeConversation.partner.avatar_url ||
-                              `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                activeConversation.partner.username
-                              )}`
-                            }
-                            alt="Avatar"
-                            style={{
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              marginBottom: '4px',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #dce8e2',
-                            }}
-                          />
-                        )}
-
-                        <div
-                          style={{
-                            backgroundColor: isMe ? '#245745' : '#ffffff',
-                            color: isMe ? '#ffffff' : '#1a1a2e',
-                            padding: '10px 14px',
-                            borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                            boxShadow: isMe
-                              ? '0 2px 8px rgba(36, 87, 69, 0.25)'
-                              : '0 2px 8px rgba(0, 0, 0, 0.04)',
-                            border: isMe ? 'none' : '1px solid #dce8e2',
-                            wordBreak: 'break-word',
-                          }}
-                        >
-                          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.45', whiteSpace: 'pre-wrap' }}>
-                            {m.content}
-                          </p>
-                          <div
-                            style={{
-                              fontSize: '10px',
-                              marginTop: '4px',
-                              textAlign: 'right',
-                              color: isMe ? 'rgba(255,255,255,0.75)' : '#9ca3af',
-                            }}
-                          >
-                            {new Date(m.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                            {isMe && m.read_at && (
-                              <div
-                                style={{
-                                  marginTop: '2px',
-                                  color: 'rgba(255,255,255,0.9)',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Đã đọc lúc{' '}
-                                {new Date(m.read_at).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Khung nhập tin nhắn HOẶC Thông báo đã bị chặn */}
-              {activeConversation.is_blocked ? (
-                <div
-                  style={{
-                    padding: '16px 20px',
-                    backgroundColor: '#fef2f2',
-                    borderTop: '1px solid #fee2e2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    flexWrap: 'wrap',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#991b1b', fontSize: '13px' }}>
-                    <LockKeyhole size={18} aria-hidden="true" />
-                    <span>
-                      {activeConversation.blocked_by_me
-                        ? 'Bạn đã chặn người dùng này. Cuộc trò chuyện đã bị vô hiệu hóa.'
-                        : 'Cuộc trò chuyện này đã bị chặn. Bạn không thể gửi tin nhắn mới.'}
-                    </span>
-                  </div>
-                  {activeConversation.blocked_by_me && (
-                    <button
-                      type="button"
-                      onClick={handleUnblock}
-                      disabled={unblocking}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #ef4444',
-                        color: '#ef4444',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: unblocking ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                      }}
-                    >
-                      {unblocking ? 'Đang bỏ chặn...' : 'Bỏ chặn'}
-                    </button>
+                    })
+                  ) : (
+                    <div className="py-12 text-center text-[#849585] text-xs font-mono">
+                      Không tìm thấy cuộc trò chuyện nào.
+                    </div>
                   )}
                 </div>
+              </aside>
+
+              {/* RIGHT MAIN CHAT AREA */}
+              {activeConversation ? (
+                <div className="flex-1 flex flex-col bg-[#08090a] overflow-hidden">
+                  {/* Chat Header */}
+                  <div className="h-16 px-4 border-b border-[#1a232e] bg-[#11151c] flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileListOpen(true)}
+                        className="md:hidden p-2 rounded-lg bg-[#181d26] text-[#b9cbb9]"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">menu</span>
+                      </button>
+
+                      {activeConversation.isAi ? (
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-sm">
+                            <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+                          </div>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#4edea3] border-2 border-[#11151c] rounded-full animate-pulse" />
+                        </div>
+                      ) : (
+                        <div
+                          className="relative cursor-pointer"
+                          onClick={handleOpenPartnerProfile}
+                          title="Xem hồ sơ chi tiết"
+                        >
+                          <Avatar
+                            src={
+                              activeConversation.is_group
+                                ? getCommunityAvatarUrl({
+                                    name: partner?.display_name,
+                                    avatar_url: partnerAvatar,
+                                  })
+                                : partnerAvatar
+                            }
+                            alt={partner?.username}
+                            className="w-10 h-10 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
+                          />
+                          <OnlineStatusDot
+                            isOnline={partner?.is_online}
+                            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[#11151c]"
+                          />
+                        </div>
+                      )}
+
+                      <div onClick={activeConversation.isAi ? undefined : handleOpenPartnerProfile} className={activeConversation.isAi ? '' : 'cursor-pointer'}>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-sm font-bold text-[#f1ffef] hover:text-[#00ff88] transition-colors">
+                            {activeConversation.isAi ? 'El Pulga' : partner?.display_name || partner?.username}
+                          </h3>
+                          {activeConversation.isAi ? (
+                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#273a2c] text-[#a4ef7b] rounded-full border border-[#3b5542]">
+                              AI Companion
+                            </span>
+                          ) : (
+                            <span
+                              className="material-symbols-outlined text-[#00ff88] text-[16px]"
+                              style={{ fontVariationSettings: "'FILL' 1" }}
+                            >
+                              verified
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#849585]">
+                          {activeConversation.isAi ? (
+                            <span className="text-[#4edea3]">Luôn sẵn sàng lắng nghe & thấu cảm</span>
+                          ) : (
+                            <>
+                              <span>@{partner?.username}</span>
+                              <span>•</span>
+                              <span className={partner?.is_online ? 'text-[#00ff88]' : 'text-[#849585]'}>
+                                {partner?.is_online ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Calling & Menu Controls */}
+                    <div className="flex items-center gap-2">
+                      {activeConversation.isAi ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm('Bạn có chắc muốn xóa lịch sử trò chuyện với El Pulga?')) {
+                              await clearAiHistory()
+                              setMessages([])
+                            }
+                          }}
+                          className="h-9 px-3 rounded-xl bg-[#18231c] hover:bg-[#203126] text-[#c5f36a] border border-[#3b5542] flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer"
+                          title="Làm mới cuộc trò chuyện với El Pulga"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                          <span className="hidden sm:inline">Làm mới</span>
+                        </button>
+                      ) : !activeConversation.is_group ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startCall(partner, activeConversation.id, 'audio')
+                            }
+                            className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#00ff88] border border-[#00ff88]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(0,255,136,0.15)]"
+                            title="Gọi thoại WebRTC HD"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">call</span>
+                            <span className="hidden sm:inline">Gọi thoại</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startCall(partner, activeConversation.id, 'video')
+                            }
+                            className="h-9 px-3 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#44fb8a] border border-[#44fb8a]/20 flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(68,251,138,0.15)]"
+                            title="Gọi Video WebRTC HD"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">videocam</span>
+                            <span className="hidden sm:inline">Video Call</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="px-3 py-1.5 rounded-xl bg-[#181d26] border border-[#00ff88]/30 text-[#00ff88] text-xs font-mono flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse"></span>
+                          <span>Nhóm thảo luận cộng đồng</span>
+                        </div>
+                      )}
+
+                      {/* Dropdown Menu */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowChatMenu(!showChatMenu)
+                          }}
+                          className="w-9 h-9 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-[#849585] hover:text-[#f1ffef] flex items-center justify-center transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                        </button>
+
+                        {showChatMenu && (
+                          <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#11151c] border border-[#1a232e] shadow-2xl p-1 z-30 animate-fadeIn">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleOpenPartnerProfile()
+                                setShowChatMenu(false)
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs text-[#b9cbb9] hover:text-[#f1ffef] hover:bg-[#181d26] flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">person</span>
+                              <span>Xem hồ sơ</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowReportModal(true)
+                                setShowChatMenu(false)
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs text-amber-400 hover:bg-amber-500/15 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">flag</span>
+                              <span>Báo cáo vi phạm</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowBlockModal(true)
+                                setShowChatMenu(false)
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs text-red-400 hover:bg-red-500/15 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">block</span>
+                              <span>Chặn người dùng</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages Stream */}
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                    {loadingMessages ? (
+                      <div className="py-20 text-center text-[#849585] text-xs">
+                        Đang tải tin nhắn...
+                      </div>
+                    ) : messages.length > 0 ? (
+                      messages.map((msg) => {
+                        const isMe = msg.sender_id === user?.id
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex items-start gap-2.5 max-w-2xl ${
+                              isMe ? 'ml-auto flex-row-reverse' : ''
+                            }`}
+                          >
+                            {activeConversation.isAi && !isMe ? (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] text-[#0d1a12] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                <span className="material-symbols-outlined text-sm font-bold">psychology</span>
+                              </div>
+                            ) : (
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold ${
+                                  isMe
+                                    ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_10px_#00ff88]'
+                                    : 'bg-[#181d26] text-[#00ff88] border border-[#00ff88]/30'
+                                }`}
+                              >
+                                {isMe ? 'ME' : partner?.username?.slice(0, 2).toUpperCase() || 'U'}
+                              </div>
+                            )}
+
+                            <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                              <div
+                                className={`p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed max-w-md whitespace-pre-wrap break-words ${
+                                  isMe
+                                    ? 'bg-[#181d26] text-[#f1ffef] border border-[#00ff88]/30 rounded-tr-sm shadow-[0_0_12px_rgba(0,255,136,0.1)]'
+                                    : activeConversation.isAi
+                                    ? 'bg-[#18261e] text-[#dcebe0] border border-[#2b3d30] rounded-tl-sm'
+                                    : 'bg-[#11151c] text-[#e3e2e3] border border-[#1a232e] rounded-tl-sm'
+                                }`}
+                              >
+                                {msg.content}
+                              </div>
+                              <div className="flex items-center gap-1.5 px-1 text-[10px] font-mono text-[#849585]">
+                                <span>{formatTimeAgo(msg.created_at)}</span>
+                                {isMe && (
+                                  <span className="material-symbols-outlined text-[14px] text-[#00ff88]">
+                                    done_all
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    ) : activeConversation.isAi ? (
+                      <div className="py-12 px-4 max-w-lg mx-auto text-center space-y-4">
+                        <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] flex items-center justify-center text-[#0d1a12] shadow-xl shadow-[#3fa876]/20">
+                          <span className="material-symbols-outlined text-3xl font-bold">psychology</span>
+                        </div>
+                        <div>
+                          <h4 className="text-base font-bold text-[#eff6f0]">El Pulga luôn ở đây lắng nghe bạn</h4>
+                          <p className="text-xs text-[#9eb2a2] mt-1 leading-relaxed">
+                            Mọi chia sẻ đều được bảo mật tuyệt đối. Bạn có thể thoải mái tâm sự bất kỳ điều gì trong lòng.
+                          </p>
+                        </div>
+                        {aiQuickPrompts.length > 0 && (
+                          <div className="space-y-2 text-left pt-2">
+                            <p className="text-[11px] font-semibold text-[#8ca090] uppercase tracking-wider text-center">
+                              Gợi ý mở lời:
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {aiQuickPrompts.map((prompt, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setInputText(prompt)
+                                    inputRef.current?.focus()
+                                  }}
+                                  className="text-left text-xs text-[#d2e0d5] bg-[#16241b] hover:bg-[#1f3326] px-3.5 py-2.5 rounded-xl border border-[#2b3e30] flex items-center justify-between transition-all"
+                                >
+                                  <span>{prompt}</span>
+                                  <span className="material-symbols-outlined text-sm text-[#8ca090]">arrow_forward</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="py-16 text-center text-xs text-[#849585] font-mono">
+                        Bắt đầu cuộc trò chuyện với {partner?.display_name || partner?.username}!
+                      </div>
+                    )}
+                    {/* Hiệu ứng đang gõ của AI */}
+                    {activeConversation.isAi && isSending && (
+                      <div className="flex items-center gap-2.5 max-w-2xl">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#3fa876] to-[#c5f36a] text-[#0d1a12] flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-sm font-bold">psychology</span>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-[#142018] border border-[#2b3e30] flex items-center gap-2 text-xs text-[#a2b5a5]">
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-[#4edea3] animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <span className="ml-1 text-[11px]">El Pulga đang suy ngẫm...</span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* Chat Input Dock */}
+                  <div className="p-3 sm:p-4 bg-[#11151c] border-t border-[#1a232e]">
+                    {activeConversation.is_blocked ? (
+                      <div className="p-3 rounded-xl bg-[#08090a] border border-red-500/30 flex items-center justify-between">
+                        <span className="text-xs text-red-400">
+                          Cuộc trò chuyện này đang bị chặn.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleUnblock}
+                          disabled={unblocking}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all cursor-pointer"
+                        >
+                          {unblocking ? 'Đang mở...' : 'Mở chặn'}
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSendMessage} className="space-y-1.5">
+                        <div className="flex items-center gap-2 p-1.5 bg-[#08090a] rounded-2xl border border-[#1a232e] focus-within:border-[#00ff88]/50 focus-within:shadow-[0_0_16px_rgba(0,255,136,0.15)] transition-all">
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder="Nhập tin nhắn... (nhấn Enter để gửi)"
+                            className="flex-1 bg-transparent px-3 py-2 text-[#f1ffef] placeholder:text-[#849585] text-xs md:text-sm outline-none min-w-0"
+                          />
+
+                          <button
+                            type="submit"
+                            disabled={!inputText.trim() || isSending}
+                            className="w-10 h-10 rounded-xl bg-[#00ff88] hover:bg-[#44fb8a] text-[#00210c] flex items-center justify-center font-bold shadow-[0_0_16px_rgba(0,255,136,0.4)] hover:shadow-[0_0_24px_rgba(0,255,136,0.6)] active:scale-95 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            <span className="material-symbols-outlined text-[19px]">send</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-end px-2 text-[10px] text-[#849585]">
+                          <span>Nhấn Enter để gửi</span>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
               ) : (
-                <form
-                  onSubmit={handleSendMessage}
-                  style={{
-                    padding: '14px 20px',
-                    backgroundColor: '#ffffff',
-                    borderTop: '1px solid #f3f4f6',
-                    display: 'flex',
-                    gap: '12px',
-                    alignItems: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <textarea
-                    ref={textareaRef}
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
-                    rows={1}
-                    style={{
-                      flex: 1,
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      border: '1px solid #d1d5db',
-                      fontSize: '14px',
-                      outline: 'none',
-                      resize: 'none',
-                      maxHeight: '100px',
-                      fontFamily: 'inherit',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim() || isSending}
-                    style={{
-                      backgroundColor: '#245745',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '10px 18px',
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      cursor: !inputText.trim() || isSending ? 'not-allowed' : 'pointer',
-                      opacity: !inputText.trim() || isSending ? 0.5 : 1,
-                      boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
-                      transition: 'all 0.15s ease',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {isSending ? 'Đang gửi...' : 'Gửi 🚀'}
-                  </button>
-                </form>
-              )}
-            </>
-          ) : (
-            // Empty state khi chưa chọn cuộc hội thoại nào
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px 20px',
-                textAlign: 'center',
-                color: '#6b7280',
-              }}
-            >
-              <div
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  backgroundColor: '#e1efe8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <MessageCircle size={36} aria-hidden="true" />
-              </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
-                Hộp thư tin nhắn La Pulga
-              </h3>
-              <p style={{ fontSize: '14px', maxWidth: '380px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
-                Chọn một người bạn ở danh sách bên trái hoặc ghé thăm trang Kết nối để bắt đầu trò chuyện realtime ngay!
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/connections')}
-                className="btn-primary"
-                style={{ fontSize: '14px', padding: '10px 20px' }}
-              >
-                <HeartHandshake size={16} aria-hidden="true" /> Xem danh sách bạn bè
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Toast thông báo */}
-      {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            backgroundColor: '#1f2937',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-            zIndex: 1200,
-            fontSize: '14px',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Info size={16} aria-hidden="true" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Modal Báo cáo vi phạm */}
-      {showReportModal && activeConversation?.partner && (
-        <ReportModal
-          targetUser={activeConversation.partner}
-          onClose={() => setShowReportModal(false)}
-          onSuccess={(msg) => setToastMessage(msg)}
-        />
-      )}
-
-      {/* Modal Xác nhận chặn */}
-      {showBlockModal && activeConversation?.partner && (
-        <BlockConfirmModal
-          targetUser={activeConversation.partner}
-          onClose={() => setShowBlockModal(false)}
-          onSuccess={handleBlockSuccess}
-        />
-      )}
-
-
-      {/* Modal Xem Hồ Sơ Người Dùng */}
-      {partnerProfileModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            padding: '16px',
-            animation: 'fadeIn 0.2s ease-in-out',
-          }}
-          onClick={() => setPartnerProfileModal(null)}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '520px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: '28px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-              position: 'relative',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Nút đóng */}
-            <button
-              type="button"
-              onClick={() => setPartnerProfileModal(null)}
-              style={{
-                position: 'absolute',
-                top: '18px',
-                right: '18px',
-                background: 'none',
-                border: 'none',
-                fontSize: '22px',
-                color: '#9ca3af',
-                cursor: 'pointer',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              title="Đóng (Esc)"
-            >
-              <X size={20} aria-hidden="true" />
-            </button>
-
-            {/* Header: Avatar & Tên */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  border: '2px solid #245745',
-                  backgroundColor: '#e1efe8',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src={
-                    partnerProfileModal.avatar_url ||
-                    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                      partnerProfileModal.username
-                    )}`
-                  }
-                  alt={partnerProfileModal.display_name || partnerProfileModal.username}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px 0' }}>
-                  {partnerProfileModal.display_name || partnerProfileModal.username}
-                </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#6b7280' }}>@{partnerProfileModal.username}</span>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                      backgroundColor: partnerProfileModal.is_online ? '#ecfdf5' : '#f3f4f6',
-                      color: partnerProfileModal.is_online ? '#059669' : '#6b7280',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: partnerProfileModal.is_online ? '#10b981' : '#9ca3af',
-                      }}
-                    />
-                    {partnerProfileModal.is_online ? 'Đang online' : 'Offline'}
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-[#849585]">
+                  <span className="material-symbols-outlined text-[48px] text-[#00ff88] mb-3">
+                    chat
                   </span>
+                  <h3 className="text-base font-bold text-[#f1ffef]">Chọn một cuộc hội thoại</h3>
+                  <p className="text-xs max-w-xs mt-1">
+                    Chọn bạn bè từ danh sách bên trái hoặc ghé thăm mục Khám phá để bắt đầu kết nối.
+                  </p>
                 </div>
-              </div>
-            </div>
-
-            {loadingPartnerProfile && (
-              <div style={{ fontSize: '12px', color: '#245745', marginBottom: '12px', fontStyle: 'italic' }}>
-                Đang tải chi tiết hồ sơ...
-              </div>
-            )}
-
-            {/* Thông tin cơ bản: Tuổi & Hoàn cảnh */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              {partnerProfileModal.age_group && (
-                <span
-                  style={{
-                    backgroundColor: '#e1efe8',
-                    color: '#245745',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}
-                >
-                  🎂 {partnerProfileModal.age_group}
-                </span>
-              )}
-              {partnerProfileModal.current_status && (
-                <span
-                  style={{
-                    backgroundColor: '#dce8e2',
-                    color: '#6b21a8',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}
-                >
-                  💼 {partnerProfileModal.current_status}
-                </span>
-              )}
-            </div>
-
-            {/* Giới thiệu bản thân (Bio) */}
-            <div style={{ marginBottom: '18px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Giới thiệu
-              </h4>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#4b5563',
-                  lineHeight: '1.6',
-                  backgroundColor: '#f3f7f4',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  margin: 0,
-                }}
-              >
-                {partnerProfileModal.bio || 'Chưa cập nhật tiểu sử giới thiệu.'}
-              </p>
-            </div>
-
-            {/* Câu chuyện cá nhân (Story) nếu có */}
-            {partnerProfileModal.story && (
-              <div style={{ marginBottom: '18px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Câu chuyện chia sẻ
-                </h4>
-                <p
-                  style={{
-                    fontSize: '13.5px',
-                    color: '#4b5563',
-                    lineHeight: '1.6',
-                    backgroundColor: '#f9fafb',
-                    padding: '12px 14px',
-                    borderRadius: '12px',
-                    margin: 0,
-                    fontStyle: 'italic',
-                  }}
-                >
-                  "{partnerProfileModal.story}"
-                </p>
-              </div>
-            )}
-
-            {/* Sở thích / Chủ đề quan tâm */}
-            {Array.isArray(partnerProfileModal.interests) && partnerProfileModal.interests.length > 0 && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Sở thích & Chủ đề
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {partnerProfileModal.interests.map((it, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: '12px',
-                        backgroundColor: '#f3f4f6',
-                        color: '#4b5563',
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      #{it}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Nút hành động */}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button
-                type="button"
-                onClick={() => setPartnerProfileModal(null)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '10px',
-                  border: '1px solid #e5e7eb',
-                  backgroundColor: '#f9fafb',
-                  color: '#4b5563',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Đóng
-              </button>
-
-              {!activeConversation?.is_blocked && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPartnerProfileModal(null)
-                      handleStartCall('audio')
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      borderRadius: '10px',
-                      border: '1px solid #dce8e2',
-                      backgroundColor: '#e1efe8',
-                      color: '#245745',
-                      fontSize: '13.5px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <Phone size={16} aria-hidden="true" /> Gọi thoại
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPartnerProfileModal(null)
-                      handleStartCall('video')
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      backgroundColor: '#245745',
-                      color: '#ffffff',
-                      fontSize: '13.5px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 8px rgba(36, 87, 69, 0.3)',
-                    }}
-                  >
-                    <Video size={16} aria-hidden="true" /> Gọi video
-                  </button>
-                </>
               )}
             </div>
           </div>
         </div>
+      </main>
+
+      {/* Partner Profile Modal */}
+      {partnerProfileModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPartnerProfileModal(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-[#11151c] border border-[#1a232e] p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#1a232e]">
+              <h3 className="text-base font-bold text-[#f1ffef]">Hồ sơ người dùng</h3>
+              <button
+                type="button"
+                onClick={() => setPartnerProfileModal(null)}
+                className="p-1 rounded-lg hover:bg-[#181d26] text-[#849585] hover:text-[#f1ffef]"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Avatar
+                src={partnerProfileModal.avatar_url}
+                alt=""
+                className="w-16 h-16 rounded-xl object-cover border border-[#00ff88]/30 bg-[#08090a]"
+              />
+              <div>
+                <h4 className="text-base font-bold text-[#f1ffef]">
+                  {partnerProfileModal.display_name || partnerProfileModal.username}
+                </h4>
+                <p className="text-xs font-mono text-[#00ff88]">@{partnerProfileModal.username}</p>
+                <p className="text-xs text-[#849585] mt-0.5">
+                  {partnerProfileModal.current_status || 'Thành viên'} •{' '}
+                  {partnerProfileModal.age_group || '21-25 tuổi'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#08090a] border border-[#1a232e] text-xs italic text-[#e3e2e3]">
+              “{partnerProfileModal.bio || 'Chưa cập nhật tiểu sử cá nhân.'}”
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPartnerProfileModal(null)}
+                className="px-4 py-2 rounded-xl bg-[#181d26] hover:bg-[#1f2021] text-xs font-semibold text-[#f1ffef]"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && partner && (
+        <ReportModal
+          targetUser={partner}
+          onClose={() => setShowReportModal(false)}
+          onSuccess={(msg) => {
+            showToast(msg)
+            setShowReportModal(false)
+          }}
+        />
+      )}
+
+      {/* Block Modal */}
+      {showBlockModal && partner && (
+        <BlockConfirmModal
+          targetUser={partner}
+          onClose={() => setShowBlockModal(false)}
+          onSuccess={(msg) => {
+            setActiveConversation((prev) => ({
+              ...prev,
+              is_blocked: true,
+              blocked_by: user?.id,
+            }))
+            showToast(msg)
+            setShowBlockModal(false)
+          }}
+        />
       )}
     </div>
   )

@@ -1,33 +1,21 @@
 import { useState } from 'react'
-import {
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  MessageCircleHeart,
-  ShieldCheck,
-  Sparkles,
-  UsersRound,
-} from 'lucide-react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import GoogleLoginButton from '../components/GoogleLoginButton'
-import { forgetAccount, getRememberedAccount, rememberAccount } from '../services/rememberedAccount'
-import ThemeToggle from '../components/ThemeToggle'
+import brandMark from '../assets/lapulga-mark.svg'
 import { getSurvey } from '../services/surveyService'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-
-  const [form, setForm] = useState(() => ({ account: getRememberedAccount(), password: '' }))
-  const [rememberAccountOnDevice, setRememberAccountOnDevice] = useState(
-    () => Boolean(getRememberedAccount())
-  )
+  const transitionClass = location.state?.authTransition === 'register-to-login'
+    ? ' lp-auth-transition-from-register'
+    : ''
+  const [form, setForm] = useState({ account: location.state?.account || '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
+  const [error, setError] = useState(location.state?.message || '')
   const from = location.state?.from?.pathname || '/home'
 
   function handleChange(e) {
@@ -38,169 +26,66 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-
-    if (!form.account.trim()) {
-      setError('Vui lòng nhập Email hoặc Tên đăng nhập.')
-      return
-    }
-    if (!form.password) {
-      setError('Vui lòng nhập mật khẩu.')
-      return
-    }
-
+    if (!form.account.trim()) return setError('Vui lòng nhập Email hoặc Tên đăng nhập.')
+    if (!form.password) return setError('Vui lòng nhập mật khẩu.')
     setLoading(true)
-
     try {
       await login(form.account, form.password)
-      if (rememberAccountOnDevice) {
-        rememberAccount(form.account)
-      } else {
-        forgetAccount()
-      }
       let destination = from
       try {
-        if (!(await getSurvey())) destination = '/survey'
+        const survey = await getSurvey()
+        if (!survey) destination = '/survey'
       } catch (surveyError) {
-        console.error('Không thể kiểm tra trạng thái khảo sát sau đăng nhập:', surveyError)
+        console.error('Không thể kiểm tra trạng thái khảo sát:', surveyError)
       }
       navigate(destination, { replace: true })
     } catch (err) {
-      if (err.response && err.response.data) {
+      if (err.response?.data) {
         const detail = err.response.data.detail
-        if (typeof detail === 'string') {
-          setError(detail)
-        } else if (Array.isArray(detail)) {
-          setError(detail[0]?.msg || 'Dữ liệu không hợp lệ')
-        } else {
-          setError('Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.')
-        }
-      } else {
-        setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.')
-      }
+        if (typeof detail === 'string') setError(detail)
+        else if (Array.isArray(detail)) setError(detail[0]?.msg || 'Dữ liệu không hợp lệ')
+        else setError('Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.')
+      } else setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="page auth-screen">
-      <main className="auth-layout">
-        <ThemeToggle className="auth-theme-toggle" />
-        <section className="auth-story">
-          <div>
-            <span className="auth-story-badge"><Sparkles size={14} aria-hidden="true" /> Nơi mọi cảm xúc đều được lắng nghe</span>
-            <h1>Chào mừng bạn đến với <span>La Pulga</span></h1>
-            <p>
-              Không phán xét, không định kiến. Tìm thấy những tâm hồn đồng điệu và tự do sống thật
-              với chính mình.
-            </p>
-            <div className="auth-benefits">
-              <span><ShieldCheck size={16} aria-hidden="true" /> Ẩn danh an toàn, bảo mật dữ liệu riêng tư</span>
-              <span><UsersRound size={16} aria-hidden="true" /> Kết nối bạn bè đồng điệu theo cảm xúc</span>
-              <span><MessageCircleHeart size={16} aria-hidden="true" /> Chia sẻ câu chuyện trong không gian an yên</span>
-            </div>
+    <main className={`lp-login-screen${transitionClass}`}>
+      <div className="lp-login-shell">
+        <section className="lp-login-form-panel">
+          <div className="lp-login-form-inner">
+            <Link to="/" className="lp-login-brand">
+              <img src={brandMark} alt="" className="lp-login-logo" />
+              <span>La Pulga</span>
+            </Link>
+            <span className="lp-login-welcome">Chào mừng bạn trở lại</span>
+            <p className="lp-login-subtitle">Đăng nhập để tiếp tục kết nối với cộng đồng của bạn.</p>
+
+            {error && <div className="alert alert-error" role="alert"><span className="material-symbols-outlined text-[16px] align-middle mr-1">warning</span>{error}</div>}
+
+            <div className="lp-login-google"><GoogleLoginButton onError={(msg) => setError(msg)} /></div>
+            <div className="lp-login-or"><span>HOẶC ĐĂNG NHẬP VỚI EMAIL</span></div>
+
+            <form onSubmit={handleSubmit} className="lp-login-form">
+              <div className="lp-login-field">
+                <label htmlFor="login-account">Email hoặc Tên người dùng</label>
+                <div className="lp-login-input-wrap"><span className="material-symbols-outlined text-[18px]" aria-hidden="true">mail</span><input id="login-account" type="text" name="account" placeholder="tenban@lapulga.vn" value={form.account} onChange={handleChange} disabled={loading} autoComplete="username" spellCheck={false} autoCorrect="off" autoCapitalize="none" /></div>
+              </div>
+              <div className="lp-login-field">
+                <div className="lp-login-label-row"><label htmlFor="login-password">Mật khẩu</label><span className="lp-login-forgot">Quên mật khẩu?</span></div>
+                <div className="lp-login-input-wrap"><span className="material-symbols-outlined text-[18px]" aria-hidden="true">lock</span><input id="login-password" type={showPassword ? 'text' : 'password'} name="password" placeholder="Nhập mật khẩu an toàn" value={form.password} onChange={handleChange} disabled={loading} autoComplete="current-password" /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><span className="material-symbols-outlined text-[18px]">{showPassword ? 'visibility_off' : 'visibility'}</span></button></div>
+              </div>
+              <label className="lp-login-remember"><input type="checkbox" /> <span>Ghi nhớ đăng nhập 30 ngày</span></label>
+              <button type="submit" className="lp-login-submit inline-flex items-center justify-center gap-2" disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span></button>
+            </form>
+
+            <p className="lp-login-signup">Chưa có tài khoản? <Link to="/register" state={{ authTransition: 'login-to-register' }}>Đăng ký ngay</Link></p>
+            <div className="lp-login-legal"><span>Điều khoản dịch vụ</span><i>·</i><span>Chính sách bảo mật</span><i>·</i><span>Trợ giúp</span></div>
           </div>
-          <blockquote className="auth-quote">
-            “Đôi khi, chỉ cần có người lắng nghe cũng đủ khiến một ngày trở nên nhẹ nhàng hơn.”
-          </blockquote>
         </section>
-        <div className="card auth-card">
-        {/* Brand header */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 800,
-              fontSize: '22px',
-              color: '#245745',
-              marginBottom: '6px',
-            }}
-          >
-            <img className="auth-logo" src="/logo-lapulga.png" alt="" />
-            <span>La Pulga</span>
-          </Link>
-          <h1 style={{ fontSize: '22px', margin: '4px 0', color: '#1a1a2e' }}>Chào mừng trở lại!</h1>
-          <p style={{ color: '#6b7280', fontSize: '13.5px', margin: 0 }}>
-            Đăng nhập để tiếp tục kết nối với những người bạn đồng điệu
-          </p>
-        </div>
-
-        {error && <div className="alert alert-error"><AlertTriangle size={16} aria-hidden="true" /> {error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="login-account">Email hoặc Tên đăng nhập</label>
-            <input
-              id="login-account"
-              type="text"
-              name="account"
-              placeholder="you@example.com hoặc username"
-              value={form.account}
-              onChange={handleChange}
-              disabled={loading}
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="login-password">Mật khẩu</label>
-            <div className="password-input-wrapper">
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={handleChange}
-                disabled={loading}
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex="-1"
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-              </button>
-            </div>
-          </div>
-
-          <label className="remember-account">
-            <input
-              type="checkbox"
-              checked={rememberAccountOnDevice}
-              onChange={(e) => setRememberAccountOnDevice(e.target.checked)}
-              disabled={loading}
-            />
-            <span>Lưu tài khoản trên thiết bị này để đăng nhập nhanh (không lưu mật khẩu)</span>
-          </label>
-
-          <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '8px' }}>
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#dce8e2' }}></div>
-          <span style={{ padding: '0 12px', fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600 }}>
-            hoặc
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#dce8e2' }}></div>
-        </div>
-
-        {/* Nút Continue with Google */}
-        <GoogleLoginButton onError={(msg) => setError(msg)} />
-
-        <p className="auth-footer">
-          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
-        </p>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   )
 }

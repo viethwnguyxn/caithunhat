@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..models.community import Community, CommunityMember
 from ..models.post import Post, PostComment, PostLike
 from ..models.profile import Profile
 from ..models.user import User
@@ -28,6 +29,7 @@ def _build_post_author(db: Session, user_id: int) -> PostAuthorResponse:
         username=user.username,
         display_name=profile.display_name if profile and profile.display_name else user.username,
         avatar_url=profile.avatar_url if profile and profile.avatar_url else user.avatar_url,
+        is_online=bool(user.is_online),
     )
 
 
@@ -72,6 +74,7 @@ def _to_post_response(
     return PostResponse(
         id=post.id,
         category=post.category,
+        community_id=post.community_id,
         content=post.content,
         image_url=post.image_url,
         mood=post.mood,
@@ -90,6 +93,7 @@ def create_post(db: Session, author: User, post_in: PostCreate) -> PostResponse:
     post = Post(
         author_id=author.id,
         category=post_in.category.strip(),
+        community_id=post_in.community_id,
         content=post_in.content.strip(),
         image_url=post_in.image_url.strip() if post_in.image_url else None,
         mood=post_in.mood.strip() if post_in.mood else None,
@@ -105,13 +109,35 @@ def get_posts(
     db: Session,
     current_user_id: int | None = None,
     category: str | None = None,
+    community_id: int | None = None,
+    joined_only: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> list[PostResponse]:
-    """Lấy danh sách bài viết trên Bảng tin (Feed), hỗ trợ lọc theo chủ đề."""
+    """Lấy danh sách bài viết trên Bảng tin (Feed), hỗ trợ lọc theo chủ đề, theo nhóm hoặc nhóm đã tham gia."""
     query = db.query(Post).order_by(Post.created_at.desc())
 
-    if category and category.strip() and category.strip() != "all" and category.strip() != "Tất cả":
+    if community_id is not None:
+        comm = db.query(Community).filter(Community.id == community_id).first()
+        if comm:
+            query = query.filter(
+                (Post.community_id == community_id)
+                | ((Post.community_id.is_(None)) & (Post.category == comm.category))
+            )
+        else:
+            query = query.filter(Post.community_id == community_id)
+    elif joined_only and current_user_id:
+        joined_comm_ids = [
+            m[0]
+            for m in db.query(CommunityMember.community_id)
+            .filter(CommunityMember.user_id == current_user_id)
+            .all()
+        ]
+        # Hiển thị bài viết của các cộng đồng đã tham gia hoặc bài viết do chính mình đăng
+        query = query.filter(
+            (Post.community_id.in_(joined_comm_ids)) | (Post.author_id == current_user_id)
+        )
+    elif category and category.strip() and category.strip() not in ("all", "Tất cả"):
         query = query.filter(Post.category == category.strip())
 
     posts = query.offset(offset).limit(limit).all()
@@ -307,4 +333,3 @@ def delete_comment(db: Session, user: User, comment_id: int) -> PostActionRespon
     db.commit()
 
     return PostActionResponse(success=True, message="Đã xóa bình luận thành công")
-

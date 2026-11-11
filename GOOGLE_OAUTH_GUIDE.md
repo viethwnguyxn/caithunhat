@@ -15,7 +15,7 @@ Tài liệu này hướng dẫn từng bước để lấy `Google Client ID` v�
 1. Vào menu bên trái chọn **APIs & Services** → **OAuth consent screen** (Màn hình đồng ý OAuth).
 2. Chọn loại User: **External** → bấm **Create**.
 3. Điền thông tin cơ bản:
-   - **App name**: `La Pulga`
+   - **App name**: `Kindred Community`
    - **User support email**: Chọn email của bạn
    - **Developer contact information**: Nhập email của bạn
 4. Bấm **Save and Continue** qua các bước Scopes và Test users (trong giai đoạn thử nghiệm, thêm email Google cá nhân của bạn vào danh sách **Test users**).
@@ -28,9 +28,8 @@ Tài liệu này hướng dẫn từng bước để lấy `Google Client ID` v�
 4. **Name**: `Kindred Web Client`.
 5. **Authorized JavaScript origins** (Nguồn gốc JavaScript được phép):
    - Thêm: `http://localhost:5173`
-   - Thêm: `http://localhost:4173` (khi chạy bản preview)
+   - Thêm: `http://localhost:8000` (nếu cần)
    - Thêm: `http://127.0.0.1:5173`
-   - Khi triển khai, thêm chính xác domain frontend thực tế (ví dụ `https://your-domain.example`).
 6. **Authorized redirect URIs** (URI chuyển hướng được phép):
    - Khi sử dụng SDK Google Identity Services Popup/One-tap, Google không yêu cầu redirect URI phức tạp, nhưng bạn có thể thêm:
      `http://localhost:5173`
@@ -68,5 +67,5 @@ VITE_GOOGLE_CLIENT_ID=xxxxxxx.apps.googleusercontent.com
    cd frontend
    npm run dev
    ```
-3. Truy cập `http://localhost:5173/login` (dev) hoặc `http://localhost:4173/login` (preview) sẽ thấy nút Google. Frontend và backend phải dùng cùng một OAuth Client ID; backend cũng phải đang chạy.
+3. Truy cập `http://localhost:5173/login` hoặc `http://localhost:5173/register` sẽ thấy nút **Continue with Google**.
 4. Bấm nút và chọn tài khoản Google để đăng nhập.

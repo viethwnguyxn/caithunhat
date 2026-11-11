@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Flag, X } from 'lucide-react'
 import { reportService } from '../services/reportService'
 
 const REPORT_REASONS = [
@@ -85,15 +84,18 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
             right: '18px',
             background: 'none',
             border: 'none',
+            fontSize: '20px',
             color: '#9ca3af',
             cursor: 'pointer',
           }}
         >
-          <X size={20} aria-hidden="true" />
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <Flag size={22} color="#ef4444" aria-hidden="true" />
+          <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#dc2626' }}>
+            flag
+          </span>
           <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#1a1a2e' }}>
             Báo cáo vi phạm
           </h3>
@@ -134,12 +136,12 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
                     gap: '10px',
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: reason === r ? '1.5px solid #245745' : '1px solid #e5e7eb',
-                    backgroundColor: reason === r ? '#f1f7f3' : '#ffffff',
+                    border: reason === r ? '1.5px solid #7c5cbf' : '1px solid #e5e7eb',
+                    backgroundColor: reason === r ? '#faf8ff' : '#ffffff',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: reason === r ? 600 : 400,
-                    color: reason === r ? '#245745' : '#374151',
+                    color: reason === r ? '#7c5cbf' : '#374151',
                   }}
                 >
                   <input
@@ -148,7 +150,7 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
                     value={r}
                     checked={reason === r}
                     onChange={(e) => setReason(e.target.value)}
-                    style={{ accentColor: '#245745' }}
+                    style={{ accentColor: '#7c5cbf' }}
                   />
                   <span>{r}</span>
                 </label>
@@ -215,3 +217,4 @@ export default function ReportModal({ targetUser, onClose, onSuccess }) {
     </div>
   )
 }
+

@@ -8,6 +8,7 @@ class PostAuthorResponse(BaseModel):
     username: str
     display_name: str | None = None
     avatar_url: str | None = None
+    is_online: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,8 +34,9 @@ class PostCreate(BaseModel):
     category: str = Field(
         ..., min_length=2, max_length=50, description="Chủ đề bài viết: Công nghệ, Đọc sách, Nghệ thuật, v.v."
     )
+    community_id: int | None = Field(None, description="ID cộng đồng nếu đăng bài trong nhóm cụ thể")
     content: str = Field(..., min_length=1, max_length=3000, description="Nội dung bài viết")
-    image_url: str | None = Field(None, max_length=500, description="URL hình ảnh đính kèm (Locket/Story)")
+    image_url: str | None = Field(None, max_length=2_500_000, description="URL hoặc dữ liệu ảnh base64 đính kèm (Locket/Story)")
     mood: str | None = Field(None, max_length=50, description="Cảm xúc/Tâm trạng hiện tại")
 
 
@@ -42,6 +44,7 @@ class PostResponse(BaseModel):
     """Schema thông tin bài viết trả về client."""
     id: int
     category: str
+    community_id: int | None = None
     content: str
     image_url: str | None = None
     mood: str | None = None
@@ -67,4 +70,3 @@ class PostActionResponse(BaseModel):
     """Schema phản hồi cho thao tác xóa bài viết hoặc bình luận."""
     success: bool = True
     message: str
-

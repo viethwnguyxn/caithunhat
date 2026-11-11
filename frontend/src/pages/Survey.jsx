@@ -1,55 +1,46 @@
 import { useEffect, useState } from 'react'
-import { Check, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getSurvey, submitSurvey } from '../services/surveyService'
 
-const AGE_GROUPS = [
-  'Under 18',
-  '18–20',
-  '21–24',
-  '25–29',
-  '30–39',
-  '40–49',
-  '50+',
-]
+const AGE_GROUPS = ['Dưới 18', '18-22', '23-26', '27-35', '36-50', 'Trên 50']
 
 const STATUS_OPTIONS = [
-  'Sinh viên',
-  'Đang đi làm',
-  'Freelancer',
-  'Đang tìm việc / Gap year',
-  'Khác',
+  { label: 'Sinh viên', desc: 'Đang theo học đại học hoặc cao đẳng', icon: 'school' },
+  { label: 'Đang đi làm', desc: 'Nhân viên công sở hoặc doanh nghiệp', icon: 'work' },
+  { label: 'Freelancer', desc: 'Làm việc tự do, remote worker', icon: 'local_cafe' },
+  { label: 'Đang tìm việc / Gap year', desc: 'Nghỉ ngơi, học thêm hoặc đổi ngành', icon: 'explore' },
+  { label: 'Khác', desc: 'Các tình trạng công việc khác', icon: 'bolt' },
 ]
 
 const SITUATION_OPTIONS = [
-  'Vừa chuyển đến môi trường mới',
-  'Bắt đầu cuộc sống tự lập',
-  'Gặp áp lực công việc hoặc học tập',
-  'Đang tìm kiếm định hướng tương lai',
-  'Cuộc sống ổn định nhưng muốn kết nối sâu sắc hơn',
+  { label: 'Vừa chuyển đến môi trường mới', desc: 'Chuyển trường, đổi công ty hoặc đến thành phố mới', icon: 'luggage' },
+  { label: 'Bắt đầu cuộc sống tự lập', desc: 'Vừa đi làm, ở riêng hoặc chuyển ra sống tự do', icon: 'apartment' },
+  { label: 'Gặp áp lực công việc hoặc học tập', desc: 'Cần tìm người chia sẻ giải tỏa căng thẳng', icon: 'bolt' },
+  { label: 'Đang tìm kiếm định hướng tương lai', desc: 'Cần người đồng hành cùng chung mục tiêu phát triển', icon: 'explore' },
+  { label: 'Cuộc sống ổn định nhưng muốn kết nối sâu sắc hơn', desc: 'Mở rộng mạng lưới bạn bè chất lượng', icon: 'spa' },
 ]
 
 const FEELING_OPTIONS = [
-  'Thỉnh thoảng thấy cô đơn',
-  'Hy vọng & Hướng về phía trước',
-  'Căng thẳng, quá tải',
-  'Mong muốn được lắng nghe',
-  'Tò mò, hào hứng khám phá',
+  { label: 'Thỉnh thoảng thấy cô đơn', icon: 'cloudy' },
+  { label: 'Hy vọng & Hướng về phía trước', icon: 'auto_awesome' },
+  { label: 'Căng thẳng, quá tải', icon: 'local_fire_department' },
+  { label: 'Mong muốn được lắng nghe', icon: 'chat_bubble' },
+  { label: 'Tò mò, hào hứng khám phá', icon: 'rocket_launch' },
 ]
 
 const GOAL_OPTIONS = [
-  'Tìm bạn tâm giao, đồng điệu',
-  'Cùng học tập, phát triển kỹ năng',
-  'Chia sẻ câu chuyện & sở thích',
-  'Tìm người cùng vượt qua giai đoạn khó khăn',
+  { label: 'Tìm bạn tâm giao, đồng điệu', icon: 'handshake' },
+  { label: 'Cùng học tập, phát triển kỹ năng', icon: 'menu_book' },
+  { label: 'Chia sẻ câu chuyện & sở thích', icon: 'local_cafe' },
+  { label: 'Tìm người cùng vượt qua khó khăn', icon: 'shield' },
 ]
 
 const EXPECTATION_OPTIONS = [
-  'Lắng nghe chân thành, không phán xét',
-  'Sự tôn trọng và giữ gìn riêng tư',
-  'Năng lượng tích cực, ấm áp',
-  'Gợi ý, lời khuyên hữu ích',
+  { label: 'Lắng nghe chân thành, không phán xét', icon: 'favorite' },
+  { label: 'Sự tôn trọng và giữ gìn riêng tư', icon: 'lock' },
+  { label: 'Năng lượng tích cực, ấm áp', icon: 'wb_sunny' },
+  { label: 'Gợi ý, lời khuyên hữu ích', icon: 'lightbulb' },
 ]
 
 const TOPIC_OPTIONS = [
@@ -87,7 +78,16 @@ const DISCOVERY_OPTIONS = [
   'Mở rộng kết nối để học hỏi góc nhìn mới',
 ]
 
-function Survey() {
+const STEP_TITLES = [
+  'HỒ SƠ CĂN BẢN & ĐỘ TUỔI',
+  'HOÀN CẢNH & CẢM XÚC',
+  'MỤC TIÊU & KỲ VỌNG',
+  'SỞ THÍCH & HOẠT ĐỘNG',
+  'KIỂU KẾT NỐI & TƯƠNG TÁC',
+  'CÂU CHUYỆN CÁ NHÂN',
+]
+
+export default function Survey() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const totalSteps = 6
@@ -111,7 +111,6 @@ function Survey() {
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState('')
-  const [stepTransitioning, setStepTransitioning] = useState(false)
 
   useEffect(() => {
     async function loadOldSurvey() {
@@ -193,29 +192,17 @@ function Survey() {
     }
     setError('')
     setStep((prev) => Math.min(prev + 1, totalSteps))
-    // Chống bấm đúp chuột từ bước trước ăn vào nút submit của bước sau
-    setStepTransitioning(true)
-    setTimeout(() => {
-      setStepTransitioning(false)
-    }, 600)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
     setError('')
     setStep((prev) => Math.max(prev - 1, 1))
-    setStepTransitioning(true)
-    setTimeout(() => {
-      setStepTransitioning(false)
-    }, 400)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
-    // Nếu vừa mới chuyển sang bước cuối dưới 600ms thì chặn để tránh click đúp ngoài ý muốn
-    if (stepTransitioning || loading) {
-      return
-    }
-
     const errMsg = validateCurrentStep()
     if (errMsg) {
       setError(errMsg)
@@ -226,7 +213,7 @@ function Survey() {
     setError('')
     try {
       await submitSurvey(form)
-      navigate('/home')
+      navigate('/discover')
     } catch (err) {
       console.error('Lỗi nộp survey:', err)
       setError(err.response?.data?.detail || 'Không thể lưu kết quả khảo sát. Vui lòng thử lại.')
@@ -235,454 +222,619 @@ function Survey() {
     }
   }
 
-  // Component Thẻ Chọn (Select Card) - Không còn ô vuông/tròn thô kệch
-  const SelectCard = ({ label, isSelected, onClick, isMulti = false }) => {
-    return (
-      <div
-        onClick={onClick}
-        style={{
-          padding: '14px 18px',
-          borderRadius: '12px',
-          border: isSelected ? '2px solid #245745' : '1.5px solid #e5e7eb',
-          backgroundColor: isSelected ? '#e1efe8' : '#ffffff',
-          color: isSelected ? '#2e5948' : '#374151',
-          fontWeight: isSelected ? 600 : 400,
-          fontSize: '15px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          transition: 'all 0.15s ease',
-          boxShadow: isSelected ? '0 2px 8px rgba(36, 87, 69, 0.15)' : 'none',
-          userSelect: 'none',
-        }}
-      >
-        <span>{label}</span>
-        {isSelected && (
-          <span
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: isMulti ? '6px' : '50%',
-              backgroundColor: '#245745',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            <Check size={14} aria-hidden="true" />
-          </span>
-        )}
-      </div>
-    )
-  }
-
   if (initialLoading) {
     return (
-      <div className="survey-page">
-        <Navbar />
-        <button
-          type="button"
-          className="survey-page-close"
-          onClick={() => navigate('/home')}
-          aria-label="Đóng khảo sát"
-        >
-          <X size={20} aria-hidden="true" />
-        </button>
-        <p style={{ color: '#6b7280' }}>Đang tải khảo sát...</p>
+      <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] flex items-center justify-center font-mono">
+        Đang khởi tạo buồng khảo sát...
       </div>
     )
   }
 
   return (
-    <div className="survey-page">
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88] selection:text-[#00210c] relative">
       <Navbar />
-      <button
-        type="button"
-        className="survey-page-close"
-        onClick={() => navigate('/home')}
-        aria-label="Đóng khảo sát"
-      >
-        <X size={20} aria-hidden="true" />
-      </button>
-      <div className="card" style={{ maxWidth: '620px', padding: '36px' }}>
-        {/* Progress Bar */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#245745', textTransform: 'uppercase' }}>
-              Bước {step} / {totalSteps}
-            </span>
-            <span style={{ fontSize: '13px', color: '#9ca3af' }}>
-              {Math.round((step / totalSteps) * 100)}% hoàn thành
-            </span>
+
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.06),transparent_60%)]"></div>
+
+      <main className="relative z-10 w-full max-w-5xl mx-auto px-4 md:px-8 pt-24 pb-16">
+        <div className="flex flex-col w-full items-center justify-center">
+          {/* Stepper Progress Header */}
+          <div className="w-full max-w-xl mx-auto mb-8 px-4 flex flex-col items-center">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+              <span className="text-xs font-mono text-[#00ff88] tracking-wider font-semibold uppercase">
+                BƯỚC {step} / {totalSteps}: {STEP_TITLES[step - 1]}
+              </span>
+            </div>
+
+            {/* Stepper Track Bar */}
+            <div className="w-full h-2 bg-[#181d26] rounded-full overflow-hidden relative shadow-inner">
+              <div
+                className="h-full bg-[#00ff88] rounded-full shadow-[0_0_12px_#00ff88] transition-all duration-500 ease-out"
+                style={{ width: `${(step / totalSteps) * 100}%` }}
+              ></div>
+            </div>
+
+            {/* Step Points Preview */}
+            <div className="w-full flex justify-between items-center mt-3 px-1">
+              {[1, 2, 3, 4, 5, 6].map((s) => (
+                <div key={s} className="flex flex-col items-center gap-1">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all ${
+                      s < step
+                        ? 'bg-[#00ff88]/20 border border-[#00ff88]/60 text-[#00ff88]'
+                        : s === step
+                        ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_14px_rgba(0,255,136,0.6)] scale-110'
+                        : 'bg-[#181d26] text-[#849585]'
+                    }`}
+                  >
+                    {s < step ? (
+                      <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+                    ) : (
+                      `0${s}`
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ height: '6px', width: '100%', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${(step / totalSteps) * 100}%`,
-                background: 'linear-gradient(90deg, #245745, #3d705c)',
-                transition: 'width 0.3s ease',
-              }}
-            ></div>
+
+          {/* Main Card Container */}
+          <div className="w-full max-w-[700px] bg-[#11151c] border border-[#1a232e] rounded-2xl p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            {/* Ambient Radial Glows */}
+            <div className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 bg-[#00ff88]/10 rounded-full blur-3xl"></div>
+            <div className="pointer-events-none absolute -bottom-28 -left-24 w-60 h-60 bg-[#44fb8a]/5 rounded-full blur-2xl"></div>
+
+            {/* Header info */}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#181d26] border border-[#1a232e] text-[#00ff88] text-[10px] font-mono">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span>
+                  THUẬT TOÁN KẾT NỐI LAPULGA
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/home', { replace: true })}
+                  className="text-xs font-semibold text-[#b9cbb9] hover:text-[#00ff88] transition-colors"
+                >
+                  Bỏ qua khảo sát
+                </button>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <div className="mb-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* BƯỚC 1: ABOUT YOU */}
+              {step === 1 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Về thông tin của bạn
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      Giúp lapulga hiểu độ tuổi và tình trạng hiện tại để hiệu chỉnh dải tần số kết
+                      nối.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      1. Nhóm độ tuổi của bạn *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {AGE_GROUPS.map((age) => {
+                        const isSelected = form.age_group === age
+                        return (
+                          <div
+                            key={age}
+                            onClick={() => handleSelectRadio('age_group', age)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all text-center text-xs font-mono ${
+                              isSelected
+                                ? 'bg-[#00ff88]/15 border-[#00ff88] text-[#00ff88] shadow-[0_0_12px_rgba(0,255,136,0.2)] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:border-[#00ff88]/40 hover:bg-[#181d26]'
+                            }`}
+                          >
+                            {age}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      2. Tình trạng hiện tại *
+                    </label>
+                    <div className="space-y-2.5">
+                      {STATUS_OPTIONS.map((st) => {
+                        const isSelected = form.current_status === st.label
+                        return (
+                          <div
+                            key={st.label}
+                            onClick={() => handleSelectRadio('current_status', st.label)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] shadow-[0_0_14px_rgba(0,255,136,0.18)]'
+                                : 'bg-[#08090a] border-[#1a232e] hover:border-[#00ff88]/40 hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-10 h-10 rounded-xl bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">{st.icon}</span>
+                              </span>
+                              <div>
+                                <h4
+                                  className={`text-sm font-semibold ${
+                                    isSelected ? 'text-[#00ff88]' : 'text-[#f1ffef]'
+                                  }`}
+                                >
+                                  {st.label}
+                                </h4>
+                                <p className="text-xs text-[#849585]">{st.desc}</p>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                isSelected
+                                  ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_8px_#00ff88]'
+                                  : 'border border-[#1a232e]'
+                              }`}
+                            >
+                              {isSelected && (
+                                <span className="material-symbols-outlined text-[13px] font-bold">
+                                  check
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 2: LIFE SITUATION & FEELINGS */}
+              {step === 2 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Hiện tại cuộc sống của bạn như thế nào?
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      Chọn những mô tả đúng nhất về bạn lúc này để tìm người thấu hiểu.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      1. Hoàn cảnh sống hiện tại * (Chọn 1)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {SITUATION_OPTIONS.map((opt) => {
+                        const isSelected = form.life_situation === opt.label
+                        return (
+                          <div
+                            key={opt.label}
+                            onClick={() => handleSelectRadio('life_situation', opt.label)}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] shadow-[0_0_14px_rgba(0,255,136,0.18)]'
+                                : 'bg-[#08090a] border-[#1a232e] hover:border-[#00ff88]/40 hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <span className="w-10 h-10 rounded-xl bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">{opt.icon}</span>
+                              </span>
+                              <div
+                                className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                  isSelected
+                                    ? 'bg-[#00ff88] text-[#00210c] shadow-[0_0_8px_#00ff88]'
+                                    : 'border border-[#1a232e]'
+                                }`}
+                              >
+                                {isSelected && (
+                                  <span className="material-symbols-outlined text-[13px] font-bold">
+                                    check
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <h4
+                                className={`text-sm font-semibold ${
+                                  isSelected ? 'text-[#00ff88]' : 'text-[#f1ffef]'
+                                }`}
+                              >
+                                {opt.label}
+                              </h4>
+                              <p className="text-xs text-[#849585] mt-1 leading-relaxed">
+                                {opt.desc}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      2. Cảm xúc gần đây của bạn * (Chọn nhiều)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {FEELING_OPTIONS.map((f) => {
+                        const isSelected = form.recent_feelings.includes(f.label)
+                        return (
+                          <div
+                            key={f.label}
+                            onClick={() => handleToggleCheckbox('recent_feelings', f.label)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold shadow-[0_0_10px_rgba(0,255,136,0.15)]'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[18px] text-[#00ff88]">{f.icon}</span>
+                              <span>{f.label}</span>
+                            </div>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                check
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 3: GOALS & EXPECTATIONS */}
+              {step === 3 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Mục tiêu & Kỳ vọng kết nối
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      Bạn đang tìm kiếm điều gì và mong đợi không gian tương tác như thế nào?
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      1. Mục tiêu kết nối của bạn * (Chọn nhiều)
+                    </label>
+                    <div className="space-y-2.5">
+                      {GOAL_OPTIONS.map((g) => {
+                        const isSelected = form.goals.includes(g.label)
+                        return (
+                          <div
+                            key={g.label}
+                            onClick={() => handleToggleCheckbox('goals', g.label)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] shadow-[0_0_12px_rgba(0,255,136,0.18)]'
+                                : 'bg-[#08090a] border-[#1a232e] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-9 h-9 rounded-lg bg-[#181d26] border border-[#1a232e] flex items-center justify-center text-[#00ff88] shrink-0">
+                                <span className="material-symbols-outlined text-[18px]">{g.icon}</span>
+                              </span>
+                              <span
+                                className={`text-sm ${
+                                  isSelected ? 'text-[#00ff88] font-bold' : 'text-[#f1ffef]'
+                                }`}
+                              >
+                                {g.label}
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[18px] text-[#00ff88]">
+                                check_circle
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      2. Mong muốn từ cộng đồng lapulga * (Chọn nhiều)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {EXPECTATION_OPTIONS.map((exp) => {
+                        const isSelected = form.community_expectations.includes(exp.label)
+                        return (
+                          <div
+                            key={exp.label}
+                            onClick={() => handleToggleCheckbox('community_expectations', exp.label)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[18px] text-[#00ff88]">{exp.icon}</span>
+                              <span>{exp.label}</span>
+                            </div>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                check
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 4: TOPICS & ACTIVITIES */}
+              {step === 4 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Sở thích & Chủ đề quan tâm
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      Giúp hệ thống tìm bạn bè có cùng gu trò chuyện và hoạt động rảnh rỗi.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      1. Chủ đề bạn thích trao đổi * (Chọn nhiều)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {TOPIC_OPTIONS.map((t) => {
+                        const isSelected = form.topics.includes(t)
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => handleToggleCheckbox('topics', t)}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#00ff88] text-[#00210c] font-bold shadow-[0_0_12px_rgba(0,255,136,0.35)]'
+                                : 'bg-[#08090a] text-[#b9cbb9] border border-[#1a232e] hover:border-[#00ff88]/40'
+                            }`}
+                          >
+                            #{t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      2. Hoạt động lúc rảnh rỗi * (Chọn nhiều)
+                    </label>
+                    <div className="space-y-2">
+                      {ACTIVITY_OPTIONS.map((act) => {
+                        const isSelected = form.free_time_activities.includes(act)
+                        return (
+                          <div
+                            key={act}
+                            onClick={() => handleToggleCheckbox('free_time_activities', act)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <span>{act}</span>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                check
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 5: CONNECTION STYLE */}
+              {step === 5 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Kiểu kết nối & Phong cách giao tiếp
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      Cách bạn muốn kết nối và nhịp điệu nhắn tin phù hợp nhất với bạn.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      1. Kiểu kết nối mong muốn *
+                    </label>
+                    <div className="space-y-2">
+                      {CONNECTION_TYPE_OPTIONS.map((c) => {
+                        const isSelected = form.desired_connection_types.includes(c)
+                        return (
+                          <div
+                            key={c}
+                            onClick={() => handleToggleCheckbox('desired_connection_types', c)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <span>{c}</span>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                check
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      2. Nhịp điệu trò chuyện ưu tiên *
+                    </label>
+                    <div className="space-y-2">
+                      {MODE_OPTIONS.map((m) => {
+                        const isSelected = form.preferred_mode === m
+                        return (
+                          <div
+                            key={m}
+                            onClick={() => handleSelectRadio('preferred_mode', m)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <span>{m}</span>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                radio_button_checked
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider mb-2.5">
+                      3. Tùy chọn khám phá ghép đôi *
+                    </label>
+                    <div className="space-y-2">
+                      {DISCOVERY_OPTIONS.map((d) => {
+                        const isSelected = form.discovery_preference === d
+                        return (
+                          <div
+                            key={d}
+                            onClick={() => handleSelectRadio('discovery_preference', d)}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
+                              isSelected
+                                ? 'bg-[#00ff88]/10 border-[#00ff88] text-[#00ff88] font-bold'
+                                : 'bg-[#08090a] border-[#1a232e] text-[#b9cbb9] hover:bg-[#181d26]'
+                            }`}
+                          >
+                            <span>{d}</span>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-[16px] text-[#00ff88]">
+                                radio_button_checked
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 6: STORY (OPTIONAL) */}
+              {step === 6 && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-[#f1ffef]">
+                      Câu chuyện & Góc nhìn riêng của bạn
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#b9cbb9] mt-1">
+                      (Tùy chọn) Chia sẻ thêm điều bạn muốn người khác thấu hiểu nhất về bạn.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider">
+                      Câu chuyện ngắn hoặc trải nghiệm đáng nhớ
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={form.story}
+                      onChange={(e) => setForm({ ...form, story: e.target.value })}
+                      placeholder="Một hành trình bạn từng trải qua, một bước ngoặt cuộc sống..."
+                      className="w-full p-3.5 rounded-xl bg-[#08090a] text-[#f1ffef] placeholder:text-[#849585] text-xs md:text-sm border border-[#1a232e] focus:outline-none focus:ring-1 focus:ring-[#00ff88] transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-mono text-[#44fb8a] uppercase tracking-wider">
+                      Điều bạn muốn người khác hiểu về mình
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={form.what_you_want_others_to_understand}
+                      onChange={(e) =>
+                        setForm({ ...form, what_you_want_others_to_understand: e.target.value })
+                      }
+                      placeholder="Vd: Mình có phần trầm tính lúc mới gặp nhưng rất chân thành và thích nghe tâm sự..."
+                      className="w-full p-3.5 rounded-xl bg-[#08090a] text-[#f1ffef] placeholder:text-[#849585] text-xs md:text-sm border border-[#1a232e] focus:outline-none focus:ring-1 focus:ring-[#00ff88] transition-all resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Buttons */}
+              <div className="flex items-center justify-between pt-8 mt-8 border-t border-[#1a232e]">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="px-5 py-2.5 rounded-xl bg-[#181d26] text-[#b9cbb9] hover:bg-[#1f2021] hover:text-[#f1ffef] font-semibold text-xs font-mono transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                    <span>Quay lại</span>
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+
+                {step < totalSteps ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="px-6 py-2.5 rounded-xl bg-[#00ff88] text-[#00210c] font-bold text-xs font-mono shadow-[0_0_16px_rgba(0,255,136,0.35)] hover:shadow-[0_0_24px_rgba(0,255,136,0.6)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Tiếp theo</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="px-7 py-2.5 rounded-xl bg-[#00ff88] text-[#00210c] font-bold text-xs font-mono shadow-[0_0_20px_rgba(0,255,136,0.5)] hover:shadow-[0_0_28px_rgba(0,255,136,0.8)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{loading ? 'Đang hiệu chuẩn...' : 'Hoàn tất & Khám phá'}</span>
+                    <span className="material-symbols-outlined text-[16px]">rocket_launch</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-
-        {error && <div className="alert alert-error">{error}</div>}
-
-        <form onSubmit={step === totalSteps ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }}>
-          {/* BƯỚC 1: ABOUT YOU */}
-          {step === 1 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Về bạn</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Giúp chúng tôi hiểu độ tuổi và tình trạng hiện tại của bạn.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Độ tuổi của bạn</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-                  {AGE_GROUPS.map((age) => (
-                    <SelectCard
-                      key={age}
-                      label={age}
-                      isSelected={form.age_group === age}
-                      onClick={() => handleSelectRadio('age_group', age)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Tình trạng hiện tại</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectCard
-                      key={status}
-                      label={status}
-                      isSelected={form.current_status === status}
-                      onClick={() => handleSelectRadio('current_status', status)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 2: LIFE SITUATION & FEELINGS */}
-          {step === 2 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Hoàn cảnh & Cảm xúc</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Những gì bạn đang trải qua sẽ giúp kết nối với người thực sự thấu hiểu.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hoàn cảnh hiện tại của bạn</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {SITUATION_OPTIONS.map((item) => (
-                    <SelectCard
-                      key={item}
-                      label={item}
-                      isSelected={form.life_situation === item}
-                      onClick={() => handleSelectRadio('life_situation', item)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Cảm xúc gần đây (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {FEELING_OPTIONS.map((feeling) => (
-                    <SelectCard
-                      key={feeling}
-                      label={feeling}
-                      isMulti={true}
-                      isSelected={form.recent_feelings.includes(feeling)}
-                      onClick={() => handleToggleCheckbox('recent_feelings', feeling)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 3: GOALS & EXPECTATIONS */}
-          {step === 3 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Mục tiêu & Kỳ vọng</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Bạn tìm kiếm điều gì khi tham gia cộng đồng này?
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Mục tiêu của bạn (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {GOAL_OPTIONS.map((goal) => (
-                    <SelectCard
-                      key={goal}
-                      label={goal}
-                      isMulti={true}
-                      isSelected={form.goals.includes(goal)}
-                      onClick={() => handleToggleCheckbox('goals', goal)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Kỳ vọng từ cộng đồng (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {EXPECTATION_OPTIONS.map((exp) => (
-                    <SelectCard
-                      key={exp}
-                      label={exp}
-                      isMulti={true}
-                      isSelected={form.community_expectations.includes(exp)}
-                      onClick={() => handleToggleCheckbox('community_expectations', exp)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 4: INTERESTS & ACTIVITIES */}
-          {step === 4 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Sở thích & Thói quen</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Những chủ đề và sở thích giúp gắn kết bạn với những người chung tần số.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Chủ đề bạn quan tâm (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  {TOPIC_OPTIONS.map((topic) => {
-                    const isChecked = form.topics.includes(topic)
-                    return (
-                      <button
-                        type="button"
-                        key={topic}
-                        onClick={() => handleToggleCheckbox('topics', topic)}
-                        style={{
-                          padding: '10px 16px',
-                          borderRadius: '24px',
-                          border: isChecked ? '2px solid #245745' : '1.5px solid #e5e7eb',
-                          backgroundColor: isChecked ? '#245745' : '#ffffff',
-                          color: isChecked ? '#ffffff' : '#374151',
-                          fontSize: '14px',
-                          fontWeight: isChecked ? 600 : 400,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isChecked ? '0 2px 8px rgba(36, 87, 69, 0.25)' : 'none',
-                        }}
-                      >
-                        {isChecked && <Check size={14} aria-hidden="true" />} {topic}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hoạt động khi rảnh rỗi (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {ACTIVITY_OPTIONS.map((act) => (
-                    <SelectCard
-                      key={act}
-                      label={act}
-                      isMulti={true}
-                      isSelected={form.free_time_activities.includes(act)}
-                      onClick={() => handleToggleCheckbox('free_time_activities', act)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 5: CONNECTION PREFERENCES */}
-          {step === 5 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Gu kết nối của bạn</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Bạn muốn kết nối và trò chuyện theo cách nào?
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Hình thức kết nối mong muốn (chọn nhiều)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {CONNECTION_TYPE_OPTIONS.map((type) => (
-                    <SelectCard
-                      key={type}
-                      label={type}
-                      isMulti={true}
-                      isSelected={form.desired_connection_types.includes(type)}
-                      onClick={() => handleToggleCheckbox('desired_connection_types', type)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Nhịp điệu trò chuyện ưu tiên</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {MODE_OPTIONS.map((mode) => (
-                    <SelectCard
-                      key={mode}
-                      label={mode}
-                      isSelected={form.preferred_mode === mode}
-                      onClick={() => handleSelectRadio('preferred_mode', mode)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '10px' }}>Sở thích khám phá</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {DISCOVERY_OPTIONS.map((disc) => (
-                    <SelectCard
-                      key={disc}
-                      label={disc}
-                      isSelected={form.discovery_preference === disc}
-                      onClick={() => handleSelectRadio('discovery_preference', disc)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BƯỚC 6: STORY (OPTIONAL) */}
-          {step === 6 && (
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Câu chuyện của bạn (Tùy chọn)</h2>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                Một vài dòng chia sẻ chân thành sẽ giúp người khác hiểu và đồng cảm với bạn hơn.
-              </p>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontWeight: 600, marginBottom: '8px' }}>
-                  Một câu chuyện ngắn hoặc điều bạn đang trải qua
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Ví dụ: Mình là người hướng nội mới chuyển đến thành phố mới, đôi lúc thấy lạc lõng và muốn tìm người bạn để tâm sự..."
-                  value={form.story}
-                  onChange={(e) => setForm({ ...form, story: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '1.5px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                    resize: 'vertical',
-                  }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '8px' }}>
-                  Điều bạn muốn người khác hiểu về mình nhất
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Ví dụ: Mình phản hồi tin nhắn hơi chậm nhưng luôn lắng nghe chân thành..."
-                  value={form.what_you_want_others_to_understand}
-                  onChange={(e) =>
-                    setForm({ ...form, what_you_want_others_to_understand: e.target.value })
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '1.5px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                    resize: 'vertical',
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  marginTop: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  color: '#6b7280',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <span>💡</span>
-                <span>
-                  Phần câu chuyện là <strong>tùy chọn</strong>. Bạn có thể chia sẻ ngay bây giờ hoặc cập nhật lại bất kỳ lúc nào trong trang <strong>Hồ sơ cá nhân</strong>.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Buttons Navigation */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn-secondary"
-                style={{ flex: 1, padding: '14px' }}
-                disabled={loading || stepTransitioning}
-              >
-                Quay lại
-              </button>
-            )}
-
-            {step < totalSteps ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn-primary"
-                style={{ flex: 2, padding: '14px' }}
-                disabled={stepTransitioning}
-              >
-                Tiếp tục
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{
-                  flex: 2,
-                  padding: '14px',
-                  opacity: stepTransitioning ? 0.7 : 1,
-                  transition: 'opacity 0.2s ease',
-                }}
-                disabled={loading || stepTransitioning}
-              >
-                {loading
-                  ? 'Đang lưu kết quả...'
-                  : form.story?.trim() || form.what_you_want_others_to_understand?.trim()
-                  ? 'Lưu câu chuyện & Hoàn thành'
-                  : 'Bỏ qua & Hoàn thành'}
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
+      </main>
     </div>
   )
 }
-
-export default Survey

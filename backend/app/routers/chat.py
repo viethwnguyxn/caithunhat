@@ -1,9 +1,33 @@
-from datetime import datetime, timezone
+import base64
+import hashlib
+import hmac
+import logging
+import time
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+import jwt
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..core.config import (
+    STRINGEE_ACCESS_TOKEN_TTL_SECONDS,
+    STRINGEE_API_KEY_SECRET,
+    STRINGEE_API_KEY_SID,
+    STRINGEE_SIGNING_SECRET,
+    TURN_CREDENTIAL_TTL_SECONDS,
+    TURN_SERVER_URLS,
+    TURN_SHARED_SECRET,
+)
 from ..core.security import decode_access_token
 from ..db.database import SessionLocal, get_db
 from ..models.chat import ConversationMember
@@ -11,19 +35,255 @@ from ..models.profile import Profile
 from ..models.user import User
 from ..routers.deps import get_current_user
 from ..schemas.chat import (
+    CallEventCreate,
     ConversationResponse,
     MessageCreate,
     MessageResponse,
 )
-from ..services import chat_service
+from ..services import chat_service, notification_service
 from ..websocket.manager import manager
 
 router = APIRouter(tags=["chat"])
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
 # 1. REST APIs
 # ==========================================
+
+@router.get("/api/calls/stringee-token")
+def get_stringee_access_token(current_user: User = Depends(get_current_user)):
+    if (
+        not STRINGEE_API_KEY_SID
+        or not STRINGEE_API_KEY_SECRET
+        or not STRINGEE_SIGNING_SECRET
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stringee chưa được cấu hình đầy đủ trên máy chủ.",
+        )
+
+    now = int(time.time())
+    expires_at = now + STRINGEE_ACCESS_TOKEN_TTL_SECONDS
+    access_token = jwt.encode(
+        {
+            "jti": f"{STRINGEE_API_KEY_SID}-{now}-{uuid.uuid4().hex}",
+            "iss": STRINGEE_API_KEY_SID,
+            "exp": expires_at,
+            "userId": str(current_user.id),
+        },
+        STRINGEE_API_KEY_SECRET,
+        algorithm="HS256",
+        headers={"cty": "stringee-api;v=1"},
+    )
+    return {
+        "access_token": access_token,
+        "user_id": str(current_user.id),
+        "expires_at": expires_at,
+    }
+
+
+@router.get("/api/calls/stringee-answer")
+def get_stringee_answer(
+    request: Request,
+    from_user: str = Query(alias="from"),
+    to_user: str = Query(alias="to"),
+    from_internal: bool = Query(alias="fromInternal"),
+    user_id: str = Query(alias="userId"),
+    db: Session = Depends(get_db),
+):
+    if not STRINGEE_SIGNING_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stringee webhook chưa được cấu hình trên máy chủ.",
+        )
+
+    request_uri = request.scope["raw_path"].decode("ascii")
+    if request.scope.get("query_string"):
+        request_uri += "?" + request.scope["query_string"].decode("ascii")
+    expected_signature = base64.b64encode(
+        hmac.new(
+            STRINGEE_SIGNING_SECRET.encode("utf-8"),
+            request_uri.encode("utf-8"),
+            hashlib.sha1,
+        ).digest()
+    ).decode("ascii")
+    received_signature = request.headers.get("X-STRINGEE-SIGNATURE")
+    if not received_signature or not hmac.compare_digest(
+        received_signature, expected_signature
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chữ ký Stringee không hợp lệ.",
+        )
+
+    if not from_internal:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ cho phép cuộc gọi giữa các tài khoản trong ứng dụng.",
+        )
+
+    try:
+        caller_id = int(from_user)
+        recipient_id = int(to_user)
+        authenticated_user_id = int(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản gọi không hợp lệ.",
+        )
+
+    participants = {
+        member.user_id
+        for member in db.query(ConversationMember)
+        .filter(ConversationMember.user_id.in_([caller_id, recipient_id]))
+        .all()
+    }
+    if (
+        caller_id == recipient_id
+        or caller_id != authenticated_user_id
+        or caller_id not in participants
+        or recipient_id not in participants
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không thể gọi giữa các tài khoản này.",
+        )
+
+    shared_conversation = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.user_id == caller_id,
+            ConversationMember.conversation_id.in_(
+                select(ConversationMember.conversation_id).where(
+                    ConversationMember.user_id == recipient_id
+                )
+            ),
+        )
+        .first()
+    )
+    if not shared_conversation or chat_service.is_conversation_blocked(
+        db, shared_conversation.conversation_id, caller_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền gọi trong cuộc hội thoại này.",
+        )
+
+    return [
+        {
+            "action": "connect",
+            "from": {"type": "internal", "number": from_user, "alias": from_user},
+            "to": {"type": "internal", "number": to_user, "alias": to_user},
+        }
+    ]
+
+
+@router.post(
+    "/api/calls/{conversation_id}/events",
+    response_model=MessageResponse,
+)
+async def record_call_event(
+    conversation_id: int,
+    call_event: CallEventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    members = (
+        db.query(ConversationMember)
+        .filter(ConversationMember.conversation_id == conversation_id)
+        .all()
+    )
+    if len(members) != 2 or current_user.id not in {member.user_id for member in members}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền ghi lịch sử cuộc gọi này.",
+        )
+    if chat_service.is_conversation_blocked(db, conversation_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cuộc hội thoại đã bị chặn.",
+        )
+
+    recipient_id = next(member.user_id for member in members if member.user_id != current_user.id)
+    icon = "📹" if call_event.call_type == "video" else "📞"
+    call_name = "Cuộc gọi video" if call_event.call_type == "video" else "Cuộc gọi thoại"
+    if call_event.outcome == "completed":
+        minutes, seconds = divmod(call_event.duration_seconds, 60)
+        content = f"{icon} {call_name} (Thời lượng: {minutes:02d}:{seconds:02d})"
+    elif call_event.outcome == "missed":
+        content = f"{icon} {call_name} nhỡ"
+    elif call_event.outcome == "busy":
+        content = f"{icon} Đối phương đang bận"
+    else:
+        content = f"{icon} {call_name} bị từ chối"
+
+    message = chat_service.create_message(
+        db=db,
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        content=content,
+        notify_recipient=False,
+    )
+    message_payload = {
+        "type": "message",
+        "message": MessageResponse.model_validate(message).model_dump(mode="json"),
+    }
+    await manager.broadcast_to_conversation(conversation_id, message_payload)
+    await manager.send_to_user(recipient_id, message_payload)
+    await manager.send_to_user(current_user.id, message_payload)
+
+    if call_event.outcome in {"missed", "busy"}:
+        profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+        caller_name = (
+            profile.display_name
+            if profile and profile.display_name
+            else current_user.username
+        )
+        notification_service.create_notification(
+            db=db,
+            user_id=recipient_id,
+            type="missed_call",
+            title=f"Cuộc gọi nhỡ từ {caller_name}",
+            content=f"Bạn có cuộc gọi {call_name.lower()} nhỡ.",
+            related_id=conversation_id,
+        )
+
+    return message
+
+
+@router.get("/api/calls/ice-servers")
+def get_call_ice_servers(current_user: User = Depends(get_current_user)):
+    ice_servers = [
+        {"urls": "stun:stun.l.google.com:19302"},
+        {"urls": "stun:stun1.l.google.com:19302"},
+    ]
+
+    if bool(TURN_SERVER_URLS) != bool(TURN_SHARED_SECRET):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cấu hình TURN chưa đầy đủ. Cần có cả TURN_SERVER_URLS và TURN_SHARED_SECRET.",
+        )
+
+    if TURN_SERVER_URLS and TURN_SHARED_SECRET:
+        expiry = int(time.time()) + TURN_CREDENTIAL_TTL_SECONDS
+        username = f"{expiry}:{current_user.id}"
+        digest = hmac.new(
+            TURN_SHARED_SECRET.encode("utf-8"),
+            username.encode("utf-8"),
+            hashlib.sha1,
+        ).digest()
+        credential = base64.b64encode(digest).decode("ascii")
+        ice_servers.append(
+            {
+                "urls": list(TURN_SERVER_URLS),
+                "username": username,
+                "credential": credential,
+            }
+        )
+
+    return {"ice_servers": ice_servers, "turn_configured": bool(TURN_SERVER_URLS)}
+
 
 @router.get("/api/conversations", response_model=list[ConversationResponse])
 def get_conversations(
@@ -55,7 +315,7 @@ def get_conversation_messages(
 
 
 @router.post("/api/conversations/{conversation_id}/messages", response_model=MessageResponse)
-def send_message_rest(
+async def send_message_rest(
     conversation_id: int,
     message_in: MessageCreate,
     db: Session = Depends(get_db),
@@ -73,19 +333,18 @@ def send_message_rest(
     )
     msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
 
-    # Broadcast tới các thành viên trong phòng chat
-    import asyncio
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(
-                manager.broadcast_to_conversation(
-                    conversation_id,
-                    {"type": "message", "message": msg_dict},
-                )
-            )
-    except Exception:
-        pass
+    recipient = (
+        db.query(ConversationMember)
+        .filter(
+            ConversationMember.conversation_id == conversation_id,
+            ConversationMember.user_id != current_user.id,
+        )
+        .first()
+    )
+    payload = {"type": "message", "message": msg_dict}
+    await manager.broadcast_to_conversation(conversation_id, payload)
+    if recipient:
+        await manager.send_to_user(recipient.user_id, payload)
 
     return new_msg
 
@@ -103,6 +362,59 @@ def mark_message_as_read(
 # ==========================================
 # 2. XỬ LÝ WEBRTC SIGNALING DÙNG CHUNG
 # ==========================================
+
+async def _record_missed_call(
+    conversation_id: int,
+    caller_id: int,
+    recipient_id: int,
+    call_type: str,
+):
+    with SessionLocal() as db:
+        participants = {
+            member.user_id
+            for member in db.query(ConversationMember)
+            .filter(ConversationMember.conversation_id == conversation_id)
+            .all()
+        }
+        if caller_id not in participants or recipient_id not in participants:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Không thể ghi nhận cuộc gọi ngoài cuộc hội thoại này.",
+            )
+
+        caller = db.query(User).filter(User.id == caller_id).first()
+        profile = db.query(Profile).filter(Profile.user_id == caller_id).first()
+        caller_name = (
+            profile.display_name
+            if profile and profile.display_name
+            else caller.username if caller else "Người dùng"
+        )
+        call_name = "video" if call_type == "video" else "thoại"
+        icon = "📹" if call_type == "video" else "📞"
+        message = chat_service.create_message(
+            db=db,
+            conversation_id=conversation_id,
+            sender_id=caller_id,
+            content=f"{icon} Cuộc gọi {call_name} nhỡ",
+            notify_recipient=False,
+        )
+        notification_service.create_notification(
+            db=db,
+            user_id=recipient_id,
+            type="missed_call",
+            title=f"Cuộc gọi nhỡ từ {caller_name}",
+            content=f"Bạn có cuộc gọi {call_name} nhỡ.",
+            related_id=conversation_id,
+        )
+        message_payload = {
+            "type": "message",
+            "message": MessageResponse.model_validate(message).model_dump(mode="json"),
+        }
+
+    await manager.broadcast_to_conversation(conversation_id, message_payload)
+    await manager.send_to_user(recipient_id, message_payload)
+    await manager.send_to_user(caller_id, message_payload)
+
 
 async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocket):
     """
@@ -147,6 +459,40 @@ async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocke
             )
             if existing_member:
                 conversation_id = existing_member.conversation_id
+
+        if conversation_id:
+            sender_member = (
+                db.query(ConversationMember)
+                .filter(
+                    ConversationMember.conversation_id == conversation_id,
+                    ConversationMember.user_id == sender_id,
+                )
+                .first()
+            )
+            partner_member = (
+                db.query(ConversationMember)
+                .filter(
+                    ConversationMember.conversation_id == conversation_id,
+                    ConversationMember.user_id != sender_id,
+                )
+                .first()
+            )
+            if not sender_member or not partner_member:
+                await manager.send_personal_message(
+                    {
+                        "type": "call:error",
+                        "message": "Bạn không có quyền gọi trong cuộc hội thoại này.",
+                    },
+                    sender_ws,
+                )
+                return
+            if target_user_id and target_user_id != partner_member.user_id:
+                await manager.send_personal_message(
+                    {"type": "call:error", "message": "Người nhận cuộc gọi không hợp lệ."},
+                    sender_ws,
+                )
+                return
+            target_user_id = partner_member.user_id
 
         # Kiểm tra chặn (Block)
         if conversation_id and chat_service.is_conversation_blocked(db, conversation_id, sender_id):
@@ -201,6 +547,23 @@ async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocke
             },
             sender_ws,
         )
+        if conversation_id and target_user_id:
+            try:
+                await _record_missed_call(
+                    conversation_id,
+                    sender_id,
+                    target_user_id,
+                    data.get("call_type", "audio"),
+                )
+            except Exception:
+                logger.exception("Could not record an unanswered call offer")
+                await manager.send_personal_message(
+                    {
+                        "type": "call:error",
+                        "message": "Không thể lưu thông báo cuộc gọi nhỡ.",
+                    },
+                    sender_ws,
+                )
 
     # Ghi log tin nhắn khi cuộc gọi kết thúc hoặc bị từ chối/nhỡ
     if msg_type in ("call:end", "call:reject") and conversation_id:
@@ -209,42 +572,61 @@ async def _handle_call_signaling(data: dict, sender_id: int, sender_ws: WebSocke
         reason = data.get("reason")
         call_icon = "📹" if call_type == "video" else "📞"
         call_name = "Cuộc gọi video" if call_type == "video" else "Cuộc gọi thoại"
+        missed_call = msg_type == "call:end" and reason == "no_answer"
 
         if duration and duration > 0:
             mins = duration // 60
             secs = duration % 60
             log_content = f"{call_icon} {call_name} (Thời lượng: {mins:02d}:{secs:02d})"
-        elif reason == "declined" or msg_type == "call:reject":
-            log_content = f"{call_icon} Cuộc gọi bị từ chối"
+        elif missed_call:
+            log_content = f"{call_icon} {call_name} nhỡ"
         elif reason == "busy":
             log_content = f"{call_icon} Đối phương đang bận"
+        elif reason == "declined" or msg_type == "call:reject":
+            log_content = f"{call_icon} Cuộc gọi bị từ chối"
         else:
-            log_content = f"{call_icon} Cuộc gọi nhỡ"
+            log_content = f"{call_icon} Cuộc gọi đã kết thúc"
 
         try:
-            with SessionLocal() as db:
-                sys_msg = chat_service.create_message(
-                    db=db,
-                    conversation_id=conversation_id,
-                    sender_id=sender_id,
-                    content=log_content,
+            if missed_call and target_user_id:
+                await _record_missed_call(
+                    conversation_id,
+                    sender_id,
+                    target_user_id,
+                    call_type,
                 )
-                msg_dict = MessageResponse.model_validate(sys_msg).model_dump(mode="json")
+            else:
+                with SessionLocal() as db:
+                    sys_msg = chat_service.create_message(
+                        db=db,
+                        conversation_id=conversation_id,
+                        sender_id=sender_id,
+                        content=log_content,
+                        notify_recipient=False,
+                    )
+                    msg_dict = MessageResponse.model_validate(sys_msg).model_dump(mode="json")
 
-            # Gửi thông báo tin nhắn hệ thống tới cả 2 người dùng
-            msg_payload = {"type": "message", "message": msg_dict}
-            await manager.broadcast_to_conversation(conversation_id, msg_payload)
-            if target_user_id:
-                await manager.send_to_user(target_user_id, msg_payload)
-            await manager.send_to_user(sender_id, msg_payload)
+                msg_payload = {"type": "message", "message": msg_dict}
+                await manager.broadcast_to_conversation(conversation_id, msg_payload)
+                if target_user_id:
+                    await manager.send_to_user(target_user_id, msg_payload)
+                await manager.send_to_user(sender_id, msg_payload)
         except Exception:
-            pass
+            logger.exception("Could not record call ending event")
+            await manager.send_personal_message(
+                {
+                    "type": "call:error",
+                    "message": "Không thể lưu lịch sử cuộc gọi.",
+                },
+                sender_ws,
+            )
 
 
 # ==========================================
 # 3. WEBSOCKET TOÀN CỤC (GLOBAL USER WS)
 # ==========================================
 
+@router.websocket("/ws/user")
 @router.websocket("/api/ws/user")
 async def websocket_user_global(
     websocket: WebSocket,
@@ -294,6 +676,7 @@ async def websocket_user_global(
 # 4. WEBSOCKET PHÒNG CHAT (ROOM CHAT WS)
 # ==========================================
 
+@router.websocket("/ws/chat/{conversation_id}")
 @router.websocket("/api/ws/chat/{conversation_id}")
 async def websocket_chat(
     websocket: WebSocket,
@@ -393,6 +776,14 @@ async def websocket_chat(
                             content=content,
                         )
                         msg_dict = MessageResponse.model_validate(new_msg).model_dump(mode="json")
+                        recipient = (
+                            db.query(ConversationMember)
+                            .filter(
+                                ConversationMember.conversation_id == conversation_id,
+                                ConversationMember.user_id != user_id,
+                            )
+                            .first()
+                        )
                 except HTTPException as e:
                     await manager.send_personal_message(
                         {"type": "error", "message": e.detail},
@@ -406,29 +797,8 @@ async def websocket_chat(
                     "message": msg_dict,
                 }
                 await manager.broadcast_to_conversation(conversation_id, broadcast_payload)
-
-            elif msg_type == "read":
-                with SessionLocal() as db:
-                    current_user = db.query(User).filter(User.id == user_id).first()
-                    if not current_user:
-                        continue
-                    messages = chat_service.get_conversation_messages(
-                        db=db,
-                        conversation_id=conversation_id,
-                        current_user=current_user,
-                    )
-
-                for message in messages:
-                    if message.sender_id != user_id and message.read_at:
-                        await manager.broadcast_to_conversation(
-                            conversation_id,
-                            {
-                                "type": "read_receipt",
-                                "message_id": message.id,
-                                "read_at": message.read_at.isoformat(),
-                            },
-                            exclude_user_id=user_id,
-                        )
+                if recipient:
+                    await manager.send_to_user(recipient.user_id, broadcast_payload)
 
             elif msg_type.startswith("call:"):
                 await _handle_call_signaling(data, user_id, websocket)

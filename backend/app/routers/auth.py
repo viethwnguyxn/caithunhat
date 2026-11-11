@@ -40,7 +40,7 @@ def login(login_in: LoginRequest, db: Session = Depends(get_db)):
     """API endpoint xử lý đăng nhập bằng email hoặc username và mật khẩu."""
     user = authenticate_user(db=db, account=login_in.account, password=login_in.password)
     access_token = create_access_token(subject=user.id)
-    return TokenResponse(access_token=access_token, token_type="bearer")
+    return TokenResponse(access_token=access_token, token_type="bearer", user=user)
 
 
 @router.post(
@@ -52,4 +52,4 @@ def google_auth(google_in: GoogleLoginRequest, db: Session = Depends(get_db)):
     """API endpoint xác thực Google ID Token và trả về JWT access token."""
     user = authenticate_or_create_google_user(db=db, google_id_token=google_in.id_token)
     access_token = create_access_token(subject=user.id)
-    return TokenResponse(access_token=access_token, token_type="bearer")
+    return TokenResponse(access_token=access_token, token_type="bearer", user=user)

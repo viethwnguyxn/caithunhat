@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, Ban, Check, CheckCircle2, Clock, Flag, Info, LockKeyhole, Settings, UsersRound } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import { adminService } from '../services/adminService'
+import Avatar from '../components/Avatar'
+import AdminUserProfileModal from '../components/AdminUserProfileModal'
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
   const [togglingUserId, setTogglingUserId] = useState(null)
+  const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
 
   // Reports Tab state
   const [reports, setReports] = useState([])
@@ -183,11 +185,13 @@ export default function AdminDashboard() {
   // GUARD: Nếu không phải Admin
   if (user && user.role !== 'admin') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
         <Navbar />
         <div style={{ maxWidth: '520px', margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
           <div className="card" style={{ padding: '40px 24px' }}>
-            <Ban size={44} style={{ marginBottom: '16px' }} aria-hidden="true" />
+            <div style={{ marginBottom: '16px', color: '#dc2626' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>block</span>
+            </div>
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
               Truy cập bị từ chối
             </h2>
@@ -209,7 +213,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
       <Navbar />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px' }}>
@@ -217,13 +221,13 @@ export default function AdminDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <Settings size={22} aria-hidden="true" />
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#7c5cbf' }}>admin_panel_settings</span>
               <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
                 Hệ thống Quản trị viên (Admin)
               </h1>
             </div>
             <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-              Quản lý tài khoản người dùng và kiểm duyệt an toàn cộng đồng La Pulga
+              Quản lý tài khoản người dùng và kiểm duyệt an toàn cộng đồng Kindred
             </p>
           </div>
 
@@ -236,12 +240,13 @@ export default function AdminDashboard() {
               borderRadius: '20px',
               backgroundColor: '#faf5ff',
               border: '1px solid #d8b4fe',
-              color: '#245745',
+              color: '#7c5cbf',
               fontSize: '13px',
               fontWeight: 700,
             }}
           >
-            <span>👑 Quyền: Administrator</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>verified_user</span>
+            <span>Quyền: Administrator</span>
           </div>
         </div>
 
@@ -255,8 +260,8 @@ export default function AdminDashboard() {
           }}
         >
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#e1efe8', color: '#245745', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              <UsersRound size={22} aria-hidden="true" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#f5f0ff', color: '#7c5cbf', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>group</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -269,8 +274,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              <Activity size={22} aria-hidden="true" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>check_circle</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -283,8 +288,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              <LockKeyhole size={22} aria-hidden="true" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>lock</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -297,8 +302,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              <Flag size={22} aria-hidden="true" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>flag</span>
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -320,7 +325,7 @@ export default function AdminDashboard() {
             borderRadius: '16px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
             marginBottom: '24px',
-            border: '1px solid #dce8e2',
+            border: '1px solid #ede9fe',
             gap: '8px',
           }}
         >
@@ -339,12 +344,13 @@ export default function AdminDashboard() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'users' ? '#245745' : 'transparent',
+              backgroundColor: activeTab === 'users' ? '#7c5cbf' : 'transparent',
               color: activeTab === 'users' ? '#ffffff' : '#6b7280',
               transition: 'all 0.2s ease',
             }}
           >
-            <span><UsersRound size={16} aria-hidden="true" /> Quản lý Người dùng</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>group</span>
+            <span>Quản lý Người dùng</span>
             <span
               style={{
                 backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
@@ -373,12 +379,13 @@ export default function AdminDashboard() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: activeTab === 'reports' ? '#245745' : 'transparent',
+              backgroundColor: activeTab === 'reports' ? '#7c5cbf' : 'transparent',
               color: activeTab === 'reports' ? '#ffffff' : '#6b7280',
               transition: 'all 0.2s ease',
             }}
           >
-            <span><Flag size={16} aria-hidden="true" /> Báo cáo Vi phạm</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>flag</span>
+            <span>Báo cáo Vi phạm</span>
             {(stats?.pending_reports ?? 0) > 0 && (
               <span
                 style={{
@@ -455,7 +462,7 @@ export default function AdminDashboard() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #dce8e2', color: '#6b7280' }}>
+                    <tr style={{ borderBottom: '2px solid #ede9fe', color: '#6b7280' }}>
                       <th style={{ padding: '12px 14px' }}>Người dùng</th>
                       <th style={{ padding: '12px 14px' }}>Email</th>
                       <th style={{ padding: '12px 14px' }}>Vai trò</th>
@@ -474,28 +481,25 @@ export default function AdminDashboard() {
                             borderBottom: '1px solid #f3f4f6',
                             transition: 'background 0.15s ease',
                           }}
-                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f7f4')}
+                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#faf9fe')}
                           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
                           <td style={{ padding: '12px 14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <img
-                                src={
-                                  u.avatar_url ||
-                                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.username)}`
-                                }
+                              <Avatar
+                                src={u.avatar_url}
                                 alt={u.username}
                                 style={{
                                   width: '36px',
                                   height: '36px',
                                   borderRadius: '50%',
                                   objectFit: 'cover',
-                                  border: '1.5px solid #245745',
+                                  border: '1.5px solid #7c5cbf',
                                 }}
                               />
                               <div>
                                 <div style={{ fontWeight: 700, color: '#1a1a2e' }}>
-                                  {u.display_name || u.username} {isMe && <span style={{ color: '#245745', fontSize: '11px' }}>(Tôi)</span>}
+                                  {u.display_name || u.username} {isMe && <span style={{ color: '#7c5cbf', fontSize: '11px' }}>(Tôi)</span>}
                                 </div>
                                 <div style={{ color: '#6b7280', fontSize: '12px' }}>@{u.username}</div>
                               </div>
@@ -512,12 +516,16 @@ export default function AdminDashboard() {
                                   borderRadius: '8px',
                                   backgroundColor: '#faf5ff',
                                   border: '1px solid #d8b4fe',
-                                  color: '#245745',
+                                  color: '#7c5cbf',
                                   fontSize: '11px',
                                   fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                👑 Admin
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>shield_person</span>
+                                Admin
                               </span>
                             ) : (
                               <span
@@ -544,9 +552,13 @@ export default function AdminDashboard() {
                                   color: '#059669',
                                   fontSize: '11px',
                                   fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                <Check size={12} aria-hidden="true" /> Hoạt động
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                                Hoạt động
                               </span>
                             ) : (
                               <span
@@ -557,9 +569,13 @@ export default function AdminDashboard() {
                                   color: '#dc2626',
                                   fontSize: '11px',
                                   fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
                                 }}
                               >
-                                <LockKeyhole size={12} aria-hidden="true" /> Bị khóa
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>lock</span>
+                                Bị khóa
                               </span>
                             )}
                           </td>
@@ -569,32 +585,48 @@ export default function AdminDashboard() {
                           </td>
 
                           <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                            {isMe ? (
-                              <span style={{ fontSize: '12px', color: '#9ca3af' }}>Tài khoản của bạn</span>
-                            ) : (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
                               <button
                                 type="button"
-                                disabled={togglingUserId === u.id}
-                                onClick={() => handleToggleUserStatus(u)}
+                                onClick={() => setSelectedUserForProfile(u)}
                                 style={{
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  border: u.is_active ? '1px solid #fee2e2' : '1px solid #a7f3d0',
-                                  backgroundColor: u.is_active ? '#fff5f5' : '#ecfdf5',
-                                  color: u.is_active ? '#dc2626' : '#059669',
+                                  border: '1px solid #ddd6fe',
+                                  backgroundColor: '#f5f0ff',
+                                  color: '#6d4bb3',
                                   fontSize: '12px',
                                   fontWeight: 600,
-                                  cursor: togglingUserId === u.id ? 'not-allowed' : 'pointer',
-                                  transition: 'all 0.15s ease',
+                                  cursor: 'pointer',
                                 }}
                               >
-                                {togglingUserId === u.id
-                                  ? 'Đang xử lý...'
-                                  : u.is_active
-                                  ? 'Khóa tài khoản'
-                                  : 'Mở khóa'}
+                                Xem hồ sơ
                               </button>
-                            )}
+                              {!isMe && (
+                                <button
+                                  type="button"
+                                  disabled={togglingUserId === u.id}
+                                  onClick={() => handleToggleUserStatus(u)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: u.is_active ? '1px solid #fee2e2' : '1px solid #a7f3d0',
+                                    backgroundColor: u.is_active ? '#fff5f5' : '#ecfdf5',
+                                    color: u.is_active ? '#dc2626' : '#059669',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: togglingUserId === u.id ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  {togglingUserId === u.id
+                                    ? 'Đang xử lý...'
+                                    : u.is_active
+                                    ? 'Khóa tài khoản'
+                                    : 'Mở khóa'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -614,10 +646,10 @@ export default function AdminDashboard() {
             {/* Lọc theo trạng thái báo cáo */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {[
-                { key: 'pending', label: 'Chờ xử lý', icon: Clock },
-                { key: 'resolved', label: 'Đã xử lý vi phạm', icon: Check },
-                { key: 'dismissed', label: 'Đã bác bỏ', icon: Ban },
-                { key: 'all', label: 'Tất cả đơn' },
+                { key: 'pending', label: 'Chờ xử lý', icon: 'hourglass_empty' },
+                { key: 'resolved', label: 'Đã xử lý vi phạm', icon: 'check_circle' },
+                { key: 'dismissed', label: 'Đã bác bỏ', icon: 'close' },
+                { key: 'all', label: 'Tất cả đơn', icon: null },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -627,15 +659,19 @@ export default function AdminDashboard() {
                     padding: '8px 14px',
                     borderRadius: '10px',
                     border: '1px solid',
-                    borderColor: reportStatusFilter === tab.key ? '#245745' : '#e5e7eb',
-                    backgroundColor: reportStatusFilter === tab.key ? '#e1efe8' : '#ffffff',
-                    color: reportStatusFilter === tab.key ? '#245745' : '#4b5563',
+                    borderColor: reportStatusFilter === tab.key ? '#7c5cbf' : '#e5e7eb',
+                    backgroundColor: reportStatusFilter === tab.key ? '#f5f0ff' : '#ffffff',
+                    color: reportStatusFilter === tab.key ? '#7c5cbf' : '#4b5563',
                     fontSize: '13px',
                     fontWeight: reportStatusFilter === tab.key ? 700 : 500,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     cursor: 'pointer',
                   }}
                 >
-                  {tab.icon && <tab.icon size={14} aria-hidden="true" />} {tab.label}
+                  {tab.icon && <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -646,7 +682,9 @@ export default function AdminDashboard() {
               </div>
             ) : reports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                <CheckCircle2 size={30} style={{ marginBottom: '8px' }} aria-hidden="true" />
+                <div style={{ marginBottom: '8px', color: '#7c5cbf' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>verified</span>
+                </div>
                 <p style={{ margin: 0 }}>Không có đơn báo cáo vi phạm nào trong danh mục này.</p>
               </div>
             ) : (
@@ -663,7 +701,7 @@ export default function AdminDashboard() {
                         padding: '18px',
                         borderRadius: '14px',
                         border: '1px solid #f3f4f6',
-                        backgroundColor: isPending ? '#f1f7f3' : '#ffffff',
+                        backgroundColor: isPending ? '#faf8ff' : '#ffffff',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '12px',
@@ -679,9 +717,13 @@ export default function AdminDashboard() {
                               color: '#b91c1c',
                               fontSize: '12px',
                               fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                           >
-                            <Flag size={14} aria-hidden="true" /> {r.reason}
+                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>flag</span>
+                            {r.reason}
                           </span>
                           <span style={{ fontSize: '12px', color: '#9ca3af' }}>
                             Đơn #{r.id} • {new Date(r.created_at).toLocaleString('vi-VN')}
@@ -690,18 +732,21 @@ export default function AdminDashboard() {
 
                         <div>
                           {isPending && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600 }}>
-                              <Clock size={12} aria-hidden="true" /> Chờ xử lý
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>hourglass_empty</span>
+                              Chờ xử lý
                             </span>
                           )}
                           {isResolved && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600 }}>
-                              <Check size={12} aria-hidden="true" /> Đã xử lý vi phạm
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                              Đã xử lý vi phạm
                             </span>
                           )}
                           {isDismissed && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600 }}>
-                              <Ban size={12} aria-hidden="true" /> Đã bác bỏ
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+                              Đã bác bỏ
                             </span>
                           )}
                         </div>
@@ -787,6 +832,15 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {selectedUserForProfile && (
+        <AdminUserProfileModal
+          targetUser={selectedUserForProfile}
+          currentUserId={user?.id}
+          onClose={() => setSelectedUserForProfile(null)}
+          onNotify={showToast}
+        />
+      )}
 
       {/* MODAL XÁC NHẬN XỬ LÝ VI PHẠM */}
       {selectedReportForAction && (
@@ -897,7 +951,7 @@ export default function AdminDashboard() {
             gap: '8px',
           }}
         >
-          <Info size={16} aria-hidden="true" />
+          <span>ℹ️</span>
           <span>{toastMsg}</span>
         </div>
       )}

@@ -1,22 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell,
-  BellOff,
-  Check,
-  Heart,
-  MessageCircle,
-  Pencil,
-  UserRoundPlus,
-  UsersRound,
-} from 'lucide-react'
-import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
 } from '../services/notificationService'
 
-// Format thời gian tương đối thân thiện
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -26,32 +15,33 @@ function formatTimeAgo(dateString) {
   if (diffInSeconds < 60) return 'Vừa xong'
   const diffInMinutes = Math.floor(diffInSeconds / 60)
   if (diffInMinutes < 60) return `${diffInMinutes} phút trước`
-  const diffInHours = Math.floor(diffInMinutes / 60)
+  const diffInHours = Math.floor(diffInSeconds / 60)
   if (diffInHours < 24) return `${diffInHours} giờ trước`
   const diffInDays = Math.floor(diffInHours / 24)
   if (diffInDays < 7) return `${diffInDays} ngày trước`
   return date.toLocaleDateString('vi-VN')
 }
 
-// Icon tương ứng với từng loại thông báo
 function getNotificationIcon(type) {
   switch (type) {
     case 'connection_request':
-      return UserRoundPlus
+      return 'handshake'
     case 'connection_accepted':
-      return Check
+      return 'celebration'
     case 'message':
-      return MessageCircle
+      return 'chat'
+    case 'missed_call':
+      return 'phone_missed'
     case 'group_join':
-      return UsersRound
+      return 'groups'
     case 'group_post':
-      return Pencil
+      return 'article'
     case 'post_like':
-      return Heart
+      return 'favorite'
     case 'post_comment':
-      return MessageCircle
+      return 'forum'
     default:
-      return Bell
+      return 'notifications'
   }
 }
 
@@ -63,7 +53,6 @@ export default function NotificationBell() {
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
 
-  // Tải danh sách thông báo
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications()
@@ -74,10 +63,13 @@ export default function NotificationBell() {
     }
   }
 
-  // Tải lần đầu, lặp polling mỗi 15 giây và lắng nghe sự kiện cập nhật thông báo
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 15000)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchNotifications()
+      }
+    }, 15000)
 
     const handleNotificationsUpdated = () => {
       fetchNotifications()
@@ -90,7 +82,6 @@ export default function NotificationBell() {
     }
   }, [])
 
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -105,7 +96,6 @@ export default function NotificationBell() {
     }
   }, [isOpen])
 
-  // Xử lý click mở/đóng dropdown
   const handleToggle = () => {
     if (!isOpen) {
       fetchNotifications()
@@ -113,7 +103,6 @@ export default function NotificationBell() {
     setIsOpen(!isOpen)
   }
 
-  // Đánh dấu tất cả đã đọc
   const handleMarkAllRead = async (e) => {
     e.stopPropagation()
     try {
@@ -128,7 +117,6 @@ export default function NotificationBell() {
     }
   }
 
-  // Click vào 1 thông báo: Đánh dấu đã đọc và điều hướng
   const handleItemClick = async (notif) => {
     if (!notif.is_read) {
       try {
@@ -144,7 +132,6 @@ export default function NotificationBell() {
 
     setIsOpen(false)
 
-    // Điều hướng tương ứng
     switch (notif.type) {
       case 'connection_request':
         navigate('/connections?tab=received')
@@ -153,6 +140,7 @@ export default function NotificationBell() {
         navigate('/connections?tab=connections')
         break
       case 'message':
+      case 'missed_call':
         if (notif.related_id) {
           navigate('/messages', { state: { conversationId: notif.related_id } })
         } else {
@@ -175,102 +163,37 @@ export default function NotificationBell() {
   }
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
-      {/* Nút Chuông */}
+    <div ref={dropdownRef} className="relative inline-block">
+      {/* Bell Button */}
       <button
         type="button"
         onClick={handleToggle}
-        style={{
-          position: 'relative',
-          width: '38px',
-          height: '38px',
-          borderRadius: '10px',
-          border: isOpen ? '1.5px solid #245745' : '1px solid #dce8e2',
-          backgroundColor: isOpen ? '#e1efe8' : '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          fontSize: '17px',
-          color: '#4b5563',
-          transition: 'all 0.15s ease',
-        }}
+        className={`relative w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+          isOpen
+            ? 'bg-[#11151c] border-[#00ff88] text-[#00ff88] shadow-[0_0_12px_rgba(0,255,136,0.3)]'
+            : 'bg-[#0d1117] border-[#1a232e] text-[#94a3b8] hover:text-[#00ff88] hover:border-[#00ff88]/40'
+        }`}
         aria-label="Thông báo"
         title="Thông báo"
       >
-        <Bell size={18} aria-hidden="true" />
+        <span className="material-symbols-outlined text-[19px]">notifications</span>
 
-        {/* Badge số lượng chưa đọc */}
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#ef4444',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 700,
-              minWidth: '18px',
-              height: '18px',
-              borderRadius: '9999px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 4px',
-              boxShadow: '0 2px 5px rgba(239, 68, 68, 0.4)',
-              border: '2px solid #ffffff',
-            }}
-          >
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#00ff88] text-[#08090a] text-[10px] font-extrabold flex items-center justify-center border-2 border-[#08090a] shadow-[0_0_8px_#00ff88]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown danh sách thông báo */}
+      {/* Dropdown Panel */}
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: '360px',
-            maxWidth: '90vw',
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(36, 87, 69, 0.08)',
-            border: '1px solid #dce8e2',
-            zIndex: 1000,
-            overflow: 'hidden',
-            animation: 'fadeIn 0.15s ease-out',
-          }}
-        >
-          {/* Header Dropdown */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 18px',
-              borderBottom: '1px solid #f3f4f6',
-              backgroundColor: '#f1f7f3',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '15px', color: '#1f2937' }}>
-                Thông báo
-              </span>
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-[#11151c] border border-[#1a232e] shadow-[0_15px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden animate-fadeIn">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a232e] bg-[#0d1117]/80">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-[#f8fafc]">Thông báo</span>
               {unreadCount > 0 && (
-                <span
-                  style={{
-                    backgroundColor: '#dce8e2',
-                    color: '#245745',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                  }}
-                >
+                <span className="px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30 text-[11px] font-bold">
                   {unreadCount} mới
                 </span>
               )}
@@ -281,19 +204,7 @@ export default function NotificationBell() {
                 type="button"
                 onClick={handleMarkAllRead}
                 disabled={loading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#245745',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '4px 6px',
-                  borderRadius: '6px',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#dce8e2')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                className="text-xs font-semibold text-[#00ff88] hover:underline"
               >
                 Đọc tất cả
               </button>
@@ -301,130 +212,62 @@ export default function NotificationBell() {
           </div>
 
           {/* List items */}
-          <div
-            style={{
-              maxHeight: '380px',
-              overflowY: 'auto',
-            }}
-          >
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-[#1a232e]/50">
             {notifications.length === 0 ? (
-              <div
-                style={{
-                  padding: '40px 20px',
-                  textAlign: 'center',
-                  color: '#6b7280',
-                }}
-              >
-                <BellOff size={32} style={{ marginBottom: '8px' }} aria-hidden="true" />
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
-                  Không có thông báo mới
-                </div>
-                <div style={{ fontSize: '12px', marginTop: '4px', color: '#9ca3af' }}>
-                  Bạn sẽ nhận được thông báo khi có người kết nối hoặc nhắn tin.
-                </div>
+              <div className="py-10 px-4 text-center text-[#94a3b8]">
+                <span className="material-symbols-outlined text-3xl mb-2 text-[#64748b]">
+                  notifications_off
+                </span>
+                <p className="text-sm font-semibold text-[#f8fafc]">Không có thông báo mới</p>
+                <p className="text-xs text-[#64748b] mt-1">
+                  Bạn sẽ nhận được thông báo khi có người kết nối hoặc gửi tin nhắn.
+                </p>
               </div>
             ) : (
               notifications.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => handleItemClick(item)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderBottom: '1px solid #f9fafb',
-                    backgroundColor: item.is_read ? '#ffffff' : '#f8f5ff',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.15s ease',
-                    position: 'relative',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = item.is_read ? '#f9fafb' : '#f0ebff'
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = item.is_read ? '#ffffff' : '#f8f5ff'
-                  }}
+                  className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    item.is_read
+                      ? 'bg-[#11151c] hover:bg-[#161c26]'
+                      : 'bg-[#00ff88]/5 hover:bg-[#00ff88]/10'
+                  }`}
                 >
-                  {/* Icon */}
                   <div
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: item.is_read ? '#f3f4f6' : '#dce8e2',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                      item.is_read
+                        ? 'bg-[#0d1117] border-[#1a232e] text-[#64748b]'
+                        : 'bg-[#00ff88]/15 border-[#00ff88]/30 text-[#00ff88]'
+                    }`}
                   >
-                    {(() => {
-                      const NotificationIcon = getNotificationIcon(item.type)
-                      return <NotificationIcon size={18} color="#245745" aria-hidden="true" />
-                    })()}
+                    <span className="material-symbols-outlined text-[18px]">
+                      {getNotificationIcon(item.type)}
+                    </span>
                   </div>
 
-                  {/* Nội dung */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '6px',
-                        marginBottom: '2px',
-                      }}
-                    >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
                       <span
-                        style={{
-                          fontSize: '13.5px',
-                          fontWeight: item.is_read ? 600 : 700,
-                          color: item.is_read ? '#374151' : '#1f2937',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
+                        className={`text-xs truncate ${
+                          item.is_read
+                            ? 'font-medium text-[#f8fafc]'
+                            : 'font-bold text-[#00ff88]'
+                        }`}
                       >
                         {item.title}
                       </span>
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          color: '#9ca3af',
-                          flexShrink: 0,
-                        }}
-                      >
+                      <span className="text-[10px] text-[#64748b] shrink-0">
                         {formatTimeAgo(item.created_at)}
                       </span>
                     </div>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '12.5px',
-                        color: item.is_read ? '#6b7280' : '#4b5563',
-                        lineHeight: 1.4,
-                        wordBreak: 'break-word',
-                      }}
-                    >
+                    <p className="text-xs text-[#94a3b8] line-clamp-2 leading-relaxed">
                       {item.content}
                     </p>
                   </div>
 
-                  {/* Chấm tròn chưa đọc */}
                   {!item.is_read && (
-                    <div
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: '#245745',
-                        flexShrink: 0,
-                        marginTop: '6px',
-                      }}
-                      title="Chưa đọc"
-                    />
+                    <span className="w-2 h-2 rounded-full bg-[#00ff88] shrink-0 mt-1.5 shadow-[0_0_6px_#00ff88]" />
                   )}
                 </div>
               ))
