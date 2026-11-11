@@ -19,6 +19,7 @@ export default function CallModal({
   const [isCameraOff, setIsCameraOff] = useState(false)
   const [duration, setDuration] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
+  const [localAspectRatio, setLocalAspectRatio] = useState(null)
 
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
@@ -192,8 +193,24 @@ export default function CallModal({
       element.muted = isLocal
       element.style.width = '100%'
       element.style.height = '100%'
-      element.style.objectFit = 'cover'
-      if (isLocal) element.style.transform = 'scaleX(-1)'
+      element.style.maxWidth = '100%'
+      element.style.maxHeight = '100%'
+      element.style.objectFit = 'contain'
+      element.style.display = 'block'
+      // Giữ nguyên chiều camera (không lật gương) để hình mình thấy khớp y hệt bên kia nhìn thấy
+      element.style.transform = 'none'
+
+      if (isLocal) {
+        const syncLocalAspectRatio = () => {
+          if (!finalizedRef.current && element.videoWidth > 0 && element.videoHeight > 0) {
+            setLocalAspectRatio(element.videoWidth / element.videoHeight)
+          }
+        }
+        element.onloadedmetadata = syncLocalAspectRatio
+        element.onresize = syncLocalAspectRatio
+        syncLocalAspectRatio()
+      }
+
       container.appendChild(element)
       mediaTracksRef.current.add(track)
     }
@@ -580,15 +597,20 @@ export default function CallModal({
               <>
                 <div
                   ref={remoteVideoRef}
-                  style={{ position: 'absolute', inset: 0 }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 />
                 <div
                   style={{
                     position: 'absolute',
                     top: 20,
                     right: 20,
-                    width: 140,
-                    height: 190,
+                    ...getLocalPipSizeStyle(isCameraOff, localAspectRatio),
                     overflow: 'hidden',
                     border: '2px solid rgba(255,255,255,.2)',
                     borderRadius: 16,
@@ -598,12 +620,30 @@ export default function CallModal({
                   <div
                     ref={localVideoRef}
                     style={{
-                      display: isCameraOff ? 'none' : 'block',
+                      display: isCameraOff ? 'none' : 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       width: '100%',
                       height: '100%',
                     }}
                   />
-                  {isCameraOff && <div style={{ padding: 16, color: '#94a3b8' }}>Camera tắt</div>}
+                  {isCameraOff && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        padding: 12,
+                        color: '#94a3b8',
+                        fontSize: 12,
+                        textAlign: 'center',
+                      }}
+                    >
+                      Camera tắt
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -663,6 +703,27 @@ export default function CallModal({
       )}
     </div>
   )
+}
+
+/** Sizes the local PiP container to match the active camera aspect ratio. */
+function getLocalPipSizeStyle(isCameraOff, localAspectRatio) {
+  if (isCameraOff) {
+    return { width: 150, height: 100 }
+  }
+  if (localAspectRatio && localAspectRatio < 1) {
+    return {
+      height: 'min(190px, 28vh)',
+      width: 'auto',
+      maxWidth: 'min(220px, 34vw)',
+      aspectRatio: String(localAspectRatio),
+    }
+  }
+  return {
+    width: 'min(220px, 34vw)',
+    height: 'auto',
+    maxHeight: 'min(190px, 28vh)',
+    aspectRatio: String(localAspectRatio || 4 / 3),
+  }
 }
 
 function buttonStyle(backgroundColor) {
