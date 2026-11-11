@@ -1,3 +1,4 @@
+import logging
 import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +41,8 @@ from .routers import (
     users_router,
 )
 from .services import community_service
+
+logger = logging.getLogger(__name__)
 
 # Tự động tạo bảng nếu chưa có
 Base.metadata.create_all(bind=engine)
@@ -294,7 +297,7 @@ def migrate_community_schema():
 
         if inspect(engine).has_table("posts"):
             post_cols = {
-                column["name"]
+                column["name"]: column
                 for column in inspect(engine).get_columns("posts")
             }
             with engine.begin() as conn:
@@ -302,6 +305,12 @@ def migrate_community_schema():
                     conn.execute(
                         text("ALTER TABLE posts ADD COLUMN community_id INTEGER")
                     )
+                if engine.dialect.name == "postgresql" and "image_url" in post_cols:
+                    col_type = str(post_cols["image_url"].get("type", "")).upper()
+                    if "TEXT" not in col_type:
+                        conn.execute(
+                            text("ALTER TABLE posts ALTER COLUMN image_url TYPE TEXT")
+                        )
 
         if inspect(engine).has_table("communities"):
             comm_cols = {

@@ -5,9 +5,8 @@ import Avatar from '../components/Avatar'
 import OnlineStatusDot from '../components/OnlineStatusDot'
 import ReportModal from '../components/ReportModal'
 import BlockConfirmModal from '../components/BlockConfirmModal'
+import CommunityHubContent from '../components/CommunityHubContent'
 import { getMatches } from '../services/matchingService'
-import communityService from '../services/communityService'
-import { COMMUNITY_DIRECTORY } from '../data/communities'
 import {
   sendConnectionRequest,
   getMyConnections,
@@ -42,7 +41,7 @@ const CONNECTION_TYPE_OPTIONS = [
 
 export default function Discover() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [matches, setMatches] = useState([])
   const [hasSurvey, setHasSurvey] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -58,31 +57,33 @@ export default function Discover() {
   const [selectedAge, setSelectedAge] = useState('Tất cả độ tuổi')
   const [selectedStatus, setSelectedStatus] = useState('Tất cả tình trạng')
   const [selectedConnType, setSelectedConnType] = useState('Tất cả mục tiêu')
-  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchKeyword, setSearchKeyword] = useState(searchParams.get('search') || '')
   const [discoveryTab, setDiscoveryTab] = useState(
     searchParams.get('tab') === 'groups' ? 'groups' : 'people'
   )
-  const [groupSearch, setGroupSearch] = useState('')
-  const [selectedGroupId, setSelectedGroupId] = useState(null)
-  const [discoverCommunities, setDiscoverCommunities] = useState([])
 
-  // Tải danh sách cộng đồng thật từ database
+  // Đồng bộ tab và từ khóa tìm kiếm khi URL thay đổi (vd: bấm link hoặc bấm Khám phá trên Navbar)
   useEffect(() => {
-    const fetchCommunities = async () => {
-      try {
-        const data = await communityService.getCommunities(null)
-        if (data && data.length > 0) {
-          setDiscoverCommunities(data)
-        } else {
-          setDiscoverCommunities(COMMUNITY_DIRECTORY)
-        }
-      } catch (err) {
-        console.warn('Lỗi tải cộng đồng tại Discover, dùng fallback:', err)
-        setDiscoverCommunities(COMMUNITY_DIRECTORY)
-      }
+    const urlTab = searchParams.get('tab')
+    setDiscoveryTab(urlTab === 'groups' ? 'groups' : 'people')
+    const urlSearch = searchParams.get('search')
+    if (urlSearch !== null) {
+      setSearchKeyword(urlSearch)
     }
-    fetchCommunities()
-  }, [])
+  }, [searchParams])
+
+  const handleSwitchTab = (tabId) => {
+    setDiscoveryTab(tabId)
+    if (tabId === 'groups') {
+      setSearchParams({ tab: 'groups' }, { replace: true })
+    } else {
+      const next = new URLSearchParams()
+      if (searchKeyword.trim()) {
+        next.set('search', searchKeyword.trim())
+      }
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   // Modal xem chi tiết profile
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
@@ -186,26 +187,6 @@ export default function Discover() {
     })
   }, [matches, connectionStatuses, selectedAge, selectedStatus, selectedConnType, searchKeyword])
 
-  const allGroups = discoverCommunities.length > 0 ? discoverCommunities : COMMUNITY_DIRECTORY
-
-  const filteredGroups = useMemo(() => {
-    const keyword = groupSearch.trim().toLocaleLowerCase()
-    if (!keyword) return allGroups
-    return allGroups.filter((group) => {
-      const tagsArr = Array.isArray(group.tags)
-        ? group.tags
-        : typeof group.tags === 'string'
-        ? group.tags.split(',').map((t) => t.trim()).filter(Boolean)
-        : []
-      return [group.name, group.category, group.description, ...tagsArr]
-        .join(' ')
-        .toLocaleLowerCase()
-        .includes(keyword)
-    })
-  }, [groupSearch, allGroups])
-
-  const selectedGroup = allGroups.find((group) => group.id === selectedGroupId)
-
   const handleResetFilters = () => {
     setSelectedAge('Tất cả độ tuổi')
     setSelectedStatus('Tất cả tình trạng')
@@ -249,37 +230,10 @@ export default function Discover() {
     <div className="discover-page app-green-theme min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-[#00ff88]">
       <Navbar />
 
-      {/* Main Container */}
-      <main className="w-full pt-20 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Ambient Atmospheric Cyber Glow Blobs */}
-        <div className="pointer-events-none fixed -top-24 left-1/4 w-96 h-96 rounded-full bg-[#00ff88]/10 blur-[150px] -z-10" />
-        <div className="pointer-events-none fixed top-1/3 right-10 w-80 h-80 rounded-full bg-[#10b981]/10 blur-[140px] -z-10" />
-
-        {/* Toast thông báo */}
-        {connectToast && (
-          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#11151c] text-[#00ff88] border border-[#00ff88]/40 px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(0,255,136,0.3)] animate-fadeIn text-sm font-semibold backdrop-blur-md">
-            <span>⚡</span>
-            <span>{connectToast}</span>
-          </div>
-        )}
-
-        {/* 1. Header & Telemetry Overview */}
-        <div className="flex flex-col gap-6 mt-4 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="max-w-2xl">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f8fafc] tracking-tight">
-                Discover & Match
-              </h1>
-              <p className="text-[#94a3b8] text-sm sm:text-base mt-2 leading-relaxed">
-                Tìm kiếm những người bạn cùng tần số, đồng điệu về hoàn cảnh, tư duy và sẵn sàng
-                lắng nghe, sẻ chia chân thành nhất.
-              </p>
-            </div>
-
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 border-b border-[#1a232e]">
+      <div className="pt-16">
+        {/* Thanh điều hướng cố định giữa Mọi người và Cộng đồng */}
+        <div className="w-full bg-[#0d0e0f] border-b border-[#1a232e]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2">
             {[
               { id: 'people', label: 'Mọi người', icon: 'person_search' },
               { id: 'groups', label: 'Cộng đồng', icon: 'groups' },
@@ -287,8 +241,8 @@ export default function Discover() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setDiscoveryTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-semibold transition-colors ${
+                onClick={() => handleSwitchTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-semibold transition-colors cursor-pointer ${
                   discoveryTab === tab.id
                     ? 'border-[#00ff88] text-[#00ff88]'
                     : 'border-transparent text-[#94a3b8] hover:text-[#f8fafc]'
@@ -299,97 +253,37 @@ export default function Discover() {
               </button>
             ))}
           </div>
+        </div>
 
-          {discoveryTab === 'groups' ? (
-            <section className="space-y-5">
-              <label className="relative block">
-                <span className="material-symbols-outlined absolute left-3.5 top-3 text-[#64748b] text-[20px] pointer-events-none">
-                  search
-                </span>
-                <input
-                  type="search"
-                  value={groupSearch}
-                  onChange={(event) => setGroupSearch(event.target.value)}
-                  placeholder="Tìm tên nhóm, chủ đề, sở thích..."
-                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#11151c] border border-[#1a232e] text-[#f8fafc] placeholder:text-[#64748b] text-sm focus:outline-none focus:border-[#00ff88]"
-                />
-              </label>
+        {discoveryTab === 'groups' ? (
+          <CommunityHubContent embedded />
+        ) : (
+        <main className="w-full pt-6 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Ambient Atmospheric Cyber Glow Blobs */}
+          <div className="pointer-events-none fixed -top-24 left-1/4 w-96 h-96 rounded-full bg-[#00ff88]/10 blur-[150px] -z-10" />
+          <div className="pointer-events-none fixed top-1/3 right-10 w-80 h-80 rounded-full bg-[#10b981]/10 blur-[140px] -z-10" />
 
-              {selectedGroup && (
-                <article className="rounded-2xl bg-[#11151c] border border-[#00ff88]/40 p-5 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="text-3xl">{selectedGroup.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-bold text-[#f8fafc]">{selectedGroup.name}</h3>
-                      <p className="text-xs text-[#00ff88]">{selectedGroup.category}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedGroupId(null)}
-                      className="text-sm text-[#94a3b8] hover:text-white"
-                      aria-label="Đóng thông tin nhóm"
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                  <p className="text-sm leading-relaxed text-[#cbd5e1]">{selectedGroup.description}</p>
-                  <p className="text-xs text-[#94a3b8]">
-                    Chủ đề đang thảo luận: {selectedGroup.activeTopic}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(Array.isArray(selectedGroup.tags)
-                      ? selectedGroup.tags
-                      : typeof selectedGroup.tags === 'string'
-                      ? selectedGroup.tags.split(',').map((t) => t.trim()).filter(Boolean)
-                      : []
-                    ).map((tag) => (
-                      <span key={tag} className="rounded-full bg-[#08090a] px-2.5 py-1 text-xs text-[#94a3b8]">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                  <Link
-                    to={`/communities?tab=feed&group_id=${selectedGroup.id}`}
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#00ff88] px-4 py-2 text-xs font-bold text-[#08090a]"
-                  >
-                    Xem bài viết trong cộng đồng
-                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                  </Link>
-                </article>
-              )}
+          {/* Toast thông báo */}
+          {connectToast && (
+            <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#11151c] text-[#00ff88] border border-[#00ff88]/40 px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(0,255,136,0.3)] animate-fadeIn text-sm font-semibold backdrop-blur-md">
+              <span>⚡</span>
+              <span>{connectToast}</span>
+            </div>
+          )}
 
-              {filteredGroups.length ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredGroups.map((group) => (
-                    <button
-                      key={group.id}
-                      type="button"
-                      onClick={() => setSelectedGroupId(group.id)}
-                      className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
-                        selectedGroupId === group.id
-                          ? 'border-[#00ff88]/50 bg-[#00ff88]/5'
-                          : 'border-[#1a232e] bg-[#11151c] hover:border-[#00ff88]/30'
-                      }`}
-                    >
-                      <span className="text-2xl">{group.icon}</span>
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-[#f8fafc]">{group.name}</span>
-                        <span className="mt-1 block text-xs text-[#00ff88]">{group.category}</span>
-                        <span className="mt-2 block text-xs leading-relaxed text-[#94a3b8]">
-                          {group.description}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-[#1a232e] bg-[#11151c] p-8 text-center text-sm text-[#94a3b8]">
-                  Không tìm thấy nhóm phù hợp.
-                </div>
-              )}
-            </section>
-          ) : (
-          <>
+          {/* 1. Header & Telemetry Overview */}
+          <div className="flex flex-col gap-6 mt-2 mb-6">
+            <div className="max-w-2xl">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f8fafc] tracking-tight">
+                Discover & Match
+              </h1>
+              <p className="text-[#94a3b8] text-sm sm:text-base mt-2 leading-relaxed">
+                Tìm kiếm những người bạn cùng tần số, đồng điệu về hoàn cảnh, tư duy và sẵn sàng
+                lắng nghe, sẻ chia chân thành nhất.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-4">
           {/* Banner nhắc làm khảo sát nếu chưa hoàn thành */}
           {!hasSurvey && (
@@ -718,8 +612,6 @@ export default function Discover() {
               </div>
             )}
           </>
-          )}
-          </>
         )}
 
         {/* 5. Detail Profile Modal (Frosted Cyber Emerald Glass) */}
@@ -905,7 +797,9 @@ export default function Discover() {
             onSuccess={handleBlockSuccess}
           />
         )}
-      </main>
+        </main>
+        )}
+      </div>
     </div>
   )
 }

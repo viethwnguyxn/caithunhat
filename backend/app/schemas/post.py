@@ -36,7 +36,7 @@ class PostCreate(BaseModel):
     )
     community_id: int | None = Field(None, description="ID cộng đồng nếu đăng bài trong nhóm cụ thể")
     content: str = Field(..., min_length=1, max_length=3000, description="Nội dung bài viết")
-    image_url: str | None = Field(None, max_length=500, description="URL hình ảnh đính kèm (Locket/Story)")
+    image_url: str | None = Field(None, max_length=2_500_000, description="URL hoặc dữ liệu ảnh base64 đính kèm (Locket/Story)")
     mood: str | None = Field(None, max_length=50, description="Cảm xúc/Tâm trạng hiện tại")
 
 

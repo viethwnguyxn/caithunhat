@@ -22,7 +22,7 @@ class Post(Base):
         Integer, ForeignKey("communities.id", ondelete="SET NULL"), nullable=True, index=True
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     mood: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True

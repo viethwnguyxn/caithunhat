@@ -88,16 +88,22 @@ def run_tests():
         assert len(chat_msgs) >= 2
         print(f"✓ Nhóm chat hoạt động chuẩn: Hiện có {len(chat_msgs)} tin nhắn")
 
-        # 5. Test Đăng bài viết vào cộng đồng
-        print("\n--- [5/6] Kiểm tra Đăng bài viết vào Cộng đồng ---")
+        # 5. Test Đăng bài viết vào cộng đồng (có ảnh base64 dài và mood=None)
+        print("\n--- [5/6] Kiểm tra Đăng bài viết vào Cộng đồng (ảnh tải từ máy & không cần mood) ---")
+        fake_base64_img = "data:image/jpeg;base64," + ("A" * 5000)
         post_in = PostCreate(
             category=created_comm.category,
+            community_id=created_comm.id,
             content="Đây là bài viết đầu tiên chia sẻ về dự án AI Agent trong cộng đồng mới!",
-            mood="🚀 Quyết tâm",
+            image_url=fake_base64_img,
+            mood=None,
         )
         new_post = post_service.create_post(db, test_user, post_in)
         assert new_post.id is not None
-        print(f"✓ Đăng bài viết thành công #{new_post.id} trong danh mục {new_post.category}")
+        assert new_post.community_id == created_comm.id
+        assert new_post.mood is None
+        assert new_post.image_url == fake_base64_img
+        print(f"✓ Đăng bài viết thành công #{new_post.id} trong nhóm #{created_comm.id} (ảnh {len(fake_base64_img)} chars)")
 
         # 6. Test Rời và Tham gia lại cộng đồng
         print("\n--- [6/6] Kiểm tra Rời và Tham gia lại cộng đồng ---")
