@@ -33,7 +33,10 @@ export default function Landing() {
           <Link to="/communities">Cộng đồng</Link>
           <a href="#about">Về chúng tôi</a>
         </nav>
-        <Link to="/login" className="lp-login-link">Đăng nhập</Link>
+        <div className="lp-nav-auth">
+          <Link to="/register" className="lp-register-link">Đăng ký</Link>
+          <Link to="/login" className="lp-login-link">Đăng nhập</Link>
+        </div>
       </header>
 
       <main className="lp-landing-main" id="about">
@@ -51,12 +54,6 @@ export default function Landing() {
             <Link to="/register" className="lp-button lp-button-large inline-flex items-center gap-2">
               Tham gia ngay <span className="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_forward</span>
             </Link>
-            <a href="#features" className="lp-learn-link">
-              <span className="lp-play-icon inline-flex items-center justify-center" aria-hidden="true">
-                <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-              </span>
-              Tìm hiểu thêm
-            </a>
           </div>
         </div>
       </main>

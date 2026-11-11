@@ -16,7 +16,10 @@
 .lp-landing-nav nav{gap:34px}
 .lp-landing-nav nav a{color:rgba(242,241,239,.8);font-size:13px;font-weight:500;transition:color .2s}
 .lp-landing-nav nav a:hover,.lp-learn-link:hover{color:#d8f182}
-.lp-login-link{padding:9px 20px;border-radius:999px;background:#d3ed78;color:#1b2418;font-size:12px;font-weight:800;transition:background .2s,transform .2s}
+.lp-nav-auth{display:flex;align-items:center;gap:10px}
+.lp-register-link{padding:8px 18px;border-radius:999px;border:1px solid rgba(211,237,120,.5);background:rgba(20,23,36,.48);color:#f5f4f1;font-size:12px;font-weight:700;white-space:nowrap;backdrop-filter:blur(8px);transition:background .2s,border-color .2s,color .2s,transform .2s}
+.lp-register-link:hover{background:rgba(211,237,120,.14);border-color:#d8f182;color:#d8f182;transform:translateY(-1px)}
+.lp-login-link{padding:9px 20px;border-radius:999px;background:#d3ed78;color:#1b2418;font-size:12px;font-weight:800;white-space:nowrap;transition:background .2s,transform .2s}
 .lp-login-link:hover{background:#e2f79b;transform:translateY(-1px)}
 .lp-landing-main{position:relative;isolation:isolate;min-height:calc(100vh - 76px);min-height:calc(100svh - 76px);padding:55px 6% 150px;display:flex;align-items:center}
 .lp-landing-copy{max-width:490px}
@@ -37,7 +40,9 @@
   .lp-landing-nav{height:68px;padding:0 20px}
   .lp-landing-nav nav{display:none}
   .lp-brand{font-size:17px}
-  .lp-login-link{padding:8px 16px}
+  .lp-nav-auth{gap:8px}
+  .lp-register-link{padding:7px 13px;font-size:11px}
+  .lp-login-link{padding:8px 14px;font-size:11px}
   .lp-landing-main{min-height:calc(100svh - 68px);padding:48px 24px 160px;align-items:center}
   .lp-landing-copy{max-width:390px}
   .lp-landing-copy h1{font-size:clamp(34px,8vw,48px);letter-spacing:-1.6px}
