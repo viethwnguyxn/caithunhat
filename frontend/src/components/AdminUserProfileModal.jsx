@@ -8,29 +8,6 @@ import {
 } from '../services/connectionService'
 import { getPublicProfile } from '../services/profileService'
 
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 1100,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '16px',
-  backgroundColor: 'rgba(17, 24, 39, 0.55)',
-  backdropFilter: 'blur(3px)',
-}
-
-const cardStyle = {
-  width: '100%',
-  maxWidth: '560px',
-  maxHeight: '90vh',
-  overflowY: 'auto',
-  padding: '28px',
-  borderRadius: '20px',
-  backgroundColor: '#ffffff',
-  boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
-}
-
 export default function AdminUserProfileModal({
   targetUser,
   currentUserId,
@@ -149,31 +126,26 @@ export default function AdminUserProfileModal({
     connectionStatus === 'none'
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-user-profile-title"
-        style={cardStyle}
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-7 rounded-2xl bg-[#11151c] border border-[#1a232e] shadow-2xl text-[#e3e2e3]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '16px',
-            marginBottom: '22px',
-          }}
-        >
+        <div className="flex justify-between items-start gap-4 mb-5">
           <div>
             <h2
               id="admin-user-profile-title"
-              style={{ margin: 0, color: '#1a1a2e', fontSize: '20px' }}
+              className="text-xl font-extrabold text-[#f8fafc] m-0"
             >
               Hồ sơ thành viên
             </h2>
-            <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '13px' }}>
+            <p className="mt-1 text-xs text-[#94a3b8]">
               Xem hồ sơ công khai và quản lý kết nối.
             </p>
           </div>
@@ -181,49 +153,28 @@ export default function AdminUserProfileModal({
             type="button"
             aria-label="Đóng hồ sơ"
             onClick={onClose}
-            style={{
-              border: 0,
-              borderRadius: '8px',
-              padding: '6px 10px',
-              color: '#4b5563',
-              backgroundColor: '#f3f4f6',
-              fontSize: '18px',
-              cursor: 'pointer',
-            }}
+            className="w-9 h-9 rounded-xl bg-[#0d1117] border border-[#1a232e] text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#00ff88]/40 flex items-center justify-center cursor-pointer transition"
           >
-            ×
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="flex items-center gap-4">
           <Avatar
             src={profile?.avatar_url || targetUser.avatar_url}
             alt={displayName}
-            style={{
-              width: '76px',
-              height: '76px',
-              flexShrink: 0,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '3px solid #ede9fe',
-            }}
+            className="w-[74px] h-[74px] shrink-0 rounded-full object-cover border-2 border-[#00ff88]/50 bg-[#08090a]"
           />
-          <div>
-            <h3
-              style={{
-                margin: '0 0 4px',
-                color: '#1a1a2e',
-                fontSize: '19px',
-                fontWeight: 800,
-              }}
-            >
+          <div className="min-w-0">
+            <h3 className="m-0 mb-1 text-lg font-extrabold text-[#f8fafc] truncate">
               {displayName}
             </h3>
-            <div style={{ color: '#6b7280', fontSize: '13px' }}>
+            <div className="text-xs font-mono text-[#94a3b8]">
               @{targetUser.username}
             </div>
             {!targetUser.is_active && (
-              <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '6px' }}>
+              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold">
+                <span className="material-symbols-outlined text-[13px]">lock</span>
                 Tài khoản đang bị khóa
               </div>
             )}
@@ -233,75 +184,38 @@ export default function AdminUserProfileModal({
         {profileError ? (
           <div
             role="alert"
-            style={{
-              marginTop: '22px',
-              padding: '14px',
-              borderRadius: '10px',
-              color: '#b91c1c',
-              backgroundColor: '#fef2f2',
-              fontSize: '13px',
-            }}
+            className="mt-5 p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs"
           >
             {profileError}
           </div>
         ) : !profile ? (
           <div
             role="status"
-            style={{ padding: '32px 0', textAlign: 'center', color: '#6b7280' }}
+            className="py-8 text-center text-sm text-[#94a3b8]"
           >
             Đang tải hồ sơ...
           </div>
         ) : (
           <>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '12px',
-                marginTop: '22px',
-              }}
-            >
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  backgroundColor: '#f9fafb',
-                }}
-              >
-                <div style={{ color: '#6b7280', fontSize: '11px' }}>Độ tuổi</div>
-                <div style={{ color: '#1f2937', fontSize: '13px', fontWeight: 600 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+              <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#1a232e]">
+                <div className="text-[11px] text-[#94a3b8] mb-0.5">Độ tuổi</div>
+                <div className="text-sm font-semibold text-[#f8fafc]">
                   {profile.age_group || 'Chưa cập nhật'}
                 </div>
               </div>
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  backgroundColor: '#f9fafb',
-                }}
-              >
-                <div style={{ color: '#6b7280', fontSize: '11px' }}>
+              <div className="p-3.5 rounded-xl bg-[#0d1117] border border-[#1a232e]">
+                <div className="text-[11px] text-[#94a3b8] mb-0.5">
                   Trạng thái hiện tại
                 </div>
-                <div style={{ color: '#1f2937', fontSize: '13px', fontWeight: 600 }}>
+                <div className="text-sm font-semibold text-[#f8fafc]">
                   {profile.current_status || 'Chưa cập nhật'}
                 </div>
               </div>
             </div>
 
-            <div
-              style={{
-                marginTop: '14px',
-                padding: '16px',
-                borderRadius: '12px',
-                backgroundColor: '#faf9fe',
-                color: '#374151',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-              }}
-            >
-              <strong style={{ display: 'block', marginBottom: '4px' }}>
+            <div className="mt-3.5 p-4 rounded-xl bg-[#0d1117] border border-[#1a232e] text-sm text-[#cbd5e1] leading-relaxed whitespace-pre-wrap">
+              <strong className="block text-[#f8fafc] text-xs uppercase tracking-wider mb-1.5">
                 Giới thiệu
               </strong>
               {profile.bio || 'Thành viên chưa cập nhật phần giới thiệu.'}
@@ -312,79 +226,48 @@ export default function AdminUserProfileModal({
         {connectionError && (
           <div
             role="alert"
-            style={{
-              marginTop: '14px',
-              padding: '12px',
-              borderRadius: '10px',
-              color: '#b91c1c',
-              backgroundColor: '#fef2f2',
-              fontSize: '13px',
-            }}
+            className="mt-3.5 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs"
           >
             {connectionError}
             <button
               type="button"
               onClick={() => setReloadKey((key) => key + 1)}
-              style={{
-                marginLeft: '8px',
-                border: 0,
-                background: 'none',
-                color: '#7c3aed',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
+              className="ml-2 text-[#00ff88] font-bold hover:underline cursor-pointer"
             >
               Thử lại
             </button>
           </div>
         )}
 
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '10px',
-            marginTop: '22px',
-          }}
-        >
+        <div className="flex justify-end items-center flex-wrap gap-2.5 mt-6">
           {Number(currentUserId) === Number(targetUser.id) ? (
-            <span style={{ color: '#6b7280', fontSize: '12px' }}>
+            <span className="text-xs text-[#94a3b8]">
               Đây là tài khoản admin đang đăng nhập.
             </span>
           ) : connectionStatus === 'accepted' ? (
-            <span style={{ color: '#059669', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+            <span className="inline-flex items-center gap-1 text-[#00ff88] text-xs font-bold">
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
               Đã là bạn bè
             </span>
           ) : connectionStatus === 'pending_sent' ? (
-            <span style={{ color: '#b45309', fontSize: '13px', fontWeight: 700 }}>
+            <span className="text-amber-300 text-xs font-bold">
               Đã gửi lời mời · Đang chờ phản hồi
             </span>
           ) : connectionStatus === 'pending_received' ? (
             <>
-              <span style={{ color: '#b45309', fontSize: '13px', fontWeight: 700 }}>
+              <span className="text-amber-300 text-xs font-bold">
                 Người này đã gửi lời mời cho bạn
               </span>
               <Link
                 to="/connections"
                 onClick={onClose}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: '9px',
-                  color: '#ffffff',
-                  backgroundColor: '#7c5cbf',
-                  textDecoration: 'none',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                }}
+                className="px-3.5 py-2 rounded-xl bg-[#00ff88] text-[#00210c] text-xs font-bold hover:opacity-90 transition"
               >
                 Xem lời mời
               </Link>
             </>
           ) : connectionStatus === 'checking' ? (
-            <span style={{ color: '#6b7280', fontSize: '13px' }}>
+            <span className="text-xs text-[#94a3b8]">
               Đang kiểm tra kết nối...
             </span>
           ) : canSendRequest ? (
@@ -392,49 +275,23 @@ export default function AdminUserProfileModal({
               type="button"
               disabled={sending || !profile}
               onClick={handleSendRequest}
-              style={{
-                padding: '10px 16px',
-                border: 0,
-                borderRadius: '9px',
-                color: '#ffffff',
-                backgroundColor: sending || !profile ? '#a78bca' : '#7c5cbf',
-                fontSize: '13px',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: sending || !profile ? 'not-allowed' : 'pointer',
-              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00ff88] text-[#00210c] text-xs font-bold hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>person_add</span>
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
               {sending ? 'Đang gửi...' : 'Gửi lời mời kết bạn'}
             </button>
           ) : null}
+
           <button
             type="button"
             onClick={onClose}
-            style={{
-              padding: '10px 16px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '9px',
-              color: '#374151',
-              backgroundColor: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="px-4 py-2 rounded-xl bg-[#0d1117] border border-[#1a232e] text-xs font-semibold text-[#cbd5e1] hover:text-[#f8fafc] hover:border-[#475569] transition cursor-pointer"
           >
             Đóng
           </button>
         </div>
-        <p
-          style={{
-            margin: '12px 0 0',
-            color: '#9ca3af',
-            fontSize: '11px',
-            textAlign: 'right',
-          }}
-        >
+
+        <p className="mt-3 text-right text-[11px] text-[#64748b]">
           Lời mời được gửi bằng tài khoản quản trị đang đăng nhập.
         </p>
       </section>

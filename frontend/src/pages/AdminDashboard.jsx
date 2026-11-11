@@ -1,23 +1,53 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Avatar from '../components/Avatar'
+import OnlineStatusDot from '../components/OnlineStatusDot'
+import AdminUserProfileModal from '../components/AdminUserProfileModal'
 import { useAuth } from '../contexts/AuthContext'
 import { adminService } from '../services/adminService'
-import Avatar from '../components/Avatar'
-import AdminUserProfileModal from '../components/AdminUserProfileModal'
+
+const REPORT_FILTER_TABS = [
+  { key: 'pending', label: 'Chờ xử lý', icon: 'hourglass_empty' },
+  { key: 'resolved', label: 'Đã xử lý vi phạm', icon: 'check_circle' },
+  { key: 'dismissed', label: 'Đã bác bỏ', icon: 'close' },
+  { key: 'all', label: 'Tất cả đơn', icon: 'list_alt' },
+]
+
+function ReportStatusBadge({ status }) {
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold whitespace-nowrap">
+        <span className="material-symbols-outlined text-[14px]">hourglass_empty</span>
+        Chờ xử lý
+      </span>
+    )
+  }
+  if (status === 'resolved') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#00ff88]/15 border border-[#00ff88]/30 text-[#00ff88] text-xs font-semibold whitespace-nowrap">
+        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+        Đã xử lý vi phạm
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#181d26] border border-[#1a232e] text-[#94a3b8] text-xs font-semibold whitespace-nowrap">
+      <span className="material-symbols-outlined text-[14px]">close</span>
+      Đã bác bỏ
+    </span>
+  )
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Tabs: 'users' | 'reports'
   const [activeTab, setActiveTab] = useState('users')
 
-  // Stats
   const [stats, setStats] = useState(null)
   const [loadingStats, setLoadingStats] = useState(true)
 
-  // Users Tab state
   const [users, setUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [userSearch, setUserSearch] = useState('')
@@ -25,24 +55,20 @@ export default function AdminDashboard() {
   const [togglingUserId, setTogglingUserId] = useState(null)
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
 
-  // Reports Tab state
   const [reports, setReports] = useState([])
   const [loadingReports, setLoadingReports] = useState(true)
-  const [reportStatusFilter, setReportStatusFilter] = useState('pending') // 'pending' | 'resolved' | 'dismissed' | 'all'
+  const [reportStatusFilter, setReportStatusFilter] = useState('pending')
   const [processingReportId, setProcessingReportId] = useState(null)
 
-  // Modal xử lý vi phạm
   const [selectedReportForAction, setSelectedReportForAction] = useState(null)
   const [lockReportedUserCheck, setLockReportedUserCheck] = useState(true)
 
-  // Thông báo toast
   const [toastMsg, setToastMsg] = useState('')
   const showToast = (msg) => {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 4000)
   }
 
-  // 1. Tải Stats
   const loadStats = async () => {
     setLoadingStats(true)
     try {
@@ -55,7 +81,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // 2. Tải danh sách Người dùng
   const loadUsers = async () => {
     setLoadingUsers(true)
     try {
@@ -71,7 +96,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // 3. Tải danh sách Báo cáo vi phạm
   const loadReports = async () => {
     setLoadingReports(true)
     try {
@@ -100,7 +124,6 @@ export default function AdminDashboard() {
     }
   }, [activeTab, userRoleFilter, reportStatusFilter, user])
 
-  // Xử lý tìm kiếm với debounce nhỏ
   useEffect(() => {
     if (activeTab === 'users' && user && user.role === 'admin') {
       const timer = setTimeout(() => {
@@ -110,7 +133,21 @@ export default function AdminDashboard() {
     }
   }, [userSearch])
 
-  // Khóa / Mở khóa người dùng
+  useEffect(() => {
+    if (!selectedReportForAction) return
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setSelectedReportForAction(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedReportForAction])
+
+  const handleRefreshAll = () => {
+    loadStats()
+    if (activeTab === 'users') loadUsers()
+    else loadReports()
+  }
+
   const handleToggleUserStatus = async (targetUser) => {
     if (targetUser.id === user?.id) {
       alert('Bạn không thể tự khóa tài khoản của chính mình!')
@@ -137,7 +174,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Bác bỏ báo cáo
   const handleDismissReport = async (report) => {
     if (!window.confirm(`Bác bỏ đơn báo cáo #${report.id}?`)) return
     setProcessingReportId(report.id)
@@ -158,7 +194,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Xác nhận xử lý vi phạm (Resolved)
   const handleConfirmResolve = async () => {
     if (!selectedReportForAction) return
     setProcessingReportId(selectedReportForAction.id)
@@ -182,27 +217,25 @@ export default function AdminDashboard() {
     }
   }
 
-  // GUARD: Nếu không phải Admin
   if (user && user.role !== 'admin') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+      <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased">
         <Navbar />
-        <div style={{ maxWidth: '520px', margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
-          <div className="card" style={{ padding: '40px 24px' }}>
-            <div style={{ marginBottom: '16px', color: '#dc2626' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>block</span>
+        <div className="max-w-lg mx-auto px-4 pt-28 pb-16">
+          <div className="bg-[#11151c] border border-[#1a232e] rounded-2xl p-8 text-center shadow-2xl">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400">
+              <span className="material-symbols-outlined text-[32px]">block</span>
             </div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
+            <h2 className="text-xl font-extrabold text-[#f8fafc] mb-2">
               Truy cập bị từ chối
             </h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
+            <p className="text-sm text-[#94a3b8] leading-relaxed mb-6">
               Trang này chỉ dành riêng cho Quản trị viên hệ thống (Admin). Tài khoản hiện tại của bạn không có quyền truy cập.
             </p>
             <button
               type="button"
               onClick={() => navigate('/home')}
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px' }}
+              className="w-full py-3 rounded-xl bg-[#00ff88] text-[#00210c] font-bold text-sm hover:opacity-90 transition cursor-pointer"
             >
               Trở về Trang chủ
             </button>
@@ -212,153 +245,125 @@ export default function AdminDashboard() {
     )
   }
 
+  const statItems = [
+    {
+      label: 'Tổng người dùng',
+      value: loadingStats ? '...' : stats?.total_users ?? 0,
+      sub: 'Tài khoản đã đăng ký',
+      icon: 'group',
+      iconBox: 'bg-[#00ff88]/15 border-[#00ff88]/30 text-[#00ff88]',
+      valueClass: 'text-[#f8fafc]',
+    },
+    {
+      label: 'Đang hoạt động',
+      value: loadingStats ? '...' : stats?.active_users ?? 0,
+      sub: 'Tài khoản mở bình thường',
+      icon: 'check_circle',
+      iconBox: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
+      valueClass: 'text-[#00ff88]',
+    },
+    {
+      label: 'Tài khoản bị khóa',
+      value: loadingStats ? '...' : stats?.locked_users ?? 0,
+      sub: 'Đã hạn chế truy cập',
+      icon: 'lock',
+      iconBox: 'bg-red-500/15 border-red-500/30 text-red-400',
+      valueClass: 'text-red-400',
+    },
+    {
+      label: 'Vi phạm chờ duyệt',
+      value: loadingStats ? '...' : stats?.pending_reports ?? 0,
+      sub: `Tổng ${loadingStats ? '...' : stats?.total_reports ?? 0} đơn báo cáo`,
+      icon: 'flag',
+      iconBox: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
+      valueClass: 'text-amber-300',
+    },
+  ]
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f7ff' }}>
+    <div className="app-green-theme bg-[#08090a] min-h-screen text-[#e3e2e3] font-sans antialiased selection:bg-[#00ff88]/30 selection:text-[#00ff88]">
       <Navbar />
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px' }}>
-        {/* Banner tiêu đề */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        {/* Header Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-6 border-b border-[#1a232e]">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#7c5cbf' }}>admin_panel_settings</span>
-              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', margin: 0 }}>
-                Hệ thống Quản trị viên (Admin)
-              </h1>
+            <div className="flex items-center gap-2 text-[#00ff88] text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+              <span>La Pulga • Admin Console</span>
             </div>
-            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-              Quản lý tài khoản người dùng và kiểm duyệt an toàn cộng đồng Kindred
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#f8fafc] tracking-tight">
+              Hệ thống Quản trị viên
+            </h1>
+            <p className="text-sm text-[#94a3b8] mt-1">
+              Quản lý tài khoản thành viên, theo dõi trạng thái hoạt động và kiểm duyệt an toàn cộng đồng La Pulga.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              backgroundColor: '#faf5ff',
-              border: '1px solid #d8b4fe',
-              color: '#7c5cbf',
-              fontSize: '13px',
-              fontWeight: 700,
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>verified_user</span>
-            <span>Quyền: Administrator</span>
-          </div>
-        </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleRefreshAll}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0d1117] border border-[#1a232e] text-xs font-semibold text-[#e3e2e3] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              Làm mới dữ liệu
+            </button>
 
-        {/* THẺ THỐNG KÊ (STATS CARDS) */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-            gap: '16px',
-            marginBottom: '28px',
-          }}
-        >
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#f5f0ff', color: '#7c5cbf', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>group</span>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Tổng Người Dùng
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', marginTop: '2px' }}>
-                {loadingStats ? '...' : stats?.total_users ?? 0}
-              </div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>check_circle</span>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Đang Hoạt Động
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
-                {loadingStats ? '...' : stats?.active_users ?? 0}
-              </div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>lock</span>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Tài Khoản Bị Khóa
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#ef4444', marginTop: '2px' }}>
-                {loadingStats ? '...' : stats?.locked_users ?? 0}
-              </div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>flag</span>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
-                Vi Phạm Chờ Duyệt
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#b45309', marginTop: '2px' }}>
-                {loadingStats ? '...' : stats?.pending_reports ?? 0}
-              </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00ff88]/15 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold">
+              <span className="material-symbols-outlined text-[16px]">verified_user</span>
+              <span>Quyền: Administrator</span>
             </div>
           </div>
         </div>
 
-        {/* THANH CHUYỂN TAB CHÍNH */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: '#ffffff',
-            padding: '6px',
-            borderRadius: '16px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-            marginBottom: '24px',
-            border: '1px solid #ede9fe',
-            gap: '8px',
-          }}
+        {/* Stats Cards */}
+        <section
+          aria-label="Thống kê hệ thống"
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6"
         >
+          {statItems.map((item) => (
+            <div
+              key={item.label}
+              className="bg-[#11151c] border border-[#1a232e] rounded-2xl p-5 flex items-center gap-4 shadow-lg"
+            >
+              <div
+                className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${item.iconBox}`}
+              >
+                <span className="material-symbols-outlined text-[24px]">{item.icon}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8]">
+                  {item.label}
+                </div>
+                <div className={`text-2xl font-extrabold leading-tight mt-0.5 ${item.valueClass}`}>
+                  {item.value}
+                </div>
+                <div className="text-xs text-[#64748b] mt-0.5 truncate">{item.sub}</div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Main Navigation Tabs */}
+        <div className="bg-[#0d1117] border border-[#1a232e] p-1.5 rounded-2xl flex flex-col sm:flex-row gap-2 mb-6">
           <button
             type="button"
             onClick={() => setActiveTab('users')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '14px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: activeTab === 'users' ? '#7c5cbf' : 'transparent',
-              color: activeTab === 'users' ? '#ffffff' : '#6b7280',
-              transition: 'all 0.2s ease',
-            }}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/35 shadow-[0_0_16px_rgba(0,255,136,0.12)]'
+                : 'text-[#94a3b8] border border-transparent hover:text-[#f8fafc] hover:bg-[#11151c]'
+            }`}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>group</span>
+            <span className="material-symbols-outlined text-[19px]">group</span>
             <span>Quản lý Người dùng</span>
             <span
-              style={{
-                backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
-                color: activeTab === 'users' ? '#ffffff' : '#4b5563',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px',
-              }}
+              className={`px-2 py-0.5 rounded-full text-xs font-mono ${
+                activeTab === 'users'
+                  ? 'bg-[#00ff88]/20 text-[#00ff88]'
+                  : 'bg-[#181d26] text-[#94a3b8]'
+              }`}
             >
               {stats?.total_users ?? 0}
             </span>
@@ -367,36 +372,16 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setActiveTab('reports')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '14px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: activeTab === 'reports' ? '#7c5cbf' : 'transparent',
-              color: activeTab === 'reports' ? '#ffffff' : '#6b7280',
-              transition: 'all 0.2s ease',
-            }}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'reports'
+                ? 'bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/35 shadow-[0_0_16px_rgba(0,255,136,0.12)]'
+                : 'text-[#94a3b8] border border-transparent hover:text-[#f8fafc] hover:bg-[#11151c]'
+            }`}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>flag</span>
+            <span className="material-symbols-outlined text-[19px]">flag</span>
             <span>Báo cáo Vi phạm</span>
             {(stats?.pending_reports ?? 0) > 0 && (
-              <span
-                style={{
-                  backgroundColor: activeTab === 'reports' ? '#ef4444' : '#fee2e2',
-                  color: activeTab === 'reports' ? '#ffffff' : '#b91c1c',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                }}
-              >
+              <span className="px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-bold">
                 {stats.pending_reports} mới
               </span>
             )}
@@ -407,199 +392,160 @@ export default function AdminDashboard() {
         {/* TAB 1: QUẢN LÝ NGƯỜI DÙNG                                  */}
         {/* ========================================================= */}
         {activeTab === 'users' && (
-          <div className="card" style={{ padding: '24px' }}>
-            {/* Bộ lọc & tìm kiếm */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
-                <input
-                  type="text"
-                  placeholder="Tìm theo username hoặc email..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '13px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
+          <section className="w-full bg-[#11151c] border border-[#1a232e] rounded-2xl p-5 sm:p-6 shadow-xl">
+            {/* Search & Filter Toolbar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+              <div className="flex flex-col sm:flex-row flex-1 gap-3">
+                <div className="relative flex-1 min-w-[240px]">
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b] text-[18px] pointer-events-none">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Tìm theo username hoặc email..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#0d1117] border border-[#1a232e] text-sm text-[#f8fafc] placeholder:text-[#64748b] focus:outline-none focus:border-[#00ff88] transition"
+                  />
+                  {userSearch && (
+                    <button
+                      type="button"
+                      aria-label="Xóa từ khóa"
+                      onClick={() => setUserSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  )}
+                </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
                 <select
                   value={userRoleFilter}
                   onChange={(e) => setUserRoleFilter(e.target.value)}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '13px',
-                    backgroundColor: '#ffffff',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className="h-11 px-4 rounded-xl bg-[#0d1117] border border-[#1a232e] text-sm text-[#f8fafc] focus:outline-none focus:border-[#00ff88] cursor-pointer min-w-[210px]"
                 >
                   <option value="">Tất cả vai trò</option>
                   <option value="user">Thành viên (User)</option>
                   <option value="admin">Quản trị viên (Admin)</option>
                 </select>
               </div>
+
+              <div className="text-xs font-mono text-[#94a3b8] bg-[#0d1117] border border-[#1a232e] px-3.5 py-2.5 rounded-xl self-start lg:self-auto whitespace-nowrap">
+                Hiển thị <strong className="text-[#00ff88]">{users.length}</strong> tài khoản
+              </div>
             </div>
 
-            {/* Bảng danh sách người dùng */}
             {loadingUsers ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+              <div className="py-16 text-center text-sm text-[#94a3b8]">
                 Đang tải danh sách người dùng...
               </div>
             ) : users.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+              <div className="py-16 text-center text-sm text-[#94a3b8]">
                 Không tìm thấy người dùng nào phù hợp.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+              <div className="w-full overflow-x-auto rounded-xl border border-[#1a232e]">
+                <table className="w-full min-w-[880px] border-collapse text-left text-sm">
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #ede9fe', color: '#6b7280' }}>
-                      <th style={{ padding: '12px 14px' }}>Người dùng</th>
-                      <th style={{ padding: '12px 14px' }}>Email</th>
-                      <th style={{ padding: '12px 14px' }}>Vai trò</th>
-                      <th style={{ padding: '12px 14px' }}>Trạng thái</th>
-                      <th style={{ padding: '12px 14px' }}>Ngày tham gia</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>Thao tác</th>
+                    <tr className="bg-[#0d1117] border-b border-[#1a232e] text-xs uppercase tracking-wider text-[#94a3b8]">
+                      <th className="py-3.5 px-4 font-bold">Người dùng</th>
+                      <th className="py-3.5 px-4 font-bold">Email & Đăng nhập</th>
+                      <th className="py-3.5 px-4 font-bold">Vai trò</th>
+                      <th className="py-3.5 px-4 font-bold">Trạng thái</th>
+                      <th className="py-3.5 px-4 font-bold">Ngày tham gia</th>
+                      <th className="py-3.5 px-4 font-bold text-right">Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-[#1a232e]">
                     {users.map((u) => {
                       const isMe = u.id === user?.id
                       return (
                         <tr
                           key={u.id}
-                          style={{
-                            borderBottom: '1px solid #f3f4f6',
-                            transition: 'background 0.15s ease',
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#faf9fe')}
-                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          className="hover:bg-[#181d26]/65 transition-colors"
                         >
-                          <td style={{ padding: '12px 14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <Avatar
-                                src={u.avatar_url}
-                                alt={u.username}
-                                style={{
-                                  width: '36px',
-                                  height: '36px',
-                                  borderRadius: '50%',
-                                  objectFit: 'cover',
-                                  border: '1.5px solid #7c5cbf',
-                                }}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, color: '#1a1a2e' }}>
-                                  {u.display_name || u.username} {isMe && <span style={{ color: '#7c5cbf', fontSize: '11px' }}>(Tôi)</span>}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3 min-w-[200px]">
+                              <div className="relative shrink-0">
+                                <Avatar
+                                  src={u.avatar_url}
+                                  alt={u.username}
+                                  className="w-10 h-10 rounded-full object-cover border border-[#00ff88]/40 bg-[#08090a]"
+                                />
+                                <OnlineStatusDot
+                                  isOnline={u.is_online}
+                                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#11151c]"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-[#f8fafc] flex items-center gap-1.5 flex-wrap">
+                                  <span className="truncate max-w-[190px]">
+                                    {u.display_name || u.username}
+                                  </span>
+                                  {isMe && (
+                                    <span className="px-1.5 py-0.5 rounded bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">
+                                      Tôi
+                                    </span>
+                                  )}
                                 </div>
-                                <div style={{ color: '#6b7280', fontSize: '12px' }}>@{u.username}</div>
+                                <div className="text-xs text-[#94a3b8] font-mono truncate">
+                                  @{u.username}
+                                </div>
                               </div>
                             </div>
                           </td>
 
-                          <td style={{ padding: '12px 14px', color: '#4b5563' }}>{u.email}</td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-[#e3e2e3] break-all">{u.email}</div>
+                            <div className="text-[11px] text-[#64748b] mt-0.5">
+                              {u.auth_provider === 'google' ? 'Google OAuth' : 'Email / Mật khẩu'}
+                            </div>
+                          </td>
 
-                          <td style={{ padding: '12px 14px' }}>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             {u.role === 'admin' ? (
-                              <span
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#faf5ff',
-                                  border: '1px solid #d8b4fe',
-                                  color: '#7c5cbf',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>shield_person</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#00ff88]/15 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold">
+                                <span className="material-symbols-outlined text-[14px]">shield_person</span>
                                 Admin
                               </span>
                             ) : (
-                              <span
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#f3f4f6',
-                                  color: '#4b5563',
-                                  fontSize: '11px',
-                                }}
-                              >
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#0d1117] border border-[#1a232e] text-[#cbd5e1] text-xs font-medium">
                                 Thành viên
                               </span>
                             )}
                           </td>
 
-                          <td style={{ padding: '12px 14px' }}>
-                            {u.is_active ? (
-                              <span
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#ecfdf5',
-                                  color: '#059669',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
-                                Hoạt động
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="flex flex-col items-start gap-1">
+                              {u.is_active ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                  Hoạt động
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold">
+                                  <span className="material-symbols-outlined text-[14px]">lock</span>
+                                  Bị khóa
+                                </span>
+                              )}
+                              <span className="text-[11px] text-[#64748b]">
+                                {u.is_online ? 'Đang trực tuyến' : 'Ngoại tuyến'}
                               </span>
-                            ) : (
-                              <span
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#fee2e2',
-                                  color: '#dc2626',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>lock</span>
-                                Bị khóa
-                              </span>
-                            )}
+                            </div>
                           </td>
 
-                          <td style={{ padding: '12px 14px', color: '#6b7280', fontSize: '12px' }}>
+                          <td className="py-3.5 px-4 text-xs font-mono text-[#94a3b8] whitespace-nowrap">
                             {new Date(u.created_at).toLocaleDateString('vi-VN')}
                           </td>
 
-                          <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-2">
                               <button
                                 type="button"
                                 onClick={() => setSelectedUserForProfile(u)}
-                                style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
-                                  border: '1px solid #ddd6fe',
-                                  backgroundColor: '#f5f0ff',
-                                  color: '#6d4bb3',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d1117] border border-[#1a232e] text-xs font-semibold text-[#e3e2e3] hover:border-[#00ff88]/50 hover:text-[#00ff88] transition cursor-pointer"
                               >
+                                <span className="material-symbols-outlined text-[15px]">person</span>
                                 Xem hồ sơ
                               </button>
                               {!isMe && (
@@ -607,18 +553,15 @@ export default function AdminDashboard() {
                                   type="button"
                                   disabled={togglingUserId === u.id}
                                   onClick={() => handleToggleUserStatus(u)}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
-                                    border: u.is_active ? '1px solid #fee2e2' : '1px solid #a7f3d0',
-                                    backgroundColor: u.is_active ? '#fff5f5' : '#ecfdf5',
-                                    color: u.is_active ? '#dc2626' : '#059669',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: togglingUserId === u.id ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.15s ease',
-                                  }}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    u.is_active
+                                      ? 'bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20'
+                                      : 'bg-[#00ff88]/15 border-[#00ff88]/35 text-[#00ff88] hover:bg-[#00ff88]/25'
+                                  }`}
                                 >
+                                  <span className="material-symbols-outlined text-[15px]">
+                                    {u.is_active ? 'lock' : 'lock_open'}
+                                  </span>
                                   {togglingUserId === u.id
                                     ? 'Đang xử lý...'
                                     : u.is_active
@@ -635,168 +578,127 @@ export default function AdminDashboard() {
                 </table>
               </div>
             )}
-          </div>
+          </section>
         )}
 
         {/* ========================================================= */}
         {/* TAB 2: KIỂM DUYỆT BÁO CÁO VI PHẠM (REPORTS MODERATION)      */}
         {/* ========================================================= */}
         {activeTab === 'reports' && (
-          <div className="card" style={{ padding: '24px' }}>
-            {/* Lọc theo trạng thái báo cáo */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-              {[
-                { key: 'pending', label: 'Chờ xử lý', icon: 'hourglass_empty' },
-                { key: 'resolved', label: 'Đã xử lý vi phạm', icon: 'check_circle' },
-                { key: 'dismissed', label: 'Đã bác bỏ', icon: 'close' },
-                { key: 'all', label: 'Tất cả đơn', icon: null },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setReportStatusFilter(tab.key)}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid',
-                    borderColor: reportStatusFilter === tab.key ? '#7c5cbf' : '#e5e7eb',
-                    backgroundColor: reportStatusFilter === tab.key ? '#f5f0ff' : '#ffffff',
-                    color: reportStatusFilter === tab.key ? '#7c5cbf' : '#4b5563',
-                    fontSize: '13px',
-                    fontWeight: reportStatusFilter === tab.key ? 700 : 500,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {tab.icon && <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>}
-                  {tab.label}
-                </button>
-              ))}
+          <section className="w-full bg-[#11151c] border border-[#1a232e] rounded-2xl p-5 sm:p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div className="flex flex-wrap gap-2">
+                {REPORT_FILTER_TABS.map((tab) => {
+                  const active = reportStatusFilter === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setReportStatusFilter(tab.key)}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                        active
+                          ? 'bg-[#00ff88]/15 border-[#00ff88]/40 text-[#00ff88]'
+                          : 'bg-[#0d1117] border-[#1a232e] text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#334155]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                      <span>{tab.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="text-xs font-mono text-[#94a3b8] bg-[#0d1117] border border-[#1a232e] px-3.5 py-2 rounded-xl self-start sm:self-auto whitespace-nowrap">
+                Tổng <strong className="text-[#00ff88]">{reports.length}</strong> đơn báo cáo
+              </div>
             </div>
 
             {loadingReports ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+              <div className="py-16 text-center text-sm text-[#94a3b8]">
                 Đang tải danh sách báo cáo...
               </div>
             ) : reports.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                <div style={{ marginBottom: '8px', color: '#7c5cbf' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>verified</span>
+              <div className="py-16 text-center text-sm text-[#94a3b8]">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#00ff88]/10 border border-[#00ff88]/25 flex items-center justify-center text-[#00ff88]">
+                  <span className="material-symbols-outlined text-[26px]">verified</span>
                 </div>
-                <p style={{ margin: 0 }}>Không có đơn báo cáo vi phạm nào trong danh mục này.</p>
+                Không có đơn báo cáo vi phạm nào trong danh mục này.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {reports.map((r) => {
                   const isPending = r.status === 'pending'
-                  const isResolved = r.status === 'resolved'
-                  const isDismissed = r.status === 'dismissed'
-
                   return (
-                    <div
+                    <article
                       key={r.id}
-                      style={{
-                        padding: '18px',
-                        borderRadius: '14px',
-                        border: '1px solid #f3f4f6',
-                        backgroundColor: isPending ? '#faf8ff' : '#ffffff',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                      }}
+                      className={`rounded-2xl border p-5 flex flex-col justify-between gap-4 transition ${
+                        isPending
+                          ? 'bg-[#0d1117] border-amber-500/35 hover:border-amber-400/50'
+                          : 'bg-[#0d1117] border-[#1a232e]'
+                      }`}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>flag</span>
-                            {r.reason}
-                          </span>
-                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                            Đơn #{r.id} • {new Date(r.created_at).toLocaleString('vi-VN')}
-                          </span>
+                      <div className="flex flex-col gap-3.5">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-bold">
+                              <span className="material-symbols-outlined text-[14px]">flag</span>
+                              {r.reason}
+                            </span>
+                            <span className="text-xs font-mono text-[#94a3b8]">
+                              Đơn #{r.id} • {new Date(r.created_at).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <ReportStatusBadge status={r.status} />
                         </div>
 
-                        <div>
-                          {isPending && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>hourglass_empty</span>
-                              Chờ xử lý
-                            </span>
-                          )}
-                          {isResolved && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
-                              Đã xử lý vi phạm
-                            </span>
-                          )}
-                          {isDismissed && (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', backgroundColor: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
-                              Đã bác bỏ
-                            </span>
-                          )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className="p-3 rounded-xl bg-[#11151c] border border-[#1a232e] flex items-center gap-2.5">
+                            <Avatar
+                              src={r.reporter?.avatar_url}
+                              alt={r.reporter?.username}
+                              className="w-8 h-8 rounded-full object-cover border border-[#1a232e] shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-[11px] text-[#94a3b8]">Người báo cáo</div>
+                              <div className="font-bold text-[#f8fafc] truncate">
+                                {r.reporter?.display_name || r.reporter?.username} (@{r.reporter?.username})
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-[#11151c] border border-[#1a232e] flex items-center gap-2.5">
+                            <Avatar
+                              src={r.reported?.avatar_url}
+                              alt={r.reported?.username}
+                              className="w-8 h-8 rounded-full object-cover border border-red-500/40 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-[11px] text-[#94a3b8]">Người bị tố cáo</div>
+                              <div className="font-bold text-red-300 truncate">
+                                {r.reported?.display_name || r.reported?.username} (@{r.reported?.username})
+                                {!r.reported?.is_active && (
+                                  <span className="ml-1.5 text-[10px] text-red-400">(Đã khóa)</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
+
+                        {r.description && (
+                          <div className="p-3.5 rounded-xl bg-[#11151c] border border-[#1a232e] text-sm text-[#cbd5e1] leading-relaxed">
+                            <span className="font-bold text-[#f8fafc] mr-1.5">Mô tả:</span>
+                            {r.description}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Thông tin 2 bên */}
-                      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '13px' }}>
-                        <div>
-                          <span style={{ color: '#6b7280' }}>Người báo cáo: </span>
-                          <strong style={{ color: '#1a1a2e' }}>
-                            {r.reporter.display_name || r.reporter.username} (@{r.reporter.username})
-                          </strong>
-                        </div>
-                        <div>
-                          <span style={{ color: '#6b7280' }}>Người bị tố cáo: </span>
-                          <strong style={{ color: '#dc2626' }}>
-                            {r.reported.display_name || r.reported.username} (@{r.reported.username})
-                          </strong>
-                          {!r.reported.is_active && (
-                            <span style={{ marginLeft: '6px', fontSize: '11px', color: '#ef4444' }}>(Đang bị khóa)</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Chi tiết nội dung vi phạm */}
-                      {r.description && (
-                        <div
-                          style={{
-                            padding: '10px 14px',
-                            borderRadius: '10px',
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #f3f4f6',
-                            fontSize: '13px',
-                            color: '#374151',
-                            lineHeight: '1.5',
-                          }}
-                        >
-                          <strong>Mô tả:</strong> {r.description}
-                        </div>
-                      )}
-
-                      {/* Nút thao tác của Admin */}
                       {isPending && (
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1a232e]">
                           <button
                             type="button"
                             disabled={processingReportId === r.id}
                             onClick={() => handleDismissReport(r)}
-                            className="btn-secondary"
-                            style={{ padding: '8px 16px', fontSize: '12.5px' }}
+                            className="px-4 py-2 rounded-xl bg-[#11151c] border border-[#1a232e] text-xs font-semibold text-[#cbd5e1] hover:border-[#475569] hover:text-[#f8fafc] transition cursor-pointer disabled:opacity-50"
                           >
                             Bác bỏ báo cáo
                           </button>
@@ -808,30 +710,20 @@ export default function AdminDashboard() {
                               setSelectedReportForAction(r)
                               setLockReportedUserCheck(true)
                             }}
-                            style={{
-                              backgroundColor: '#ef4444',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '8px 16px',
-                              fontWeight: 600,
-                              fontSize: '12.5px',
-                              cursor: 'pointer',
-                              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
-                            }}
+                            className="px-4 py-2 rounded-xl bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold transition cursor-pointer disabled:opacity-50"
                           >
                             Xác nhận vi phạm
                           </button>
                         </div>
                       )}
-                    </div>
+                    </article>
                   )
                 })}
               </div>
             )}
-          </div>
+          </section>
         )}
-      </div>
+      </main>
 
       {selectedUserForProfile && (
         <AdminUserProfileModal
@@ -845,67 +737,43 @@ export default function AdminDashboard() {
       {/* MODAL XÁC NHẬN XỬ LÝ VI PHẠM */}
       {selectedReportForAction && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            padding: '16px',
-          }}
+          className="fixed inset-0 z-[1100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setSelectedReportForAction(null)}
         >
           <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '460px',
-              width: '100%',
-              padding: '28px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            }}
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-[#11151c] border border-[#1a232e] rounded-2xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 10px 0', color: '#1a1a2e' }}>
+            <h3 className="text-lg font-extrabold text-[#f8fafc] mb-2">
               Xác nhận xử lý vi phạm #{selectedReportForAction.id}
             </h3>
-            <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.5', margin: '0 0 16px 0' }}>
-              Bạn đang xác nhận tài khoản <strong>@{selectedReportForAction.reported.username}</strong> có hành vi vi phạm ({selectedReportForAction.reason}).
+            <p className="text-sm text-[#94a3b8] leading-relaxed mb-4">
+              Bạn đang xác nhận tài khoản{' '}
+              <strong className="text-[#f8fafc]">
+                @{selectedReportForAction.reported.username}
+              </strong>{' '}
+              có hành vi vi phạm ({selectedReportForAction.reason}).
             </p>
 
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px',
-                borderRadius: '10px',
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fee2e2',
-                cursor: 'pointer',
-                marginBottom: '24px',
-              }}
-            >
+            <label className="flex items-center gap-3 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 cursor-pointer mb-6">
               <input
                 type="checkbox"
                 checked={lockReportedUserCheck}
                 onChange={(e) => setLockReportedUserCheck(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: '#ef4444' }}
+                className="w-4 h-4 accent-red-500"
               />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b' }}>
+              <span className="text-xs font-semibold text-red-300">
                 Khóa luôn tài khoản của người vi phạm này
               </span>
             </label>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div className="flex justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setSelectedReportForAction(null)}
-                className="btn-secondary"
-                style={{ padding: '10px 18px', fontSize: '13px' }}
+                className="px-4 py-2.5 rounded-xl bg-[#0d1117] border border-[#1a232e] text-xs font-semibold text-[#cbd5e1] hover:text-[#f8fafc] cursor-pointer"
               >
                 Hủy
               </button>
@@ -913,16 +781,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={handleConfirmResolve}
                 disabled={processingReportId === selectedReportForAction.id}
-                style={{
-                  backgroundColor: '#ef4444',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px 20px',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+                className="px-5 py-2.5 rounded-xl bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
               >
                 {processingReportId ? 'Đang duyệt...' : 'Xác nhận xử lý'}
               </button>
@@ -931,27 +790,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TOAST THÔNG BÁO */}
       {toastMsg && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            backgroundColor: '#1f2937',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-            zIndex: 1200,
-            fontSize: '14px',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <span>ℹ️</span>
+        <div className="fixed bottom-6 right-6 z-[1200] bg-[#11151c] border border-[#00ff88]/40 text-[#f8fafc] px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2.5">
+          <span className="material-symbols-outlined text-[#00ff88] text-[18px]">info</span>
           <span>{toastMsg}</span>
         </div>
       )}
